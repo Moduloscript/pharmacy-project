@@ -65,12 +65,12 @@ export default function UserStart() {
 		else setGreeting("Good evening");
 	}, []);
 
-	// BenPharm Nigerian Pharmaceutical Dashboard - Enhanced UX
+	// BenPharm Nigerian Pharmaceutical Dashboard - Enhanced UX with Dark Mode Support
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+		<div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
 			<div className="space-y-8 animate-in fade-in duration-500">
-				{/* Enhanced Hero Welcome Section */}
-				<div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-blue-500 to-teal-400 p-8 text-white shadow-2xl">
+				{/* Enhanced Hero Welcome Section with Dark Mode */}
+				<div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-blue-500 to-teal-400 dark:from-blue-800 dark:via-blue-700 dark:to-teal-700 p-8 text-white shadow-2xl dark:shadow-black/50">
 					{/* Animated background pattern */}
 					<div className="absolute inset-0 opacity-10">
 						<div className="absolute -left-4 -top-4 h-72 w-72 animate-pulse rounded-full bg-white/20 blur-3xl" />
@@ -145,15 +145,17 @@ export default function UserStart() {
 
 				{/* Quick Actions Section with Enhanced UX */}
 				<div className="space-y-6">
-					{/* Section Header */}
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-2">
-							<ZapIcon className="h-5 w-5 text-blue-600" />
-							<h2 className="text-xl font-semibold text-gray-900">Quick Actions</h2>
+					{/* Section Header with Better Alignment */}
+					<div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg px-4 py-3 shadow-sm border border-gray-200 dark:border-gray-700">
+						<div className="flex items-center gap-3">
+							<div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+								<ZapIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+							</div>
+							<h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Quick Actions</h2>
 						</div>
 						{cartItemCount > 0 && (
-							<Badge className="bg-orange-100 text-orange-700">
-								{cartItemCount} items in cart
+							<Badge className="bg-orange-500 dark:bg-orange-600 text-white font-semibold px-3 py-1.5 text-sm border-0 shadow-md">
+								{cartItemCount} ITEMS IN CART
 							</Badge>
 						)}
 					</div>
@@ -164,27 +166,27 @@ export default function UserStart() {
 						<Link href="/app/products">
 							<Card 
 								className={cn(
-									"group relative overflow-hidden border-2 transition-all duration-300 hover:border-green-400 hover:shadow-xl",
-									hoveredCard === 'products' && 'scale-105 shadow-xl border-green-400'
+									"group relative overflow-hidden border-2 bg-white dark:bg-gray-800 transition-all duration-300 hover:border-green-400 dark:hover:border-green-500 hover:shadow-xl dark:border-gray-700",
+									hoveredCard === 'products' && 'scale-105 shadow-xl border-green-400 dark:border-green-500'
 								)}
 								onMouseEnter={() => setHoveredCard('products')}
 								onMouseLeave={() => setHoveredCard(null)}
 							>
 								{/* Gradient background on hover */}
-								<div className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 group-hover:opacity-100 transition-opacity" />
+								<div className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 opacity-0 group-hover:opacity-100 transition-opacity" />
 								
 								<div className="relative p-6">
 									<div className="flex items-start justify-between mb-4">
-										<div className="p-3 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl shadow-lg">
+										<div className="p-3 bg-gradient-to-br from-green-400 to-emerald-500 dark:from-green-600 dark:to-emerald-700 rounded-xl shadow-lg">
 											<PackageIcon className="h-7 w-7 text-white" />
 										</div>
-										<ArrowRightIcon className="h-5 w-5 text-gray-400 group-hover:text-green-600 transition-colors" />
+										<ArrowRightIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors" />
 									</div>
-									<h3 className="font-bold text-lg text-gray-900 mb-1">Browse Products</h3>
-									<p className="text-sm text-gray-600 mb-3">
+									<h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">Browse Products</h3>
+									<p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
 										Explore 10,000+ authentic medicines
 									</p>
-									<div className="flex items-center gap-2 text-xs text-green-600 font-medium">
+									<div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400 font-medium">
 										<SparklesIcon className="h-3 w-3" />
 										New arrivals daily
 									</div>
@@ -196,39 +198,39 @@ export default function UserStart() {
 						<Link href="/app/cart">
 							<Card 
 								className={cn(
-									"group relative overflow-hidden border-2 transition-all duration-300 hover:border-blue-400 hover:shadow-xl",
-									hoveredCard === 'cart' && 'scale-105 shadow-xl border-blue-400'
+									"group relative overflow-hidden border-2 bg-white dark:bg-gray-800 transition-all duration-300 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-xl dark:border-gray-700",
+									hoveredCard === 'cart' && 'scale-105 shadow-xl border-blue-400 dark:border-blue-500'
 								)}
 								onMouseEnter={() => setHoveredCard('cart')}
 								onMouseLeave={() => setHoveredCard(null)}
 							>
-								<div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity" />
+								<div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 opacity-0 group-hover:opacity-100 transition-opacity" />
 								
 								<div className="relative p-6">
 									<div className="flex items-start justify-between mb-4">
 										<div className="relative">
-											<div className="p-3 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl shadow-lg">
+											<div className="p-3 bg-gradient-to-br from-blue-400 to-indigo-500 dark:from-blue-600 dark:to-indigo-700 rounded-xl shadow-lg">
 												<ShoppingCartIcon className="h-7 w-7 text-white" />
 											</div>
 											{cartItemCount > 0 && (
-												<div className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 rounded-full flex items-center justify-center animate-bounce">
+												<div className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 dark:bg-red-600 rounded-full flex items-center justify-center animate-bounce">
 													<span className="text-xs text-white font-bold">{cartItemCount}</span>
 												</div>
 											)}
 										</div>
-										<ArrowRightIcon className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
+										<ArrowRightIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
 									</div>
-									<h3 className="font-bold text-lg text-gray-900 mb-1">Shopping Cart</h3>
-									<p className="text-sm text-gray-600 mb-3">
+									<h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">Shopping Cart</h3>
+									<p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
 										Review and checkout items
 									</p>
 									{cartItemCount > 0 ? (
-										<div className="flex items-center gap-2 text-xs text-blue-600 font-medium">
+										<div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
 											<ActivityIcon className="h-3 w-3" />
 											Ready to checkout
 										</div>
 									) : (
-										<div className="flex items-center gap-2 text-xs text-gray-500">
+										<div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500">
 											Cart is empty
 										</div>
 									)}
@@ -240,35 +242,35 @@ export default function UserStart() {
 						<Link href="/app/orders">
 							<Card 
 								className={cn(
-									"group relative overflow-hidden border-2 transition-all duration-300 hover:border-purple-400 hover:shadow-xl",
-									hoveredCard === 'orders' && 'scale-105 shadow-xl border-purple-400'
+									"group relative overflow-hidden border-2 bg-white dark:bg-gray-800 transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-xl dark:border-gray-700",
+									hoveredCard === 'orders' && 'scale-105 shadow-xl border-purple-400 dark:border-purple-500'
 								)}
 								onMouseEnter={() => setHoveredCard('orders')}
 								onMouseLeave={() => setHoveredCard(null)}
 							>
-								<div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 opacity-0 group-hover:opacity-100 transition-opacity" />
+								<div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 opacity-0 group-hover:opacity-100 transition-opacity" />
 								
 								<div className="relative p-6">
 									<div className="flex items-start justify-between mb-4">
 										<div className="relative">
-											<div className="p-3 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl shadow-lg">
+											<div className="p-3 bg-gradient-to-br from-purple-400 to-pink-500 dark:from-purple-600 dark:to-pink-700 rounded-xl shadow-lg">
 												<ClipboardListIcon className="h-7 w-7 text-white" />
 											</div>
 											{hasNewOrders && (
 												<div className="absolute -top-2 -right-2">
-													<div className="h-2 w-2 bg-red-500 rounded-full animate-ping absolute" />
-													<div className="h-2 w-2 bg-red-500 rounded-full" />
+													<div className="h-2 w-2 bg-red-500 dark:bg-red-400 rounded-full animate-ping absolute" />
+													<div className="h-2 w-2 bg-red-500 dark:bg-red-400 rounded-full" />
 												</div>
 											)}
 										</div>
-										<ArrowRightIcon className="h-5 w-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
+										<ArrowRightIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" />
 									</div>
-									<h3 className="font-bold text-lg text-gray-900 mb-1">Order History</h3>
-									<p className="text-sm text-gray-600 mb-3">
+									<h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">Order History</h3>
+									<p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
 										Track all your orders
 									</p>
 									{hasNewOrders && (
-										<div className="flex items-center gap-2 text-xs text-purple-600 font-medium">
+										<div className="flex items-center gap-2 text-xs text-purple-600 dark:text-purple-400 font-medium">
 											<BellIcon className="h-3 w-3" />
 											New order update
 										</div>
@@ -281,26 +283,26 @@ export default function UserStart() {
 						<Link href="/app/search">
 							<Card 
 								className={cn(
-									"group relative overflow-hidden border-2 transition-all duration-300 hover:border-amber-400 hover:shadow-xl",
-									hoveredCard === 'search' && 'scale-105 shadow-xl border-amber-400'
+									"group relative overflow-hidden border-2 bg-white dark:bg-gray-800 transition-all duration-300 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xl dark:border-gray-700",
+									hoveredCard === 'search' && 'scale-105 shadow-xl border-amber-400 dark:border-amber-500'
 								)}
 								onMouseEnter={() => setHoveredCard('search')}
 								onMouseLeave={() => setHoveredCard(null)}
 							>
-								<div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-yellow-50 opacity-0 group-hover:opacity-100 transition-opacity" />
+								<div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 opacity-0 group-hover:opacity-100 transition-opacity" />
 								
 								<div className="relative p-6">
 									<div className="flex items-start justify-between mb-4">
-										<div className="p-3 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-xl shadow-lg">
+										<div className="p-3 bg-gradient-to-br from-amber-400 to-yellow-500 dark:from-amber-600 dark:to-yellow-700 rounded-xl shadow-lg">
 											<SearchIcon className="h-7 w-7 text-white" />
 										</div>
-										<ArrowRightIcon className="h-5 w-5 text-gray-400 group-hover:text-amber-600 transition-colors" />
+										<ArrowRightIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors" />
 									</div>
-									<h3 className="font-bold text-lg text-gray-900 mb-1">Quick Search</h3>
-									<p className="text-sm text-gray-600 mb-3">
+									<h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">Quick Search</h3>
+									<p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
 										Find medicines instantly
 									</p>
-									<div className="flex items-center gap-2 text-xs text-amber-600 font-medium">
+									<div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 font-medium">
 										<ZapIcon className="h-3 w-3" />
 										AI-powered search
 									</div>
@@ -312,26 +314,26 @@ export default function UserStart() {
 						<Link href="/app/settings">
 							<Card 
 								className={cn(
-									"group relative overflow-hidden border-2 transition-all duration-300 hover:border-gray-400 hover:shadow-xl",
-									hoveredCard === 'settings' && 'scale-105 shadow-xl border-gray-400'
+									"group relative overflow-hidden border-2 bg-white dark:bg-gray-800 transition-all duration-300 hover:border-gray-400 dark:hover:border-gray-500 hover:shadow-xl dark:border-gray-700",
+									hoveredCard === 'settings' && 'scale-105 shadow-xl border-gray-400 dark:border-gray-500'
 								)}
 								onMouseEnter={() => setHoveredCard('settings')}
 								onMouseLeave={() => setHoveredCard(null)}
 							>
-								<div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-slate-50 opacity-0 group-hover:opacity-100 transition-opacity" />
+								<div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-700/20 dark:to-slate-700/20 opacity-0 group-hover:opacity-100 transition-opacity" />
 								
 								<div className="relative p-6">
 									<div className="flex items-start justify-between mb-4">
-										<div className="p-3 bg-gradient-to-br from-gray-400 to-slate-500 rounded-xl shadow-lg">
+										<div className="p-3 bg-gradient-to-br from-gray-400 to-slate-500 dark:from-gray-600 dark:to-slate-700 rounded-xl shadow-lg">
 											<UserIcon className="h-7 w-7 text-white" />
 										</div>
-										<ArrowRightIcon className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+										<ArrowRightIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors" />
 									</div>
-									<h3 className="font-bold text-lg text-gray-900 mb-1">My Account</h3>
-									<p className="text-sm text-gray-600 mb-3">
+									<h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">My Account</h3>
+									<p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
 										Profile & preferences
 									</p>
-									<div className="flex items-center gap-2 text-xs text-gray-600 font-medium">
+									<div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 font-medium">
 										<ShieldCheckIcon className="h-3 w-3" />
 										Secure & private
 									</div>
