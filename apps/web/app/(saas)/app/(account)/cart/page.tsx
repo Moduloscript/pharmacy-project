@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import { ShoppingCart } from '@/modules/saas/cart/components/ShoppingCart'
+import { ShoppingCart } from '@saas/cart/components/ShoppingCart'
 
 export const metadata: Metadata = {
   title: 'Shopping Cart - BenPharm Online',
