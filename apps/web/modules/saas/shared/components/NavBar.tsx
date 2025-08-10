@@ -12,6 +12,10 @@ import {
 	SettingsIcon,
 	UserCog2Icon,
 	UserCogIcon,
+	PackageIcon,
+	ShoppingCartIcon,
+	ClipboardListIcon,
+	SearchIcon,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -30,6 +34,34 @@ export function NavBar() {
 		? `/app/${activeOrganization.slug}`
 		: "/app";
 
+	// If organizations are disabled, show pharmaceutical menu items
+	const pharmaceuticalMenuItems = !config.organizations.enable ? [
+		{
+			label: "Products",
+			href: "/app/products",
+			icon: PackageIcon,
+			isActive: pathname.startsWith("/app/products"),
+		},
+		{
+			label: "Cart",
+			href: "/app/cart",
+			icon: ShoppingCartIcon,
+			isActive: pathname === "/app/cart",
+		},
+		{
+			label: "Orders",
+			href: "/app/orders",
+			icon: ClipboardListIcon,
+			isActive: pathname.startsWith("/app/orders"),
+		},
+		{
+			label: "Search",
+			href: "/app/search",
+			icon: SearchIcon,
+			isActive: pathname === "/app/search",
+		},
+	] : [];
+
 	const menuItems = [
 		{
 			label: t("app.menu.start"),
@@ -37,6 +69,8 @@ export function NavBar() {
 			icon: HomeIcon,
 			isActive: pathname === basePath,
 		},
+		// Add pharmaceutical menu items when organizations are disabled
+		...pharmaceuticalMenuItems,
 		{
 			label: t("app.menu.aiChatbot"),
 			href: activeOrganization
