@@ -1,0 +1,180 @@
+# BenPharm Online - Product Requirements Document
+
+## Project Overview
+BenPharm Online is a comprehensive pharmacy management SaaS platform for Nigerian pharmacies, specifically designed for a small pharmaceutical distribution company in Benin City, Edo State. The platform will serve both retail customers and wholesale/pharmacy businesses with online ordering, inventory management, and payment processing capabilities.
+
+## Business Context
+- Company: Small pharmaceutical distribution company in Benin City
+- Current: Manual WhatsApp/phone orders, Excel inventory tracking
+- Target: Digital transformation with online ordering platform
+- Budget: ₦5,000,000 over 12 months
+- Currency: Nigerian Naira (NGN)
+- Market: Primary focus on Edo State, expansion to Nigeria
+
+## Target Users
+1. **Retail Customers**: Individual buyers purchasing medicines online
+2. **Wholesale Customers**: Registered pharmacies, clinics, patent medicine stores
+3. **Admin Staff**: Internal team managing orders, inventory, and customers
+
+## Core Features Required
+
+### Phase 1: Foundation (Months 1-3) - ₦1.5M Budget
+**Priority: Critical (Must Have)**
+
+#### 1. Database Schema & Models
+- Extend existing Prisma schema with pharmacy-specific models
+- Product model with Nigerian medicine details (NAFDAC registration, wholesale/retail pricing)
+- Order model with Nigerian address fields (State, LGA)
+- Customer model with business verification for wholesale accounts
+- Payment tracking with multiple gateway support
+
+#### 2. Product Catalog System
+- Medicine catalog with search and filtering (category, brand, price range)
+- Product details pages with stock availability
+- Wholesale vs retail pricing display based on customer type
+- Minimum order quantity validation
+- Image upload and management for products
+
+#### 3. User Registration & Authentication
+- Customer type selection during signup (Retail/Wholesale/Pharmacy/Clinic)
+- Business registration with license verification for wholesale customers
+- Nigerian address fields (State, Local Government Area)
+- Phone number verification via SMS
+- Role-based access control
+
+#### 4. Shopping Cart & Checkout
+- Add/remove/update cart items with quantity validation
+- Different pricing tiers for wholesale vs retail customers
+- Bulk discount calculations for wholesale orders
+- Delivery options: Standard (₦500), Express (₦1000), Pickup (Free)
+- Customer information collection during checkout
+
+#### 5. Order Management System
+- Order creation and tracking workflow
+- Order status progression: Received → Processing → Ready → Dispatched → Delivered
+- Order history for customers
+- Admin interface for order processing and status updates
+
+#### 6. Admin Dashboard Foundation
+- Order management interface for staff
+- Basic inventory tracking and updates
+- Customer management and verification
+- Daily/weekly/monthly sales statistics
+
+### Phase 2: Enhanced Operations (Months 4-6) - ₦1.5M Budget
+**Priority: High (Should Have)**
+
+#### 7. Payment Gateway Integration
+- Primary: Flutterwave (1.4% + ₦50 per transaction)
+- Secondary: OPay (1.5% per transaction)
+- Tertiary: Paystack (1.5% + ₦100 per transaction)
+- Payment method fallback system with retry logic
+- Webhook handlers for payment confirmations
+- Cash on Delivery option for local Benin City orders
+
+#### 8. Notification System
+- WhatsApp Business API integration for order updates
+- SMS gateway for payment and delivery notifications
+- Order confirmation and status update templates
+- Admin alerts for new orders and low stock
+- Automated customer communication workflow
+
+#### 9. Inventory Management
+- Real-time stock level tracking
+- Low stock alerts and reorder point calculations
+- Bulk product updates and management
+- Expiry date tracking for medicines
+- Stock movement logging and audit trail
+
+#### 10. Customer Credit Management
+- Credit limits and approval workflow for wholesale customers
+- 30-day payment terms for approved businesses
+- Credit utilization tracking and payment reminders
+- Invoice generation and management
+
+#### 11. Mobile Optimization
+- Progressive Web App (PWA) functionality
+- Mobile-responsive design for all components
+- Touch-friendly interface elements
+- Offline caching for product catalog
+- Optimized for Nigerian mobile networks (low bandwidth)
+
+#### 12. Basic Reporting & Analytics
+- Daily sales reports and revenue tracking
+- Inventory turnover and stock reports
+- Customer order history and preferences
+- Payment method performance analytics
+- Top-selling products identification
+
+### Phase 3: Growth Features (Months 7-12) - ₦2M Budget
+**Priority: Medium (Nice to Have)**
+
+#### 13. Mobile Application
+- React Native customer app for iOS/Android
+- Push notifications for order updates
+- Offline functionality for product browsing
+- Mobile-specific payment integration
+
+#### 14. Advanced Analytics
+- Customer behavior tracking and insights
+- Seasonal demand forecasting
+- Profit margin analysis by product
+- Supplier performance metrics
+- Predictive inventory management
+
+#### 15. Customer Loyalty Program
+- Points-based reward system
+- Referral program with bonuses
+- Customer tiers with special pricing
+- Birthday and anniversary discounts
+
+#### 16. Delivery Integration
+- Integration with local delivery services
+- Real-time delivery tracking
+- Delivery partner management
+- Performance metrics and optimization
+
+## Technical Requirements
+
+### Architecture
+- Built on existing Supastarter Next.js foundation
+- PostgreSQL database with Prisma ORM
+- Multi-tenant organization support
+- API-first design with proper error handling
+
+### Nigerian-Specific Requirements
+- NGN currency throughout the system
+- State and LGA fields for addresses
+- NAFDAC registration tracking for medicines
+- Business license verification for wholesale accounts
+- Support for Nigerian payment methods and banks
+
+### Security & Compliance
+- Data encryption and secure payment processing
+- User authentication with role-based permissions
+- Audit logging for all transactions
+- Backup and disaster recovery procedures
+
+## Success Metrics
+- 100 online orders/month by Month 6
+- 300 online orders/month by Month 12
+- ₦2M monthly online revenue by end of Year 1
+- 80% customer satisfaction rate
+- 95%+ payment success rate
+- 50% repeat customer rate
+
+## Integration Requirements
+- Flutterwave, OPay, and Paystack payment gateways
+- WhatsApp Business API for notifications
+- SMS gateway for Nigeria (Termii or similar)
+- Nigerian banking system integration
+- Local delivery service APIs
+
+## Constraints & Assumptions
+- Budget limitation of ₦5M over 12 months
+- Focus on Benin City market initially
+- Nigerian internet connectivity challenges
+- Mobile-first user base (80% Android users)
+- Limited technical infrastructure in target market
+
+This PRD outlines the complete development roadmap for BenPharm Online, transforming a traditional pharmacy business into a modern digital platform serving the Nigerian pharmaceutical market.

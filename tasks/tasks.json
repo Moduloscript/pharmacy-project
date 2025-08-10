@@ -1,0 +1,198 @@
+{
+  "master": {
+    "name": "master",
+    "description": "Main development branch for BenPharm Online",
+    "metadata": {
+      "projectName": "BenPharm Online - Pharmacy Management Platform",
+      "description": "Comprehensive pharmacy management SaaS platform for Nigerian pharmacies",
+      "version": "1.0.0",
+      "created": "2025-01-07",
+      "budget": "₦5,000,000",
+      "timeline": "12 months",
+      "currency": "NGN"
+    },
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Database Schema Implementation",
+        "description": "Extend existing Prisma schema with pharmacy-specific models for products, orders, customers, and payments",
+        "details": "Create Product model with Nigerian medicine details (NAFDAC registration, wholesale/retail pricing), Order model with Nigerian address fields (State, LGA), Customer model with business verification, and Payment tracking models. Files to modify: packages/database/prisma/schema.prisma",
+        "status": "done",
+        "priority": "high",
+        "phase": "Phase 1",
+        "budget": "₦200,000",
+        "timeline": "2 weeks",
+        "dependencies": [],
+        "files": [
+          "packages/database/prisma/schema.prisma"
+        ],
+        "category": "database"
+      },
+      {
+        "id": 2,
+        "title": "Product Catalog System",
+        "description": "Build comprehensive product management system with search, filtering, and inventory tracking",
+        "details": "Create API endpoints for product management, frontend components for product catalog, search functionality, and admin interface. Budget includes development time for API routes, React components, and product management features.",
+        "status": "done",
+        "priority": "high",
+        "phase": "Phase 1",
+        "budget": "₦300,000",
+        "timeline": "3 weeks",
+        "dependencies": [1],
+        "files": [
+          "packages/api/src/routes/products.ts",
+          "apps/web/app/(saas)/app/(account)/products/page.tsx",
+          "apps/web/modules/saas/products/components/ProductCatalog.tsx",
+          "apps/web/modules/saas/products/components/ProductCard.tsx",
+          "apps/web/modules/saas/products/components/ProductSearch.tsx"
+        ],
+        "category": "frontend"
+      },
+      {
+        "id": 3,
+        "title": "Enhanced User Registration & Authentication",
+        "description": "Extend authentication system for retail and wholesale customers with business verification",
+        "details": "Add customer type selection, business registration fields, Nigerian address fields (State, LGA), phone verification via SMS, and role-based access control. Modify existing auth components and create new business signup forms.",
+        "status": "done",
+        "priority": "high",
+        "phase": "Phase 1",
+        "budget": "₦200,000",
+        "timeline": "2 weeks",
+        "dependencies": [1],
+        "files": [
+          "apps/web/modules/saas/auth/components/SignupForm.tsx",
+          "apps/web/modules/saas/auth/components/BusinessSignupForm.tsx",
+          "packages/auth/lib/user.ts"
+        ],
+        "category": "authentication"
+      },
+      {
+        "id": 4,
+        "title": "Shopping Cart & Checkout System",
+        "description": "Implement complete shopping cart functionality with wholesale/retail pricing and Nigerian delivery options",
+        "details": "Create cart state management with Jotai, quantity validation, different pricing tiers, bulk discounts, and delivery options (Standard ₦500, Express ₦1000, Pickup Free). Include cart persistence and checkout flow.",
+        "status": "done",
+        "priority": "high",
+        "phase": "Phase 1",
+        "budget": "₦250,000",
+        "timeline": "2 weeks",
+        "dependencies": [2],
+        "files": [
+          "apps/web/app/(saas)/app/(account)/cart/page.tsx",
+          "apps/web/modules/saas/cart/components/ShoppingCart.tsx",
+          "packages/api/src/routes/cart.ts"
+        ],
+        "category": "ecommerce"
+      },
+      {
+        "id": 5,
+        "title": "Order Management System",
+        "description": "Complete order processing workflow with Nigerian-specific features and status tracking",
+        "details": "Implement order creation, status workflow (Received → Processing → Ready → Dispatched → Delivered), order history, and admin management interface. Include Nigerian delivery integration and customer communication.",
+        "status": "done",
+        "priority": "high",
+        "phase": "Phase 1",
+        "budget": "₦350,000",
+        "timeline": "3 weeks",
+        "dependencies": [4],
+        "files": [
+          "apps/web/app/(saas)/app/(account)/checkout/page.tsx",
+          "apps/web/app/(saas)/app/(account)/orders/page.tsx",
+          "apps/web/modules/saas/orders/components/CheckoutForm.tsx",
+          "packages/api/src/routes/orders.ts"
+        ],
+        "category": "orders"
+      },
+      {
+        "id": 6,
+        "title": "Admin Dashboard Foundation",
+        "description": "Build comprehensive admin interface for order, inventory, and customer management",
+        "details": "Create admin dashboard with key metrics, order management interface, basic inventory tracking, customer management panel, and daily/weekly/monthly statistics display.",
+        "status": "done",
+        "priority": "high",
+        "phase": "Phase 1",
+        "budget": "₦200,000",
+        "timeline": "2 weeks",
+        "dependencies": [5],
+        "files": [
+          "apps/web/app/(saas)/app/(account)/admin/page.tsx",
+          "apps/web/modules/saas/admin/components/AdminDashboard.tsx",
+          "apps/web/modules/saas/admin/components/OrdersTable.tsx"
+        ],
+        "category": "admin"
+      },
+      {
+        "id": 7,
+        "title": "Payment Gateway Integration - Flutterwave Primary",
+        "description": "Integrate Flutterwave as primary payment gateway with OPay and Paystack as fallback options",
+        "details": "Implement Flutterwave SDK (1.4% + ₦50 fees), OPay SDK (1.5% fees), Paystack SDK (1.5% + ₦100 fees), payment selection UI, webhook handlers, retry logic, and fallback system for Nigerian market.",
+        "status": "pending",
+        "priority": "high",
+        "phase": "Phase 2",
+        "budget": "₦400,000",
+        "timeline": "3 weeks",
+        "dependencies": [5],
+        "files": [
+          "packages/payments/provider/flutterwave/index.ts",
+          "packages/payments/provider/opay/index.ts",
+          "apps/web/modules/saas/payments/components/FlutterwaveCheckout.tsx",
+          "packages/api/src/routes/payments/flutterwave.ts"
+        ],
+        "category": "payments"
+      },
+      {
+        "id": 8,
+        "title": "WhatsApp & SMS Notification System",
+        "description": "Implement automated customer communication via WhatsApp Business API and SMS gateway",
+        "details": "Integrate WhatsApp Business API and Nigerian SMS gateway (Termii), create notification templates for order confirmations, payment updates, delivery alerts, and admin notifications.",
+        "status": "pending",
+        "priority": "high",
+        "phase": "Phase 2",
+        "budget": "₦200,000",
+        "timeline": "2 weeks",
+        "dependencies": [7],
+        "files": [
+          "packages/mail/src/provider/whatsapp.ts",
+          "packages/mail/src/provider/sms.ts",
+          "packages/api/src/routes/notifications.ts"
+        ],
+        "category": "notifications"
+      },
+      {
+        "id": 9,
+        "title": "Inventory Management System",
+        "description": "Real-time stock tracking with low stock alerts and expiry date management for medicines",
+        "details": "Implement inventory tracking, low stock alerts, bulk product updates, expiry date tracking for medicines, stock movement logging, and reorder point calculations.",
+        "status": "pending",
+        "priority": "high",
+        "phase": "Phase 2",
+        "budget": "₦300,000",
+        "timeline": "3 weeks",
+        "dependencies": [6],
+        "files": [
+          "apps/web/modules/saas/inventory/components/InventoryList.tsx",
+          "apps/web/modules/saas/inventory/components/LowStockAlerts.tsx",
+          "packages/api/src/routes/inventory.ts"
+        ],
+        "category": "inventory"
+      },
+      {
+        "id": 10,
+        "title": "Environment Configuration & Setup",
+        "description": "Configure development environment with all required services and API keys",
+        "details": "Set up local development environment, database connections, payment gateway credentials, SMS and WhatsApp API keys, file storage configuration, and email settings for Nigerian market.",
+        "status": "done",
+        "priority": "high",
+        "phase": "Setup",
+        "budget": "₦50,000",
+        "timeline": "1 week",
+        "dependencies": [],
+        "files": [
+          ".env.local",
+          "packages/database/prisma/migrations/"
+        ],
+        "category": "setup"
+      }
+    ]
+  }
+}
