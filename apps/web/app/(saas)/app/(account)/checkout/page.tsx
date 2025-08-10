@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import { CheckoutForm } from '@/modules/saas/orders/components/CheckoutForm'
+import { EnhancedCheckoutForm } from '@/modules/saas/orders/components/EnhancedCheckoutForm'
 import { redirect } from 'next/navigation'
 
 export const metadata: Metadata = {
@@ -31,7 +31,7 @@ export default function CheckoutPage({ searchParams }: CheckoutPageProps) {
           </p>
         </div>
         
-        <CheckoutForm 
+        <EnhancedCheckoutForm 
           onSuccess={handleCheckoutSuccess}
           onCancel={handleCheckoutCancel}
         />

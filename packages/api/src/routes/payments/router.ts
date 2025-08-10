@@ -4,6 +4,7 @@ import { PurchaseSchema, db } from "@repo/database";
 import { logger } from "@repo/logs";
 import {
 	createCheckoutLink,
+	createEnhancedCheckoutLink,
 	createCustomerPortalLink,
 	getCustomerIdFromEntity,
 } from "@repo/payments";
@@ -133,7 +134,8 @@ export const paymentsRouter = new Hono()
 					: undefined;
 
 			try {
-				const checkoutLink = await createCheckoutLink({
+				// Use enhanced checkout link for better Nigerian payment support
+				const checkoutLink = await createEnhancedCheckoutLink({
 					type,
 					productId,
 					email: user.email,
