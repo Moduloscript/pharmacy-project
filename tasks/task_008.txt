@@ -1,0 +1,11 @@
+# Task ID: 8
+# Title: WhatsApp & SMS Notification System
+# Status: pending
+# Dependencies: 7
+# Priority: high
+# Description: Implement automated customer communication via WhatsApp Business API and SMS gateway
+# Details:
+Integrate WhatsApp Business API and Nigerian SMS gateway (Termii), create notification templates for order confirmations, payment updates, delivery alerts, and admin notifications.
+
+# Test Strategy:
+

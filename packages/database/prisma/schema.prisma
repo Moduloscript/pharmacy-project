@@ -1,0 +1,520 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator zod {
+  provider         = "zod-prisma-types"
+  output           = "../src/zod"
+  addIncludeType   = "false"
+  addSelectType    = "false"
+  createInputTypes = "false"
+}
+
+generator json {
+  provider = "prisma-json-types-generator"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                 String       @id
+  name               String
+  email              String       @unique
+  emailVerified      Boolean
+  image              String?
+  createdAt          DateTime
+  updatedAt          DateTime
+  username           String?      @unique
+  password           String?      // Added for better-auth email/password authentication  
+  role               String?
+  banned             Boolean?
+  banReason          String?
+  banExpires         DateTime?
+  onboardingComplete Boolean      @default(false)
+  paymentsCustomerId String?
+  locale             String?
+  aiChats            AiChat[]
+  purchases          Purchase[]
+  accounts           Account[]
+  customer           Customer?
+  invitations        Invitation[]
+  memberships        Member[]
+  passkeys           Passkey[]
+  sessions           Session[]
+
+  @@map("user")
+}
+
+model Session {
+  id                   String   @id
+  expiresAt            DateTime
+  ipAddress            String?
+  userAgent            String?
+  userId               String
+  impersonatedBy       String?
+  activeOrganizationId String?
+  token                String   @unique
+  createdAt            DateTime
+  updatedAt            DateTime
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  expiresAt             DateTime?
+  password              String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  createdAt             DateTime
+  updatedAt             DateTime
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verification")
+}
+
+model Passkey {
+  id           String    @id
+  name         String?
+  publicKey    String
+  userId       String
+  credentialID String
+  counter      Int
+  deviceType   String
+  backedUp     Boolean
+  transports   String?
+  createdAt    DateTime?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("passkey")
+}
+
+model Organization {
+  id                 String       @id
+  name               String
+  slug               String?      @unique
+  logo               String?
+  createdAt          DateTime
+  metadata           String?
+  paymentsCustomerId String?
+  aiChats            AiChat[]
+  purchases          Purchase[]
+  invitations        Invitation[]
+  members            Member[]
+
+  @@map("organization")
+}
+
+model Member {
+  id             String       @id
+  organizationId String
+  userId         String
+  role           String
+  createdAt      DateTime
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@map("member")
+}
+
+model Invitation {
+  id             String       @id
+  organizationId String
+  email          String
+  role           String?
+  status         String
+  expiresAt      DateTime
+  inviterId      String
+  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([inviterId])
+  @@index([organizationId])
+  @@map("invitation")
+}
+
+model Purchase {
+  id             String        @id @default(cuid())
+  organizationId String?
+  userId         String?
+  type           PurchaseType
+  customerId     String
+  subscriptionId String?       @unique
+  productId      String
+  status         String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+model AiChat {
+  id             String        @id @default(cuid())
+  organizationId String?
+  userId         String?
+  title          String?
+  /// [AIChatMessages]
+  messages       Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([userId])
+}
+
+model Customer {
+  id                    String                     @id @default(cuid())
+  userId                String                     @unique
+  customerType          CustomerType
+  phone                 String
+  address               String?
+  city                  String?
+  state                 String?
+  lga                   String?
+  country               String                     @default("Nigeria")
+  businessName          String?
+  businessAddress       String?
+  pharmacyLicense       String?
+  taxId                 String?
+  businessPhone         String?
+  businessEmail         String?
+  verificationStatus    BusinessVerificationStatus @default(PENDING)
+  verificationDocuments String?
+  creditLimit           Decimal?                   @db.Decimal(10, 2)
+  creditTermDays        Int?                       @default(30)
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+  cartItems             CartItem[]
+  user                  User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders                Order[]
+  payments              Payment[]
+
+  @@index([customerType])
+  @@index([phone])
+  @@index([state, lga])
+  @@index([verificationStatus])
+  @@map("customer")
+}
+
+model Product {
+  id                     String              @id @default(cuid())
+  name                   String
+  description            String?
+  category               ProductCategory
+  genericName            String?
+  brandName              String?
+  manufacturer           String?
+  ndcNumber              String?
+  nafdacNumber           String?
+  strength               String?
+  dosageForm             String?
+  activeIngredient       String?
+  retailPrice            Decimal             @db.Decimal(10, 2)
+  wholesalePrice         Decimal?            @db.Decimal(10, 2)
+  cost                   Decimal?            @db.Decimal(10, 2)
+  sku                    String              @unique
+  barcode                String?
+  stockQuantity          Int                 @default(0)
+  minStockLevel          Int                 @default(10)
+  maxStockLevel          Int?
+  packSize               String?
+  unit                   String              @default("piece")
+  weight                 Decimal?            @db.Decimal(8, 2)
+  dimensions             String?
+  isActive               Boolean             @default(true)
+  isPrescriptionRequired Boolean             @default(false)
+  isRefrigerated         Boolean             @default(false)
+  isControlled           Boolean             @default(false)
+  slug                   String              @unique
+  images                 Json?    // JSON array of image objects with URLs, keys, metadata
+  imageUrl               String?  // Backward compatibility - primary image URL
+  tags                   String?
+  hasExpiry              Boolean             @default(true)
+  shelfLifeMonths        Int?
+  minOrderQuantity       Int                 @default(1)
+  bulkPricing            String?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  cartItems              CartItem[]
+  inventoryMovements     InventoryMovement[]
+  orderItems             OrderItem[]
+
+  @@index([category])
+  @@index([isActive])
+  @@map("product")
+}
+
+model CartItem {
+  id         String   @id @default(cuid())
+  customerId String
+  productId  String
+  quantity   Int
+  unitPrice  Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, productId])
+  @@index([productId])
+  @@map("cart_item")
+}
+
+model Order {
+  id                  String          @id @default(cuid())
+  orderNumber         String          @unique
+  customerId          String
+  status              OrderStatus     @default(RECEIVED)
+  deliveryMethod      DeliveryMethod  @default(STANDARD)
+  deliveryAddress     String
+  deliveryCity        String
+  deliveryState       String
+  deliveryLGA         String?
+  deliveryPhone       String
+  deliveryNotes       String?
+  subtotal            Decimal         @db.Decimal(10, 2)
+  deliveryFee         Decimal         @default(0) @db.Decimal(10, 2)
+  discount            Decimal         @default(0) @db.Decimal(10, 2)
+  tax                 Decimal         @default(0) @db.Decimal(10, 2)
+  total               Decimal         @db.Decimal(10, 2)
+  paymentStatus       PaymentStatus   @default(PENDING)
+  paymentMethod       PaymentMethod?
+  paymentReference    String?
+  purchaseOrderNumber String?
+  creditTerms         Boolean         @default(false)
+  estimatedDelivery   DateTime?
+  actualDelivery      DateTime?
+  internalNotes       String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  customer            Customer        @relation(fields: [customerId], references: [id])
+  orderItems          OrderItem[]
+  orderTracking       OrderTracking[]
+  payments            Payment[]
+
+  @@index([createdAt])
+  @@index([customerId])
+  @@index([deliveryState])
+  @@index([paymentStatus])
+  @@index([status])
+  @@map("order")
+}
+
+model OrderItem {
+  id                 String   @id @default(cuid())
+  orderId            String
+  productId          String
+  quantity           Int
+  unitPrice          Decimal  @db.Decimal(10, 2)
+  subtotal           Decimal  @db.Decimal(10, 2)
+  productName        String
+  productSKU         String
+  productDescription String?
+  createdAt          DateTime @default(now())
+  order              Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product            Product  @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_item")
+}
+
+model OrderTracking {
+  id        String      @id @default(cuid())
+  orderId   String
+  status    OrderStatus
+  notes     String?
+  timestamp DateTime    @default(now())
+  updatedBy String?
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_tracking")
+}
+
+model Payment {
+  id               String        @id @default(cuid())
+  customerId       String
+  orderId          String?
+  amount           Decimal       @db.Decimal(10, 2)
+  currency         String        @default("NGN")
+  method           PaymentMethod
+  status           PaymentStatus @default(PENDING)
+  gatewayReference String?
+  transactionId    String?
+  gatewayResponse  String?
+  gatewayFee       Decimal?      @db.Decimal(10, 2)
+  appFee           Decimal?      @db.Decimal(10, 2)
+  paymentUrl       String?
+  webhookData      String?
+  failureReason    String?
+  retryCount       Int           @default(0)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  completedAt      DateTime?
+  customer         Customer      @relation(fields: [customerId], references: [id])
+  order            Order?        @relation(fields: [orderId], references: [id])
+
+  @@index([customerId])
+  @@index([gatewayReference])
+  @@index([orderId])
+  @@index([status])
+  @@map("payment")
+}
+
+model InventoryMovement {
+  id            String    @id @default(cuid())
+  productId     String
+  type          String
+  quantity      Int
+  reason        String?
+  reference     String?
+  previousStock Int
+  newStock      Int
+  batchNumber   String?
+  expiryDate    DateTime?
+  userId        String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  product       Product   @relation(fields: [productId], references: [id])
+
+  @@index([createdAt])
+  @@index([productId])
+  @@map("inventory_movement")
+}
+
+model Notification {
+  id              String    @id @default(cuid())
+  customerId      String?
+  orderId         String?
+  type            String
+  channel         String
+  recipient       String
+  subject         String?
+  message         String
+  status          String    @default("PENDING")
+  gatewayResponse String?
+  retryCount      Int       @default(0)
+  maxRetries      Int       @default(3)
+  createdAt       DateTime  @default(now())
+  sentAt          DateTime?
+  deliveredAt     DateTime?
+
+  @@index([channel])
+  @@index([status])
+  @@index([type])
+  @@map("notification")
+}
+
+model NigerianLocation {
+  id         String    @id
+  state      String
+  lga        String
+  zone       String?
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+
+  @@map("nigerian_locations")
+}
+
+enum PurchaseType {
+  SUBSCRIPTION
+  ONE_TIME
+}
+
+enum CustomerType {
+  RETAIL
+  WHOLESALE
+  ADMIN
+}
+
+enum ProductCategory {
+  PAIN_RELIEF
+  ANTIBIOTICS
+  VITAMINS
+  SUPPLEMENTS
+  BABY_CARE
+  FIRST_AID
+  DIABETES_CARE
+  HEART_HEALTH
+  RESPIRATORY
+  DIGESTIVE
+  SKIN_CARE
+  EYE_CARE
+  CONTRACEPTIVES
+  PRESCRIPTION
+  OTHER
+}
+
+enum OrderStatus {
+  RECEIVED
+  PROCESSING
+  READY
+  DISPATCHED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  FLUTTERWAVE
+  OPAY
+  PAYSTACK
+  CASH_ON_DELIVERY
+  BANK_TRANSFER
+}
+
+enum DeliveryMethod {
+  STANDARD
+  EXPRESS
+  PICKUP
+}
+
+enum BusinessVerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}

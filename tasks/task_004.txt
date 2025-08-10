@@ -1,0 +1,11 @@
+# Task ID: 4
+# Title: Shopping Cart & Checkout System
+# Status: pending
+# Dependencies: 2
+# Priority: high
+# Description: Implement complete shopping cart functionality with wholesale/retail pricing and Nigerian delivery options
+# Details:
+Create cart state management with Jotai, quantity validation, different pricing tiers, bulk discounts, and delivery options (Standard ₦500, Express ₦1000, Pickup Free). Include cart persistence and checkout flow.
+
+# Test Strategy:
+

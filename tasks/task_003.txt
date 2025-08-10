@@ -1,0 +1,11 @@
+# Task ID: 3
+# Title: Enhanced User Registration & Authentication
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Extend authentication system for retail and wholesale customers with business verification
+# Details:
+Add customer type selection, business registration fields, Nigerian address fields (State, LGA), phone verification via SMS, and role-based access control. Modify existing auth components and create new business signup forms.
+
+# Test Strategy:
+

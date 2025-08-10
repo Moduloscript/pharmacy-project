@@ -1,0 +1,11 @@
+# Task ID: 7
+# Title: Payment Gateway Integration - Flutterwave Primary
+# Status: pending
+# Dependencies: 5
+# Priority: high
+# Description: Integrate Flutterwave as primary payment gateway with OPay and Paystack as fallback options
+# Details:
+Implement Flutterwave SDK (1.4% + ₦50 fees), OPay SDK (1.5% fees), Paystack SDK (1.5% + ₦100 fees), payment selection UI, webhook handlers, retry logic, and fallback system for Nigerian market.
+
+# Test Strategy:
+
