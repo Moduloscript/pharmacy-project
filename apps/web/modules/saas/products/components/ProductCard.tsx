@@ -27,10 +27,15 @@ export function ProductCard({
   onAddToCart,
   className 
 }: ProductCardProps) {
-  const stockStatus = getStockStatus(product.stock_quantity);
-  const prescriptionBadge = getPrescriptionBadge(product.is_prescription_required);
+  // Validate product object and provide defaults
+  const stockQuantity = product?.stock_quantity ?? 0;
+  const stockStatus = getStockStatus(stockQuantity);
+  const prescriptionBadge = getPrescriptionBadge(product?.is_prescription_required ?? false);
   
-  const price = showWholesalePrice ? product.wholesale_price : product.retail_price;
+  // Ensure prices are valid numbers, default to 0 if undefined/null
+  const wholesalePrice = product?.wholesale_price ?? 0;
+  const retailPrice = product?.retail_price ?? 0;
+  const price = showWholesalePrice ? wholesalePrice : retailPrice;
   const priceLabel = showWholesalePrice ? 'Wholesale' : 'Retail';
 
   return (
@@ -146,7 +151,7 @@ export function ProductCard({
             {showWholesalePrice && (
               <div className="text-right">
                 <p className="text-sm text-gray-600">
-                  Retail: {formatPrice(product.retail_price)}
+                  Retail: {formatPrice(retailPrice)}
                 </p>
               </div>
             )}
@@ -189,10 +194,10 @@ export function ProductCard({
               variant="primary"
               size="sm"
               className="flex-1"
-              disabled={product.stock_quantity === 0}
+              disabled={stockQuantity === 0}
               onClick={() => onAddToCart(product)}
             >
-              {product.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+              {stockQuantity === 0 ? 'Out of Stock' : 'Add to Cart'}
             </Button>
           )}
         </div>
