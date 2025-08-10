@@ -222,7 +222,11 @@ class ProductsAPI {
 export const productsAPI = new ProductsAPI();
 
 // Utility functions
-export function formatPrice(price: number, currency = '₦'): string {
+export function formatPrice(price: number | null | undefined, currency = '₦'): string {
+  // Handle undefined, null, or invalid price values
+  if (price === undefined || price === null || isNaN(price)) {
+    return `${currency}0`;
+  }
   return `${currency}${price.toLocaleString('en-NG')}`;
 }
 
