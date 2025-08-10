@@ -11,7 +11,7 @@ import { cn } from '@ui/lib';
 import { Product } from '../lib/api';
 import { useSearchProducts } from '../lib/queries';
 import { searchQueryAtom, setSearchFocusAtom } from '../lib/store';
-import { useDebouncedValue } from 'usehooks-ts';
+import { useDebounceValue } from 'usehooks-ts';
 
 interface ProductSearchProps {
   onProductSelect?: (product: Product) => void;
@@ -34,7 +34,7 @@ export function ProductSearch({
   const [, setSearchFocus] = useAtom(setSearchFocusAtom);
   
   // Debounce the search query
-  const debouncedQuery = useDebouncedValue(query, 300);
+  const [debouncedQuery] = useDebounceValue(query, 300);
   
   // Use TanStack Query for search
   const { 
