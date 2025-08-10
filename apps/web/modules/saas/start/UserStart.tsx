@@ -68,9 +68,10 @@ export default function UserStart() {
 	// BenPharm Nigerian Pharmaceutical Dashboard - Enhanced UX with Dark Mode Support
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-			<div className="space-y-8 animate-in fade-in duration-500">
+			{/* Main Container with Proper Padding */}
+			<div className="max-w-7xl mx-auto px-6 py-8 lg:px-8 lg:py-10 space-y-10 animate-in fade-in duration-500">
 				{/* Enhanced Hero Welcome Section with Dark Mode */}
-				<div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-blue-500 to-teal-400 dark:from-blue-800 dark:via-blue-700 dark:to-teal-700 p-8 text-white shadow-2xl dark:shadow-black/50">
+				<div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-blue-500 to-teal-400 dark:from-blue-800 dark:via-blue-700 dark:to-teal-700 p-10 lg:p-12 text-white shadow-2xl dark:shadow-black/50">
 					{/* Animated background pattern */}
 					<div className="absolute inset-0 opacity-10">
 						<div className="absolute -left-4 -top-4 h-72 w-72 animate-pulse rounded-full bg-white/20 blur-3xl" />
@@ -113,8 +114,8 @@ export default function UserStart() {
 								</div>
 							</div>
 							
-							{/* User info card */}
-							<div className="rounded-xl bg-white/10 backdrop-blur-sm p-4 border border-white/20">
+						{/* User info card */}
+						<div className="rounded-xl bg-white/10 backdrop-blur-sm p-5 border border-white/20">
 								<div className="flex items-center gap-4">
 									<div className="relative">
 										<div className="h-14 w-14 rounded-full bg-white/20 flex items-center justify-center">
@@ -144,9 +145,9 @@ export default function UserStart() {
 				</div>
 
 				{/* Quick Actions Section with Enhanced UX */}
-				<div className="space-y-6">
+				<div className="space-y-8">
 					{/* Section Header with Better Alignment */}
-					<div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg px-4 py-3 shadow-sm border border-gray-200 dark:border-gray-700">
+					<div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl px-6 py-4 shadow-sm border border-gray-200 dark:border-gray-700">
 						<div className="flex items-center gap-3">
 							<div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
 								<ZapIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -160,8 +161,8 @@ export default function UserStart() {
 						)}
 					</div>
 
-					{/* Action Cards Grid */}
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+					{/* Action Cards Grid with Better Spacing */}
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 						{/* Browse Products - Primary Action */}
 						<Link href="/app/products">
 							<Card 
@@ -175,7 +176,7 @@ export default function UserStart() {
 								{/* Gradient background on hover */}
 								<div className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 opacity-0 group-hover:opacity-100 transition-opacity" />
 								
-								<div className="relative p-6">
+								<div className="relative p-7">
 									<div className="flex items-start justify-between mb-4">
 										<div className="p-3 bg-gradient-to-br from-green-400 to-emerald-500 dark:from-green-600 dark:to-emerald-700 rounded-xl shadow-lg">
 											<PackageIcon className="h-7 w-7 text-white" />
@@ -378,49 +379,96 @@ export default function UserStart() {
 					</div>
 				</div>
 
-				{/* Featured Products Carousel */}
-				<div className="space-y-4">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-2">
-							<StarIcon className="h-5 w-5 text-yellow-500" />
-							<h2 className="text-xl font-semibold text-gray-900">Featured Today</h2>
+				{/* Featured Products Section with Enhanced UX */}
+				<div className="space-y-8">
+					{/* Section Header with Professional Styling */}
+					<div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl px-6 py-4 shadow-sm border border-gray-200 dark:border-gray-700">
+						<div className="flex items-center gap-3">
+							<div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+								<StarIcon className="h-5 w-5 text-amber-600 dark:text-amber-500" />
+							</div>
+							<h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Featured Today</h2>
 						</div>
-						<Link href="/app/products" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+						<Link 
+							href="/app/products" 
+							className="group flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium text-sm transition-all duration-200 border border-gray-200 dark:border-gray-600"
+						>
 							View all
-							<ArrowRightIcon className="h-4 w-4" />
+							<ArrowRightIcon className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
 						</Link>
 					</div>
 					
-					<div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-						{/* Featured Product Cards */}
+					{/* Featured Product Cards Grid with Better Spacing */}
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 						{[
-							{ name: "Paracetamol 500mg", price: "₦250", discount: "15%", category: "Pain Relief" },
-							{ name: "Vitamin C 1000mg", price: "₦1,200", discount: "20%", category: "Vitamins" },
-							{ name: "Amoxicillin 500mg", price: "₦800", discount: "10%", category: "Antibiotics" },
-							{ name: "Insulin Pen", price: "₦5,500", discount: "5%", category: "Diabetes Care" }
+							{ name: "Paracetamol 500mg", price: "₦250", oldPrice: "₦295", discount: "15%", category: "Pain Relief", stock: "In Stock", color: "from-slate-200 to-blue-200 dark:from-slate-700 dark:to-blue-900" },
+							{ name: "Vitamin C 1000mg", price: "₦1,200", oldPrice: "₦1,500", discount: "20%", category: "Vitamins", stock: "Limited", color: "from-amber-100 to-orange-200 dark:from-amber-900 dark:to-orange-900" },
+							{ name: "Amoxicillin 500mg", price: "₦800", oldPrice: "₦890", discount: "10%", category: "Antibiotics", stock: "In Stock", color: "from-emerald-100 to-teal-200 dark:from-emerald-900 dark:to-teal-900" },
+							{ name: "Insulin Pen", price: "₦5,500", oldPrice: "₦5,790", discount: "5%", category: "Diabetes Care", stock: "Available", color: "from-purple-100 to-indigo-200 dark:from-purple-900 dark:to-indigo-900" }
 						].map((product, index) => (
-							<Card key={index} className="group relative overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer">
-								{/* Discount Badge */}
-								<div className="absolute top-2 right-2 z-10">
-									<Badge className="bg-red-500 text-white">
-										<PercentIcon className="h-3 w-3 mr-1" />
-										{product.discount} OFF
+							<Card 
+								key={index} 
+								className="group relative overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-lg transition-all duration-300 cursor-pointer"
+							>
+								{/* Discount Badge - Refined */}
+								<div className="absolute top-3 right-3 z-10">
+									<Badge className="bg-rose-500 dark:bg-rose-600 text-white font-semibold px-2 py-0.5 text-xs shadow-sm">
+										<PercentIcon className="h-3 w-3 mr-1 inline" />
+										{product.discount}
+									</Badge>
+								</div>
+
+								{/* Stock Indicator */}
+								<div className="absolute top-3 left-3 z-10">
+									<Badge className={cn(
+										"text-xs font-medium px-2 py-0.5",
+										product.stock === "Limited" 
+											? "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
+											: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
+									)}>
+										{product.stock}
 									</Badge>
 								</div>
 								
-								<div className="p-4">
-									{/* Product Image Placeholder */}
-									<div className="h-24 w-full bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg mb-3 flex items-center justify-center group-hover:scale-105 transition-transform">
-										<PillIcon className="h-12 w-12 text-gray-400" />
+								<div className="p-6">
+									{/* Product Image Placeholder with Subtle Professional Design */}
+									<div className={cn(
+										"h-32 w-full rounded-xl mb-4 flex items-center justify-center group-hover:scale-[1.02] transition-transform bg-gradient-to-br",
+										product.color
+									)}>
+										<div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full p-4 shadow-sm">
+											<PillIcon className="h-12 w-12 text-gray-600 dark:text-gray-400" />
+										</div>
 									</div>
 									
-									<div className="space-y-1">
-										<p className="text-xs text-gray-500">{product.category}</p>
-										<h4 className="font-semibold text-sm text-gray-900 line-clamp-1">{product.name}</h4>
-										<p className="text-lg font-bold text-blue-600">{product.price}</p>
+									{/* Product Details with Better Spacing */}
+									<div className="space-y-2">
+										{/* Category */}
+										<div className="flex items-center gap-2">
+											<span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+												{product.category}
+											</span>
+										</div>
+										
+										{/* Product Name */}
+										<h4 className="font-bold text-base text-gray-900 dark:text-gray-100 line-clamp-1">
+											{product.name}
+										</h4>
+										
+										{/* Price Section */}
+										<div className="flex items-baseline gap-2">
+											<p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+												{product.price}
+											</p>
+											<p className="text-sm text-gray-400 dark:text-gray-500 line-through">
+												{product.oldPrice}
+											</p>
+										</div>
 									</div>
 									
-									<Button className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white text-sm py-1">
+									{/* Add to Cart Button - Professional */}
+									<Button className="w-full mt-4 bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium text-sm py-2.5 shadow-sm hover:shadow-md transition-all duration-200">
+										<ShoppingCartIcon className="h-4 w-4 mr-2 inline" />
 										Add to Cart
 									</Button>
 								</div>
@@ -430,7 +478,7 @@ export default function UserStart() {
 				</div>
 
 				{/* Nigerian Market Features - Enhanced Design */}
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
 					{/* Features Card */}
 					<Card className="relative overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
 						<div className="absolute top-0 right-0 h-32 w-32 bg-green-200/30 rounded-full blur-3xl" />
@@ -488,22 +536,32 @@ export default function UserStart() {
 				</div>
 
 				{/* Quick Stats Footer */}
-				<div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+				<div className="mt-12 mb-8 grid grid-cols-2 md:grid-cols-4 gap-6">
 					{[
-						{ label: "Products Available", value: "10,000+", icon: PackageIcon, color: "from-blue-500 to-indigo-600" },
-						{ label: "Happy Customers", value: "5,000+", icon: HeartIcon, color: "from-red-500 to-pink-600" },
-						{ label: "Cities Covered", value: "36", icon: TruckIcon, color: "from-green-500 to-emerald-600" },
-						{ label: "Avg Delivery Time", value: "2 hrs", icon: Clock3Icon, color: "from-purple-500 to-indigo-600" }
+						{ label: "Products Available", value: "10,000+", icon: PackageIcon, bg: "from-blue-600/15 to-indigo-600/15", badgeBg: "bg-blue-500/15 dark:bg-blue-400/10", iconColor: "text-blue-400", textColor: "text-blue-600 dark:text-blue-300" },
+						{ label: "Happy Customers", value: "5,000+", icon: HeartIcon, bg: "from-rose-600/15 to-pink-600/15", badgeBg: "bg-rose-500/15 dark:bg-rose-400/10", iconColor: "text-rose-400", textColor: "text-rose-600 dark:text-rose-300" },
+						{ label: "Cities Covered", value: "36", icon: TruckIcon, bg: "from-emerald-600/15 to-teal-600/15", badgeBg: "bg-emerald-500/15 dark:bg-emerald-400/10", iconColor: "text-emerald-400", textColor: "text-emerald-600 dark:text-emerald-300" },
+						{ label: "Avg Delivery Time", value: "2 hrs", icon: Clock3Icon, bg: "from-purple-600/15 to-indigo-600/15", badgeBg: "bg-purple-500/15 dark:bg-purple-400/10", iconColor: "text-purple-400", textColor: "text-purple-600 dark:text-purple-300" }
 					].map((stat, index) => (
-						<Card key={index} className="relative overflow-hidden hover:shadow-md transition-shadow">
-							<div className={cn("absolute inset-0 bg-gradient-to-br opacity-5", stat.color)} />
-							<div className="p-4 text-center">
-								<stat.icon className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-								<p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-								<p className="text-xs text-gray-600">{stat.label}</p>
+						<Card
+							key={index}
+							className={cn(
+								"relative overflow-hidden rounded-2xl border border-white/20 dark:border-white/10 bg-white/60 dark:bg-gray-800/40 backdrop-blur-md shadow-lg transition-all",
+								"hover:shadow-xl hover:-translate-y-0.5"
+							)}
+						>
+							{/* subtle gradient tint */}
+							<div className={cn("absolute inset-0 bg-gradient-to-br", stat.bg)} />
+							{/* inner content */}
+							<div className="relative p-5 text-center space-y-2">
+								<div className={cn("mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full", stat.badgeBg)}>
+									<stat.icon className={cn("h-5 w-5", stat.iconColor)} />
+								</div>
+								<p className={cn("text-2xl font-extrabold tracking-tight", stat.textColor)}>{stat.value}</p>
+								<p className="text-xs text-gray-600 dark:text-gray-400">{stat.label}</p>
 							</div>
-					</Card>
-				))}
+						</Card>
+					))}
 				</div>
 			</div>
 		</div>
