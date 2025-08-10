@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { ProductCatalog } from '@/modules/saas/products/components/ProductCatalog';
+import { ProductCatalog } from '@saas/products/components/ProductCatalog';
 
 export const metadata: Metadata = {
   title: 'Product Catalog - BenPharm Online',
