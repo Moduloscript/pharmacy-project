@@ -207,6 +207,7 @@ export interface BulkOrderItem {
   productId: string;
   quantity: number;
   notes?: string;
+  unitPrice?: number;
 }
 
 export const bulkOrderAtom = atomWithStorage<BulkOrderItem[]>('bulk-order', []);
@@ -224,6 +225,7 @@ export const addToBulkOrderAtom = atom(
         ...updated[existingIndex],
         quantity: item.quantity,
         notes: item.notes,
+        unitPrice: item.unitPrice,
       };
       set(bulkOrderAtom, updated);
     } else {
@@ -232,6 +234,9 @@ export const addToBulkOrderAtom = atom(
     }
   }
 );
+
+// Update bulk order item (alias for addToBulkOrderAtom for backwards compatibility)
+export const updateBulkOrderAtom = addToBulkOrderAtom;
 
 export const removeFromBulkOrderAtom = atom(
   null,

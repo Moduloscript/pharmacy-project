@@ -4,18 +4,29 @@ export interface Product {
   id: string;
   name: string;
   generic_name?: string;
+  genericName?: string; // Add camelCase version
   brand_name?: string;
+  brandName?: string; // Add camelCase version
   category: string;
   description?: string;
   image_url?: string;
-  wholesale_price: number;
+  imageUrl?: string; // Add camelCase version
+  wholesale_price?: number;
+  wholesalePrice?: number; // Add camelCase version
   retail_price: number;
+  retailPrice?: number; // Add camelCase version
   stock_quantity: number;
-  min_order_qty: number;
-  is_prescription_required: boolean;
+  stockQuantity?: number; // Add camelCase version
+  min_order_qty?: number;
+  minOrderQuantity?: number; // Add camelCase version
+  is_prescription_required?: boolean;
+  isPrescriptionRequired?: boolean; // Add camelCase version
   nafdac_reg_number?: string;
-  created_at: string;
-  updated_at: string;
+  nafdacNumber?: string; // Add camelCase version
+  created_at?: string;
+  createdAt?: string; // Add camelCase version
+  updated_at?: string;
+  updatedAt?: string; // Add camelCase version
   organization?: {
     id: string;
     name: string;

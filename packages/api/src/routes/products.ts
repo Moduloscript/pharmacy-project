@@ -126,25 +126,47 @@ productsRouter.get('/', zValidator('query', productsQuerySchema), async (c) => {
       db.product.count({ where })
     ]);
 
-    // Format products with extracted image URLs
-    const formattedProducts = products.map(product => ({
-      ...product,
-      imageUrl: product.images ? (() => {
+    // Format products with extracted image URLs and refresh if needed
+    const formattedProducts = await Promise.all(products.map(async product => {
+      let imageUrl = null;
+      
+      // Handle both JSON string and already parsed arrays
+      if (product.images) {
         try {
-          const images = JSON.parse(product.images);
-          return Array.isArray(images) && images.length > 0 ? images[0]?.url : null;
-        } catch {
-          return null;
+          let images;
+          if (typeof product.images === 'string') {
+            images = JSON.parse(product.images);
+          } else {
+            images = product.images;
+          }
+          
+          if (Array.isArray(images) && images.length > 0) {
+            const firstImage = images[0];
+            if (firstImage?.url) {
+              // Check if URL looks like a Supabase signed URL that might be expired
+              if (firstImage.key && firstImage.url.includes('supabase.co')) {
+                try {
+                  const refreshedUrl = await imageService.refreshImageUrl(firstImage.key);
+                  imageUrl = refreshedUrl;
+                } catch (refreshError) {
+                  console.warn(`Failed to refresh URL for image ${firstImage.key}:`, refreshError);
+                  imageUrl = firstImage.url; // Use original if refresh fails
+                }
+              } else {
+                imageUrl = firstImage.url;
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error parsing product images for product ID', product.id, ':', error);
         }
-      })() : null,
-      image_url: product.images ? (() => {
-        try {
-          const images = JSON.parse(product.images);
-          return Array.isArray(images) && images.length > 0 ? images[0]?.url : null;
-        } catch {
-          return null;
-        }
-      })() : null,
+      }
+      
+      return {
+        ...product,
+        imageUrl,
+        image_url: imageUrl, // Add snake_case version for frontend compatibility
+      };
     }));
 
     return c.json({
@@ -168,30 +190,31 @@ productsRouter.get('/:id', async (c) => {
   
   try {
     const product = await db.product.findUnique({
-      where: { id },
-      include: {
-        organization: {
-          select: {
-            id: true,
-            name: true
-          }
-        }
-      }
+      where: { id }
     });
     
     if (!product) {
       return c.json({ error: 'Product not found' }, 404);
     }
     
-    // Extract primary image URL from images JSON (same logic as admin API)
-    const imageUrl = product.images ? (() => {
+    // Extract primary image URL from images JSON (improved logic)
+    let imageUrl = null;
+    if (product.images) {
       try {
-        const images = JSON.parse(product.images);
-        return Array.isArray(images) && images.length > 0 ? images[0]?.url : null;
-      } catch {
-        return null;
+        let images;
+        if (typeof product.images === 'string') {
+          images = JSON.parse(product.images);
+        } else {
+          images = product.images;
+        }
+        
+        if (Array.isArray(images) && images.length > 0) {
+          imageUrl = images[0]?.url || null;
+        }
+      } catch (error) {
+        console.error('Error parsing product images for single product ID', product.id, ':', error);
       }
-    })() : null;
+    }
     
     // Format product with extracted imageUrl
     const formattedProduct = {

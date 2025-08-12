@@ -6,11 +6,11 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 type Props = {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = params;
+  const { id } = await params;
   
   // In a real app, you would fetch the product details here to generate proper metadata
   // For now, we'll use a generic title
@@ -20,8 +20,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default function ProductDetailsPage({ params }: Props) {
-  const { id } = params;
+export default async function ProductDetailsPage({ params }: Props) {
+  const { id } = await params;
 
   if (!id) {
     notFound();
