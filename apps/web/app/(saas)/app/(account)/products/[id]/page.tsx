@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ProductDetails } from '@/modules/saas/products/components/ProductDetails';
+import { ProductDetails } from '@saas/products/components/ProductDetails';
 import { Button } from '@ui/components/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
