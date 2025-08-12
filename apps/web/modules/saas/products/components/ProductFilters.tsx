@@ -43,74 +43,142 @@ export function ProductFilters({ className }: ProductFiltersProps) {
     updateFilters({ [key]: value });
   };
 
-  // Filter sections configuration matching template
+  // Helper function to get category icons
+  const getCategoryIcon = (category: string) => {
+    const iconMap: { [key: string]: string } = {
+      'PAIN_RELIEF': '💊',
+      'ANTIBIOTICS': '🦠',
+      'VITAMINS': '🌟',
+      'SKINCARE': '🧴',
+      'BABY_CARE': '👶',
+      'FIRST_AID': '🩹',
+      'OTHER': '📋'
+    };
+    return iconMap[category] || '💊';
+  };
+
+  // Enhanced filter sections with icons and better styling
   const filterSections = [
     {
       id: 'category',
       name: 'Category',
+      icon: '🏷️',
+      description: 'Filter by product type',
       options: categories.map(cat => ({
         value: cat.name,
-        label: `${cat.name} (${cat.count})`
+        label: cat.name,
+        count: cat.count,
+        icon: getCategoryIcon(cat.name)
       }))
     },
     {
       id: 'price',
       name: 'Price Range',
+      icon: '💰',
+      description: 'Select your budget',
       options: [
-        { value: 'under-1000', label: 'Under ₦1,000' },
-        { value: '1000-5000', label: '₦1,000 - ₦5,000' },
-        { value: '5000-10000', label: '₦5,000 - ₦10,000' },
-        { value: 'over-10000', label: 'Above ₦10,000' },
+        { value: 'under-1000', label: 'Under ₦1,000', icon: '🟢', description: 'Budget friendly' },
+        { value: '1000-5000', label: '₦1,000 - ₦5,000', icon: '🟡', description: 'Mid-range' },
+        { value: '5000-10000', label: '₦5,000 - ₦10,000', icon: '🟠', description: 'Premium' },
+        { value: 'over-10000', label: 'Above ₦10,000', icon: '🔴', description: 'High-end' },
       ]
     },
     {
       id: 'prescription',
-      name: 'Prescription',
+      name: 'Prescription Type',
+      icon: '🏥',
+      description: 'Medical requirement',
       options: [
-        { value: 'rx-required', label: 'Prescription Required' },
-        { value: 'otc', label: 'Over-the-Counter' },
+        { value: 'rx-required', label: 'Prescription Required', icon: '🔒', description: 'Requires valid prescription' },
+        { value: 'otc', label: 'Over-the-Counter', icon: '🛒', description: 'Available without prescription' },
       ]
     },
     {
       id: 'availability',
-      name: 'Availability',
+      name: 'Stock Status',
+      icon: '📦',
+      description: 'Product availability',
       options: [
-        { value: 'in-stock', label: 'In Stock' },
-        { value: 'low-stock', label: 'Low Stock' },
+        { value: 'in-stock', label: 'In Stock', icon: '✅', description: 'Ready to ship' },
+        { value: 'low-stock', label: 'Low Stock', icon: '⚠️', description: 'Limited quantities' },
       ]
     },
   ];
 
   return (
-    <form className={cn('divide-y divide-gray-200', className)}>
+    <div className={cn('space-y-6', className)}>
+      {/* Clear Filters Button */}
+      {hasActiveFilters && (
+        <div className="pb-4 border-b border-gray-200 dark:border-gray-700">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearFilters}
+            className="text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20 w-full justify-center"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Clear All Filters
+          </Button>
+        </div>
+      )}
+      
       {filterSections.map((section) => (
-        <div key={section.name} className="py-10 first:pt-0 last:pb-0">
-          <fieldset>
-            <legend className="block text-sm font-medium text-gray-900">{section.name}</legend>
-            <div className="space-y-3 pt-6">
-              {section.options.map((option, optionIdx) => (
-                <div key={option.value} className="flex gap-3">
-                  <div className="flex h-5 shrink-0 items-center">
-                    <div className="group grid size-4 grid-cols-1">
+        <div key={section.name} className="space-y-4">
+          {/* Section Header */}
+          <div className="flex items-center gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
+            <span className="text-lg" role="img" aria-label={section.name}>
+              {section.icon}
+            </span>
+            <div className="flex-1">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                {section.name}
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {section.description}
+              </p>
+            </div>
+          </div>
+          
+          {/* Filter Options */}
+          <div className="space-y-2">
+            {section.options.map((option, optionIdx) => {
+              const isChecked = 
+                section.id === 'category' ? currentFilters.category === option.value :
+                section.id === 'price' ? 
+                  (option.value === 'under-1000' && currentFilters.max_price === 1000 && !currentFilters.min_price) ||
+                  (option.value === '1000-5000' && currentFilters.min_price === 1000 && currentFilters.max_price === 5000) ||
+                  (option.value === '5000-10000' && currentFilters.min_price === 5000 && currentFilters.max_price === 10000) ||
+                  (option.value === 'over-10000' && currentFilters.min_price === 10000 && !currentFilters.max_price) :
+                section.id === 'prescription' ?
+                  (option.value === 'rx-required' && currentFilters.prescription_only === true) ||
+                  (option.value === 'otc' && currentFilters.prescription_only === false) :
+                section.id === 'availability' ?
+                  (option.value === 'in-stock' && currentFilters.in_stock_only === true) :
+                false;
+              
+              return (
+                <label
+                  key={option.value}
+                  className={cn(
+                    "group flex items-center gap-3 p-3 rounded-lg border-2 transition-all cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50",
+                    isChecked
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400"
+                      : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
+                  )}
+                >
+                  <div className="flex items-center">
+                    <span className="text-sm mr-2" role="img">
+                      {option.icon || section.icon}
+                    </span>
+                    
+                    {/* Custom Checkbox */}
+                    <div className="relative">
                       <input
-                        defaultValue={option.value}
-                        id={`${section.id}-${optionIdx}`}
-                        name={`${section.id}[]`}
                         type="checkbox"
-                        checked={
-                          section.id === 'category' ? currentFilters.category === option.value :
-                          section.id === 'price' ? 
-                            (option.value === 'under-1000' && currentFilters.max_price === 1000 && !currentFilters.min_price) ||
-                            (option.value === '1000-5000' && currentFilters.min_price === 1000 && currentFilters.max_price === 5000) ||
-                            (option.value === '5000-10000' && currentFilters.min_price === 5000 && currentFilters.max_price === 10000) ||
-                            (option.value === 'over-10000' && currentFilters.min_price === 10000 && !currentFilters.max_price) :
-                          section.id === 'prescription' ?
-                            (option.value === 'rx-required' && currentFilters.prescription_only === true) ||
-                            (option.value === 'otc' && currentFilters.prescription_only === false) :
-                          section.id === 'availability' ?
-                            (option.value === 'in-stock' && currentFilters.in_stock_only === true) :
-                          false
-                        }
+                        id={`${section.id}-${optionIdx}`}
+                        checked={isChecked}
                         onChange={(e) => {
                           if (section.id === 'category') {
                             updateFilter('category', e.target.checked ? option.value : undefined);
@@ -148,40 +216,64 @@ export function ProductFilters({ className }: ProductFiltersProps) {
                             updateFilter('in_stock_only', e.target.checked || undefined);
                           }
                         }}
-                        className="col-start-1 row-start-1 appearance-none rounded-sm border border-gray-300 bg-white checked:border-indigo-600 checked:bg-indigo-600 indeterminate:border-indigo-600 indeterminate:bg-indigo-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:border-gray-300 disabled:bg-gray-100 disabled:checked:bg-gray-100 forced-colors:appearance-auto"
+                        className="sr-only"
                       />
-                      <svg
-                        fill="none"
-                        viewBox="0 0 14 14"
-                        className="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white group-has-disabled:stroke-gray-950/25"
-                      >
-                        <path
-                          d="M3 8L6 11L11 3.5"
-                          strokeWidth={2}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="opacity-0 group-has-checked:opacity-100"
-                        />
-                        <path
-                          d="M3 7H11"
-                          strokeWidth={2}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="opacity-0 group-has-indeterminate:opacity-100"
-                        />
-                      </svg>
+                      <div className={cn(
+                        "w-4 h-4 rounded border-2 flex items-center justify-center transition-all",
+                        isChecked
+                          ? "bg-blue-500 border-blue-500 dark:bg-blue-400 dark:border-blue-400"
+                          : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-500 group-hover:border-blue-300"
+                      )}>
+                        {isChecked && (
+                          <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <label htmlFor={`${section.id}-${optionIdx}`} className="text-sm text-gray-600">
-                    {option.label}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </fieldset>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className={cn(
+                        "font-medium text-sm",
+                        isChecked 
+                          ? "text-blue-900 dark:text-blue-100" 
+                          : "text-gray-700 dark:text-gray-200"
+                      )}>
+                        {option.label}
+                      </span>
+                      {option.count && (
+                        <Badge 
+                          className={cn(
+                            "text-xs",
+                            isChecked
+                              ? "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100"
+                              : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                          )}
+                        >
+                          {option.count}
+                        </Badge>
+                      )}
+                    </div>
+                    {option.description && (
+                      <p className={cn(
+                        "text-xs mt-1",
+                        isChecked
+                          ? "text-blue-700 dark:text-blue-300"
+                          : "text-gray-500 dark:text-gray-400"
+                      )}>
+                        {option.description}
+                      </p>
+                    )}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
         </div>
       ))}
-    </form>
+    </div>
   );
 }
 

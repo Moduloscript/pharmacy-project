@@ -121,13 +121,13 @@ export function ProductCatalog({
     const visiblePages = getVisiblePages();
 
     return (
-      <div className="flex items-center justify-between border-t border-border bg-background px-4 py-3 sm:px-6">
+      <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 rounded-lg">
         {/* Mobile pagination */}
         <div className="flex flex-1 justify-between sm:hidden">
           <button
             onClick={() => handlePageChange(page - 1)}
             disabled={page <= 1}
-            className={`relative inline-flex items-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted ${
+            className={`inline-flex items-center px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 ${
               page <= 1 ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
@@ -136,7 +136,7 @@ export function ProductCatalog({
           <button
             onClick={() => handlePageChange(page + 1)}
             disabled={page >= pages}
-            className={`relative ml-3 inline-flex items-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted ${
+            className={`inline-flex items-center px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 ${
               page >= pages ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
@@ -147,14 +147,12 @@ export function ProductCatalog({
         {/* Desktop pagination */}
         <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm text-gray-700">
-              Showing <span className="font-medium">{startItem}</span> to{' '}
-              <span className="font-medium">{endItem}</span> of{' '}
-              <span className="font-medium">{total}</span> results
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              Showing <span className="font-medium">{startItem}</span>-<span className="font-medium">{endItem}</span> of <span className="font-medium">{total}</span>
             </p>
           </div>
           <div>
-            <nav aria-label="Pagination" className="isolate inline-flex -space-x-px rounded-md shadow-xs">
+            <nav aria-label="Pagination" className="flex items-center space-x-1">
               {/* Previous button */}
               <button
                 onClick={() => handlePageChange(page - 1)}
@@ -218,127 +216,116 @@ export function ProductCatalog({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Mobile filter dialog */}
       <MobileFiltersDialog open={mobileFiltersOpen} onClose={() => setMobileFiltersOpen(false)} />
 
-      <main className="mx-auto max-w-2xl px-4 lg:max-w-7xl lg:px-8">
-        {/* Enhanced Page Header with Pharmaceutical Branding */}
-        <div className="relative overflow-hidden border-b border-gray-200 dark:border-gray-700 pt-24 pb-10">
-          {/* Background Decoration */}
-          <div className="absolute inset-0 opacity-5 dark:opacity-10">
-            <div className="absolute -left-40 -top-40 h-80 w-80 rounded-full bg-blue-500 blur-3xl" />
-            <div className="absolute -right-40 -bottom-40 h-80 w-80 rounded-full bg-green-500 blur-3xl" />
-          </div>
-          
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-gradient-to-br from-blue-500 to-green-500 rounded-lg shadow-lg">
-                <Package className="h-8 w-8 text-white" />
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Compact Page Header */}
+        <div className="border-b border-gray-200 dark:border-gray-700 pt-16 pb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Package className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                <Badge className="bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300 text-xs">
+                  <ShieldCheck className="size-3 mr-1" />
+                  NAFDAC Certified
+                </Badge>
               </div>
-              <Badge className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-300 dark:border-green-700">
-                <ShieldCheck className="size-3 mr-1" />
-                NAFDAC Certified
-              </Badge>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                Product Catalog
+              </h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Browse <span className="font-medium text-green-600 dark:text-green-400">NAFDAC-approved</span> pharmaceutical products
+              </p>
             </div>
             
-            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-green-600 dark:from-blue-400 dark:to-green-400 bg-clip-text text-transparent">
-              Product Catalog
-            </h1>
-            <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
-              Browse our collection of <span className="font-semibold text-green-600 dark:text-green-400">NAFDAC-approved</span> pharmaceutical products
-            </p>
-            
-            {/* Quick Stats */}
-            <div className="flex gap-6 mt-6">
-              <div className="flex items-center gap-2 text-sm">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-gray-600 dark:text-gray-400">1,234 Products Available</span>
+            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                <span>1,234 Products</span>
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                <TrendingUp className="size-4 text-orange-500" />
-                <span className="text-gray-600 dark:text-gray-400">New Arrivals Daily</span>
+              <div className="flex items-center gap-1">
+                <TrendingUp className="size-3 text-orange-500" />
+                <span>Daily Updates</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Main Content Layout with Enhanced Sidebar */}
-        <div className="pt-12 pb-24 lg:grid lg:grid-cols-3 lg:gap-x-8 xl:grid-cols-4">
-          {/* Enhanced Filters Sidebar */}
-          <aside>
-            <h2 className="sr-only">Filters</h2>
-            
-            {/* Enhanced Mobile Filter Button */}
+        {/* Compact Main Content Layout */}
+        <div className="py-6 lg:grid lg:grid-cols-4 lg:gap-6">
+          {/* Compact Filters Sidebar */}
+          <aside className="lg:col-span-1">
+            {/* Mobile Filter Button */}
             <button
               type="button"
               onClick={() => setMobileFiltersOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:shadow-md transition-all lg:hidden"
+              className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm hover:shadow-md transition-all lg:hidden w-full mb-4"
             >
-              <SlidersHorizontal className="size-5 text-blue-600 dark:text-blue-400" />
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Filters & Sort</span>
-              <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 text-xs">3</Badge>
+              <SlidersHorizontal className="size-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Filters</span>
             </button>
             
-            {/* Desktop Filters with Enhanced Styling */}
+            {/* Desktop Filters */}
             <div className="hidden lg:block">
-              <div className="bg-white dark:bg-gray-800/95 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center gap-2 mb-6">
-                  <Filter className="size-5 text-blue-600 dark:text-blue-400" />
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Filter Products</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Filter className="size-4 text-blue-600 dark:text-blue-400" />
+                  <h3 className="font-medium text-gray-900 dark:text-gray-100">Filters</h3>
                 </div>
-                <ProductFilters className="divide-y divide-gray-200 dark:divide-gray-700" />
+                <ProductFilters className="space-y-4" />
               </div>
             </div>
           </aside>
 
-          {/* Enhanced Products Section */}
-          <section aria-labelledby="product-heading" className="mt-6 lg:col-span-2 lg:mt-0 xl:col-span-3">
+          {/* Compact Products Section */}
+          <section aria-labelledby="product-heading" className="lg:col-span-3">
             <h2 id="product-heading" className="sr-only">
               Products
             </h2>
             
-            {/* Sort and View Options Bar */}
-            <div className="bg-white dark:bg-gray-800/95 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
+            {/* Compact Sort and View Options Bar */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 mb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-600 dark:text-gray-400">Showing</span>
-                  <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
-                    {productsData?.pagination?.total || 0} Products
+                  <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 text-xs">
+                    {productsData?.pagination?.total || 0}
                   </Badge>
                 </div>
                 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   {/* View Mode Toggle */}
-                  <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                  <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-md p-0.5">
                     <button
                       onClick={() => setViewMode('grid')}
                       className={cn(
-                        "p-1.5 rounded transition-all",
+                        "p-1 rounded transition-all",
                         viewMode === 'grid' 
                           ? "bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-400" 
-                          : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                       )}
                     >
-                      <Grid3X3 className="size-4" />
+                      <Grid3X3 className="size-3.5" />
                     </button>
                     <button
                       onClick={() => setViewMode('list')}
                       className={cn(
-                        "p-1.5 rounded transition-all",
+                        "p-1 rounded transition-all",
                         viewMode === 'list' 
                           ? "bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-400" 
-                          : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                       )}
                     >
-                      <List className="size-4" />
+                      <List className="size-3.5" />
                     </button>
                   </div>
                   
                   {/* Sort Dropdown */}
                   <select
                     onChange={(e) => handleSortChange(e.target.value)}
-                    className="px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                    className="px-2 py-1 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
                   >
                     <option value="name-asc">Name (A-Z)</option>
                     <option value="price-low">Price: Low to High</option>
@@ -372,7 +359,7 @@ export function ProductCatalog({
                 </svg>
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Failed to Load Products</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">{error || 'Something went wrong while loading products.'}</p>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">{error?.message || error || 'Something went wrong while loading products.'}</p>
               <Button 
                 onClick={() => window.location.reload()}
                 className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white"

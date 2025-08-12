@@ -213,3 +213,35 @@ export function usePrefetchProducts() {
     });
   };
 }
+
+// Product Review types
+export interface ProductReview {
+  id: string;
+  product_id: string;
+  reviewer_name: string;
+  rating: number;
+  comment: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Hook for fetching product reviews
+export function useProductReviews(productId: string) {
+  return useQuery({
+    queryKey: [...productKeys.detail(productId), 'reviews'] as const,
+    queryFn: async (): Promise<ProductReview[]> => {
+      const response = await fetch(`/api/products/${productId}/reviews`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          return []; // Return empty array if no reviews found
+        }
+        throw new Error('Failed to fetch product reviews');
+      }
+      return response.json();
+    },
+    enabled: !!productId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 1,
+  });
+}

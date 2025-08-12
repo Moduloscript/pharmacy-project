@@ -47,7 +47,8 @@ export function ProductDetails({
   const [quantity, setQuantity] = useState(1);
   
   // Use TanStack Query for data fetching
-  const { data: product, isLoading, error } = useProduct(productId);
+  const { data, isLoading, error } = useProduct(productId);
+  const product = data?.product;
   const { data: reviews } = useProductReviews(productId);
   
   // Use Jotai for state management
@@ -95,7 +96,7 @@ export function ProductDetails({
         </div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Product Not Found</h3>
         <p className="text-gray-600 mb-4">
-          {error || 'The requested product could not be found.'}
+          {error ? (error instanceof Error ? error.message : String(error)) : 'The requested product could not be found.'}
         </p>
         <Button onClick={() => window.history.back()}>
           Go Back
@@ -114,13 +115,15 @@ export function ProductDetails({
     updateBulkOrder({
       productId: product.id,
       quantity,
-      unitPrice: pricingPrefs.showWholesale ? product.wholesale_price : product.retail_price
+      unitPrice: pricingPrefs.showWholesalePrice ? (product.wholesalePrice || product.wholesale_price) : (product.retailPrice || product.retail_price)
     });
   };
 
-  const currentPrice = pricingPrefs.showWholesale ? product.wholesale_price : product.retail_price;
-  const savings = product.retail_price - product.wholesale_price;
-  const discountPercent = Math.round((savings / product.retail_price) * 100);
+  const currentPrice = pricingPrefs.showWholesalePrice ? (product.wholesalePrice || product.wholesale_price) : (product.retailPrice || product.retail_price);
+  const wholesalePrice = product.wholesalePrice || product.wholesale_price || 0;
+  const retailPrice = product.retailPrice || product.retail_price;
+  const savings = retailPrice - wholesalePrice;
+  const discountPercent = Math.round((savings / retailPrice) * 100);
 
   return (
     <div className={cn('space-y-6', className)}>
@@ -216,10 +219,10 @@ export function ProductDetails({
                 </span>
               </div>
               
-              {pricingPrefs.showWholesale && product.retail_price > product.wholesale_price && (
+              {pricingPrefs.showWholesalePrice && retailPrice > wholesalePrice && (
                 <div className="text-right">
                   <span className="text-sm line-through text-gray-500 dark:text-gray-500 block">
-                    ₦{product.retail_price.toLocaleString()}
+                    ₦{retailPrice.toLocaleString()}
                   </span>
                   <Badge className="bg-gradient-to-r from-orange-500 to-amber-500 text-white border-0 mt-1">
                     <TrendingUp className="size-3 mr-1" />
