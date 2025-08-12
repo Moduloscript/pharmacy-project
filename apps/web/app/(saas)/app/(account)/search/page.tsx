@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ProductCatalog } from '@/modules/saas/products/components/ProductCatalog';
-import { ProductSearch } from '@/modules/saas/products/components/ProductSearch';
+import { ProductCatalog } from '@saas/products/components/ProductCatalog';
+import { ProductSearch } from '@saas/products/components/ProductSearch';
 import { Card } from '@ui/components/card';
 import { useAtom } from 'jotai';
-import { updateFiltersAtom } from '@/modules/saas/products/lib/store';
+import { updateFiltersAtom } from '@saas/products/lib/store';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();

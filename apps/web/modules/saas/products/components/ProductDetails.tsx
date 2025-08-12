@@ -14,6 +14,23 @@ import {
   bulkOrderAtom,
   updateBulkOrderAtom
 } from '../lib/store';
+import {
+  Shield,
+  Package,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Star,
+  Heart,
+  ShoppingCart,
+  Plus,
+  Minus,
+  Info,
+  Truck,
+  Award,
+  Activity
+} from 'lucide-react';
 
 interface ProductDetailsProps {
   productId: string;
@@ -110,16 +127,22 @@ export function ProductDetails({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Product Images */}
         <div className="space-y-4">
-          {/* Main Image */}
-          <div className="aspect-square rounded-lg bg-white border overflow-hidden">
-            <img
-              src={product.images?.[selectedImageIndex] || '/placeholder-product.jpg'}
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
+          {/* Main Image with Enhanced Styling */}
+          <div className="aspect-square rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border border-gray-200 dark:border-gray-700 overflow-hidden shadow-lg">
+            {product.images?.[selectedImageIndex] ? (
+              <img
+                src={product.images[selectedImageIndex]}
+                alt={product.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Package className="size-32 text-blue-400 dark:text-blue-500 opacity-30" />
+              </div>
+            )}
           </div>
           
-          {/* Thumbnail Gallery */}
+          {/* Enhanced Thumbnail Gallery */}
           {product.images && product.images.length > 1 && (
             <div className="grid grid-cols-4 gap-2">
               {product.images.map((image, index) => (
@@ -127,10 +150,10 @@ export function ProductDetails({
                   key={index}
                   onClick={() => setSelectedImageIndex(index)}
                   className={cn(
-                    'aspect-square rounded-lg border-2 overflow-hidden transition-colors',
+                    'aspect-square rounded-lg border-2 overflow-hidden transition-all duration-200',
                     selectedImageIndex === index 
-                      ? 'border-primary' 
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-blue-500 dark:border-blue-400 shadow-md scale-105' 
+                      : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-sm'
                   )}
                 >
                   <img
@@ -144,72 +167,105 @@ export function ProductDetails({
           )}
         </div>
 
-        {/* Product Information */}
+        {/* Enhanced Product Information */}
         <div className="space-y-6">
-          {/* Header */}
+          {/* Header with Better Typography */}
           <div>
-            <div className="flex items-start justify-between mb-2">
-              <div className="space-y-1">
-                <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
-                <p className="text-gray-600">{product.generic_name}</p>
+            <div className="flex items-start justify-between mb-3">
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{product.name}</h1>
+                {product.generic_name && (
+                  <p className="text-lg text-gray-600 dark:text-gray-400">
+                    <span className="text-gray-500 dark:text-gray-500">Generic:</span> {product.generic_name}
+                  </p>
+                )}
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-col gap-2">
                 {product.requires_prescription && (
-                  <Badge variant="secondary">Prescription Required</Badge>
+                  <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 border-purple-300 dark:border-purple-700">
+                    <Shield className="size-3 mr-1" />
+                    Prescription Required
+                  </Badge>
                 )}
                 {product.nafdac_number && (
-                  <Badge variant="outline">NAFDAC: {product.nafdac_number}</Badge>
+                  <Badge className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-300 dark:border-green-700">
+                    <CheckCircle className="size-3 mr-1" />
+                    NAFDAC: {product.nafdac_number}
+                  </Badge>
                 )}
               </div>
             </div>
             
             {product.manufacturer && (
-              <p className="text-sm text-gray-500">
-                by <span className="font-medium">{product.manufacturer}</span>
-              </p>
+              <div className="flex items-center gap-2 text-sm">
+                <Award className="size-4 text-blue-500 dark:text-blue-400" />
+                <p className="text-gray-600 dark:text-gray-400">
+                  Manufactured by <span className="font-semibold text-blue-600 dark:text-blue-400">{product.manufacturer}</span>
+                </p>
+              </div>
             )}
           </div>
 
-          {/* Pricing */}
-          <div className="space-y-2">
-            <div className="flex items-center space-x-4">
-              <span className="text-3xl font-bold text-gray-900">
-                ₦{currentPrice.toLocaleString()}
-              </span>
+          {/* Enhanced Pricing Section */}
+          <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-gray-800/50 dark:to-gray-700/30 rounded-xl p-5 shadow-sm border border-blue-100 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Price</p>
+                <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-green-600 dark:from-blue-400 dark:to-green-400 bg-clip-text text-transparent">
+                  ₦{currentPrice.toLocaleString()}
+                </span>
+              </div>
               
               {pricingPrefs.showWholesale && product.retail_price > product.wholesale_price && (
-                <div className="text-sm">
-                  <span className="line-through text-gray-500">₦{product.retail_price.toLocaleString()}</span>
-                  <span className="ml-2 text-green-600 font-medium">
-                    Save {discountPercent}%
+                <div className="text-right">
+                  <span className="text-sm line-through text-gray-500 dark:text-gray-500 block">
+                    ₦{product.retail_price.toLocaleString()}
                   </span>
+                  <Badge className="bg-gradient-to-r from-orange-500 to-amber-500 text-white border-0 mt-1">
+                    <TrendingUp className="size-3 mr-1" />
+                    Save {discountPercent}%
+                  </Badge>
                 </div>
               )}
             </div>
             
             {product.unit && (
-              <p className="text-sm text-gray-600">
-                per {product.unit}
-                {product.pack_size && ` • Pack of ${product.pack_size}`}
-              </p>
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-blue-100 dark:border-gray-700">
+                <Package className="size-4 text-gray-500 dark:text-gray-400" />
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Sold per <span className="font-medium">{product.unit}</span>
+                  {product.pack_size && ` • Pack contains ${product.pack_size} units`}
+                </p>
+              </div>
             )}
           </div>
 
-          {/* Stock Status */}
-          <div className="flex items-center space-x-2">
+          {/* Enhanced Stock Status */}
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
             {product.stock_quantity > 0 ? (
-              <>
-                <div className="size-2 bg-green-500 rounded-full" />
-                <span className="text-sm text-green-700 font-medium">
-                  In Stock ({product.stock_quantity} available)
-                </span>
-              </>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="size-5 text-green-500 dark:text-green-400" />
+                <div>
+                  <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                    In Stock
+                  </span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400 ml-1">
+                    ({product.stock_quantity} units available)
+                  </span>
+                </div>
+              </div>
             ) : (
-              <>
-                <div className="size-2 bg-red-500 rounded-full" />
-                <span className="text-sm text-red-700 font-medium">Out of Stock</span>
-              </>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="size-5 text-red-500 dark:text-red-400" />
+                <span className="text-sm font-medium text-red-700 dark:text-red-400">Out of Stock</span>
+              </div>
             )}
+            
+            {/* Estimated Delivery */}
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <Truck className="size-4" />
+              <span>Express delivery available</span>
+            </div>
           </div>
 
           {/* Description */}
@@ -220,80 +276,100 @@ export function ProductDetails({
             </div>
           )}
 
-          {/* Key Information */}
-          <div className="grid grid-cols-2 gap-4 py-4 border-t border-b">
+          {/* Key Information with Icons */}
+          <div className="grid grid-cols-2 gap-4 p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
             {product.dosage_form && (
-              <div>
-                <span className="text-sm text-gray-500">Dosage Form</span>
-                <p className="font-medium">{product.dosage_form}</p>
+              <div className="flex items-start gap-2">
+                <Activity className="size-4 text-blue-500 dark:text-blue-400 mt-0.5" />
+                <div>
+                  <span className="text-xs text-gray-500 dark:text-gray-500">Dosage Form</span>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{product.dosage_form}</p>
+                </div>
               </div>
             )}
             {product.strength && (
-              <div>
-                <span className="text-sm text-gray-500">Strength</span>
-                <p className="font-medium">{product.strength}</p>
+              <div className="flex items-start gap-2">
+                <Info className="size-4 text-green-500 dark:text-green-400 mt-0.5" />
+                <div>
+                  <span className="text-xs text-gray-500 dark:text-gray-500">Strength</span>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{product.strength}</p>
+                </div>
               </div>
             )}
             {product.therapeutic_class && (
-              <div>
-                <span className="text-sm text-gray-500">Therapeutic Class</span>
-                <p className="font-medium">{product.therapeutic_class}</p>
+              <div className="flex items-start gap-2">
+                <Heart className="size-4 text-red-500 dark:text-red-400 mt-0.5" />
+                <div>
+                  <span className="text-xs text-gray-500 dark:text-gray-500">Therapeutic Class</span>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{product.therapeutic_class}</p>
+                </div>
               </div>
             )}
             {product.storage_conditions && (
-              <div>
-                <span className="text-sm text-gray-500">Storage</span>
-                <p className="font-medium">{product.storage_conditions}</p>
+              <div className="flex items-start gap-2">
+                <Clock className="size-4 text-amber-500 dark:text-amber-400 mt-0.5" />
+                <div>
+                  <span className="text-xs text-gray-500 dark:text-gray-500">Storage</span>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{product.storage_conditions}</p>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Quantity and Actions */}
+          {/* Enhanced Quantity Selector and Actions */}
           <div className="space-y-4">
-            <div className="flex items-center space-x-4">
-              <label htmlFor="quantity" className="font-medium text-gray-700">
-                Quantity:
-              </label>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={quantity <= 1}
-                >
-                  -
-                </Button>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="1"
-                  max={product.stock_quantity}
-                  value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-20 text-center"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setQuantity(Math.min(product.stock_quantity, quantity + 1))}
-                  disabled={quantity >= product.stock_quantity}
-                >
-                  +
-                </Button>
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <label htmlFor="quantity" className="font-medium text-gray-700 dark:text-gray-300">
+                  Quantity:
+                </label>
+                <div className="flex items-center bg-white dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    disabled={quantity <= 1}
+                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                  >
+                    <Minus className="size-4" />
+                  </Button>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="1"
+                    max={product.stock_quantity}
+                    value={quantity}
+                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-20 text-center border-0 focus:ring-0 bg-transparent"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setQuantity(Math.min(product.stock_quantity, quantity + 1))}
+                    disabled={quantity >= product.stock_quantity}
+                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                  >
+                    <Plus className="size-4" />
+                  </Button>
+                </div>
               </div>
               
-              <span className="text-sm text-gray-600">
-                Total: ₦{(currentPrice * quantity).toLocaleString()}
-              </span>
+              <div className="text-right">
+                <p className="text-xs text-gray-500 dark:text-gray-500">Total Price</p>
+                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  ₦{(currentPrice * quantity).toLocaleString()}
+                </span>
+              </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex space-x-4">
+            {/* Enhanced Action Buttons */}
+            <div className="flex gap-3">
               <Button
                 onClick={handleAddToCart}
                 disabled={product.stock_quantity <= 0}
-                className="flex-1"
+                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 dark:from-green-500 dark:to-emerald-500 dark:hover:from-green-400 dark:hover:to-emerald-400 text-white font-medium shadow-md hover:shadow-lg transition-all"
               >
+                <ShoppingCart className="size-4 mr-2" />
                 Add to Cart
               </Button>
               
@@ -301,21 +377,22 @@ export function ProductDetails({
                 variant="outline"
                 onClick={handleAddToBulkOrder}
                 disabled={product.stock_quantity <= 0}
-                className="flex-1"
+                className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:hover:bg-blue-900/30 font-medium"
               >
-                Add to Bulk Order
+                <Package className="size-4 mr-2" />
+                Bulk Order
               </Button>
             </div>
 
             {product.requires_prescription && (
-              <div className="flex items-start space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <svg className="size-5 text-yellow-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.732 18.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <div className="text-sm">
-                  <p className="font-medium text-yellow-800">Prescription Required</p>
-                  <p className="text-yellow-700">
-                    You will need to upload a valid prescription before checkout.
+              <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-700 rounded-lg">
+                <AlertTriangle className="size-5 text-purple-600 dark:text-purple-400 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium text-purple-800 dark:text-purple-300 mb-1">
+                    Prescription Required
+                  </p>
+                  <p className="text-sm text-purple-700 dark:text-purple-400">
+                    A valid prescription from a licensed healthcare provider is required for this medication. You'll be prompted to upload it during checkout.
                   </p>
                 </div>
               </div>
