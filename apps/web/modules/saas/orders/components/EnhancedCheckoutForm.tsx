@@ -17,6 +17,15 @@ import { RadioGroup, RadioGroupItem } from '@ui/components/radio-group'
 import { useCartToast } from '@saas/shared/hooks/use-toast'
 import { Loader2, CreditCard, Truck, Package, MapPin, Phone, User, Globe, CheckCircle } from 'lucide-react'
 import { nigerianStates, getLGAs, formatNaira } from '../../../../lib/nigerian-locations'
+import { 
+  selectedStateAtom, 
+  selectedLGAAtom, 
+  deliveryAddressAtom, 
+  phoneNumberAtom,
+  cartItemsAtom,
+  cartSummaryAtom,
+  type CartItem
+} from '../../cart/lib/cart-store'
 
 // Enhanced atoms for Nigerian payment system integration
 const enhancedCheckoutFormAtom = atom({
@@ -25,12 +34,6 @@ const enhancedCheckoutFormAtom = atom({
   purchaseOrderNumber: '',
   useNigerianPayments: true // Auto-detect Nigerian payments
 })
-
-// Temporary atoms for checkout form state
-const selectedStateAtom = atom<string>('Edo')
-const selectedLGAAtom = atom<string>('')
-const deliveryAddressAtom = atom<string>('')
-const phoneNumberAtom = atom<string>('')
 
 const checkoutLoadingAtom = atom(false)
 const orderCompleteAtom = atom(false)
@@ -69,19 +72,7 @@ const enhancedCheckoutSchema = z.object({
 
 type EnhancedCheckoutFormData = z.infer<typeof enhancedCheckoutSchema>
 
-interface CartItem {
-  id: string
-  productId: string
-  product: {
-    id: string
-    name: string
-    brandName?: string
-    nafdacNumber?: string
-  }
-  quantity: number
-  unitPrice: number
-  totalPrice: number
-}
+// Using CartItem from cart-store
 
 interface EnhancedCheckoutFormProps {
   onSuccess?: (orderId: string) => void
@@ -124,16 +115,24 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
     }
   })
   
-  // Get cart data
-  const { data: cartData, isLoading: cartLoading } = useQuery({
-    queryKey: ['cart'],
-    queryFn: async () => {
-      const response = await fetch('/api/cart')
-      if (!response.ok) throw new Error('Failed to fetch cart')
-      const data = await response.json()
-      return data
+  // Get cart data from atoms
+  const cartItems = useAtomValue(cartItemsAtom)
+  const cartSummary = useAtomValue(cartSummaryAtom)
+  
+  // Format cart data to match expected structure
+  const cartData = {
+    data: {
+      items: cartItems,
+      summary: {
+        subtotal: cartSummary.subtotal,
+        itemCount: cartSummary.totalQuantity,
+        bulkDiscount: cartSummary.bulkDiscount,
+        deliveryFee: cartSummary.deliveryFee,
+        total: cartSummary.total
+      }
     }
-  })
+  }
+  const cartLoading = false // No loading state needed for atoms
   
   // Enhanced order creation that uses Nigerian payment system
   const createEnhancedOrderMutation = useMutation({
@@ -239,7 +238,7 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         items: cartData?.data?.items?.map((item: CartItem) => ({
-          productId: item.productId,
+          productId: item.product.id,
           quantity: item.quantity,
           unitPrice: item.unitPrice
         })) || [],
@@ -360,8 +359,8 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
       <div className="lg:col-span-2 space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <User className="h-5 w-5 text-muted-foreground" />
               Customer Information
             </CardTitle>
           </CardHeader>
@@ -404,8 +403,8 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
         {/* Delivery Options */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Truck className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <Truck className="h-5 w-5 text-muted-foreground" />
               Delivery Options
               {isNigerianUser && (
                 <Badge variant="outline" className="ml-auto">
@@ -473,8 +472,8 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
         {form.watch('deliveryMethod') !== 'PICKUP' && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <MapPin className="h-5 w-5 text-muted-foreground" />
                 Delivery Address
               </CardTitle>
             </CardHeader>
@@ -539,7 +538,7 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
                     <SelectTrigger>
                       <SelectValue placeholder="Select state" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
                       {nigerianStates.map((state) => (
                         <SelectItem key={state} value={state}>
                           {state}
@@ -559,7 +558,7 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
                     <SelectTrigger>
                       <SelectValue placeholder="Select LGA" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
                       {form.watch('deliveryState') && getLGAs(form.watch('deliveryState')).map((lga) => (
                         <SelectItem key={lga} value={lga}>
                           {lga}
@@ -586,8 +585,8 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
         {/* Payment Method */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <CreditCard className="h-5 w-5 text-muted-foreground" />
               Payment Method
               {isNigerianUser && (
                 <Badge variant="outline" className="ml-auto">
@@ -667,7 +666,7 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
       <div>
         <Card className="sticky top-4">
           <CardHeader>
-            <CardTitle>Order Summary</CardTitle>
+            <CardTitle className="text-lg font-semibold">Order Summary</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -685,10 +684,10 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
                   <span>Included</span>
                 </div>
               )}
-              <Separator />
-              <div className="flex justify-between font-semibold">
-                <span>Total</span>
-                <span>{formatNaira(total)}</span>
+              <Separator className="my-3" />
+              <div className="flex justify-between items-center p-3 bg-muted rounded-md">
+                <span className="text-base font-medium">Total</span>
+                <span className="text-xl font-semibold">{formatNaira(total)}</span>
               </div>
             </div>
             

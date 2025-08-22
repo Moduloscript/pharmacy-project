@@ -333,7 +333,7 @@ export function CheckoutForm({ onSuccess, onCancel }: CheckoutFormProps) {
                     <SelectTrigger>
                       <SelectValue placeholder="Select state" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
                       {nigerianStates.map((state) => (
                         <SelectItem key={state} value={state}>
                           {state}
@@ -353,7 +353,7 @@ export function CheckoutForm({ onSuccess, onCancel }: CheckoutFormProps) {
                     <SelectTrigger>
                       <SelectValue placeholder="Select LGA" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
                       {form.watch('deliveryState') && getLGAs(form.watch('deliveryState')).map((lga) => (
                         <SelectItem key={lga} value={lga}>
                           {lga}

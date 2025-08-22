@@ -53,8 +53,15 @@ export const DELIVERY_OPTIONS: DeliveryOption[] = [
 ];
 
 // Cart state atoms
-export const cartItemsAtom = atomWithStorage<CartItem[]>('benpharm-cart-items', []);
-export const selectedDeliveryAtom = atomWithStorage<DeliveryOption['id']>('benpharm-delivery', 'pickup');
+export const cartItemsAtom = atomWithStorage<CartItem[]>('benpharm-cart-items', [])
+export const selectedDeliveryAtom = atomWithStorage<DeliveryOption['id']>('benpharm-delivery', 'pickup')
+
+// Checkout form atoms - these were missing and causing import errors
+export const selectedStateAtom = atom<string>('Edo')
+export const selectedLGAAtom = atom<string>('')
+export const deliveryAddressAtom = atom<string>('')
+export const phoneNumberAtom = atom<string>('')
+export const selectedDeliveryTypeAtom = atom<DeliveryOption['id']>('pickup')
 
 // Cart summary calculations
 export const cartSummaryAtom = atom((get) => {
@@ -92,7 +99,7 @@ export const cartSummaryAtom = atom((get) => {
     totalQuantity,
     selectedDelivery,
     isEmpty: items.length === 0,
-    requiresPrescription: items.some(item => item.product.requires_prescription)
+    requiresPrescription: items.some(item => item.product.is_prescription_required || item.product.isPrescriptionRequired)
   };
 });
 
@@ -238,7 +245,6 @@ export const validateCartAtom = atom((get) => {
     // Get field values with fallback between camelCase and snake_case
     const stockQuantity = item.product.stockQuantity || item.product.stock_quantity || 0;
     const minOrderQty = item.product.minOrderQuantity || item.product.min_order_qty || 1;
-    const isActive = item.product.isActive ?? item.product.is_active ?? true;
     
     // Check stock availability
     if (item.quantity > stockQuantity) {
@@ -248,11 +254,6 @@ export const validateCartAtom = atom((get) => {
     // Check minimum order quantity
     if (item.quantity < minOrderQty) {
       errors.push(`${item.product.name}: Minimum order quantity is ${minOrderQty}`);
-    }
-    
-    // Check if product is still active
-    if (!isActive) {
-      errors.push(`${item.product.name}: Product is no longer available`);
     }
   });
   
