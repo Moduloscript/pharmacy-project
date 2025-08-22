@@ -1,11 +1,11 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { useToast } from '@/components/ui/use-toast'
+import { Button } from '@ui/components/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@ui/components/card'
+import { Badge } from '@ui/components/badge'
+import { Separator } from '@ui/components/separator'
+import { toast } from 'sonner'
 import { 
   Loader2, 
   ArrowLeft,
@@ -114,7 +114,6 @@ interface Order {
 }
 
 export function OrderDetails({ orderId }: OrderDetailsProps) {
-  const { toast } = useToast()
   const router = useRouter()
   const queryClient = useQueryClient()
   
@@ -152,20 +151,13 @@ export function OrderDetails({ orderId }: OrderDetailsProps) {
       return response.json()
     },
     onSuccess: () => {
-      toast({
-        title: 'Order Cancelled',
-        description: 'Your order has been successfully cancelled'
-      })
+      toast.success('Your order has been successfully cancelled')
       
       queryClient.invalidateQueries({ queryKey: ['order', orderId] })
       queryClient.invalidateQueries({ queryKey: ['orders'] })
     },
     onError: (error) => {
-      toast({
-        title: 'Cancellation Failed',
-        description: error.message,
-        variant: 'destructive'
-      })
+      toast.error('Cancellation Failed: ' + error.message)
     }
   })
   

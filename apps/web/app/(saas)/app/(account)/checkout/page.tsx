@@ -1,24 +1,22 @@
-import { Metadata } from 'next'
-import { EnhancedCheckoutForm } from '@/modules/saas/orders/components/EnhancedCheckoutForm'
-import { redirect } from 'next/navigation'
+'use client'
 
-export const metadata: Metadata = {
-  title: 'Checkout - BenPharm Online',
-  description: 'Complete your order with secure checkout'
-}
+import { EnhancedCheckoutForm } from '@/modules/saas/orders/components/EnhancedCheckoutForm'
+import { useRouter } from 'next/navigation'
 
 interface CheckoutPageProps {
   searchParams: { success?: string; orderId?: string }
 }
 
 export default function CheckoutPage({ searchParams }: CheckoutPageProps) {
+  const router = useRouter()
+  
   const handleCheckoutSuccess = (orderId: string) => {
     // Redirect to order confirmation page
-    redirect(`/app/orders/${orderId}?success=true`)
+    router.push(`/app/orders/${orderId}?success=true`)
   }
   
   const handleCheckoutCancel = () => {
-    redirect('/app/cart')
+    router.push('/app/cart')
   }
   
   return (

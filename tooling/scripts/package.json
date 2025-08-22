@@ -1,8 +1,8 @@
 {
 	"dependencies": {
+		"@repo/auth": "workspace:*",
 		"@repo/database": "workspace:*",
 		"@repo/logs": "workspace:*",
-		"@repo/auth": "workspace:*",
 		"@repo/utils": "workspace:*"
 	},
 	"devDependencies": {
@@ -16,7 +16,8 @@
 	"private": true,
 	"scripts": {
 		"create:user": "dotenv -c -e ../../.env -- tsx ./src/create-user.ts",
-		"type-check": "tsc --noEmit"
+		"type-check": "tsc --noEmit",
+		"create:customer": "dotenv -c -e ../../.env -- tsx ./src/create-customer.ts"
 	},
 	"version": "0.0.0"
 }

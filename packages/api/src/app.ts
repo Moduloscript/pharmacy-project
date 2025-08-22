@@ -21,9 +21,9 @@ import { webhooksRouter } from "./routes/webhooks";
 import { productsRouter } from "./routes/products";
 import { categoriesRouter } from "./routes/categories";
 import { customersRouter } from "./routes/customers";
-// Temporarily commented out until imports are fixed
-// import { cartRouter } from "./routes/cart";
-// import { ordersRouter } from "./routes/orders";
+// Previously commented out due to missing dependency
+import { cartRouter } from "./routes/cart";
+import { ordersRouter } from "./routes/orders";
 
 export const app = new Hono().basePath("/api");
 
@@ -49,10 +49,10 @@ const appRouter = app
 	.route("/", healthRouter)
 	.route("/products", productsRouter)
 	.route("/categories", categoriesRouter)
-	.route("/customers", customersRouter);
-	// Temporarily commented out until imports are fixed
-	// .route("/cart", cartRouter)
-	// .route("/orders", ordersRouter);
+	.route("/customers", customersRouter)
+	// Uncommented now that dependencies are fixed
+	.route("/cart", cartRouter)
+	.route("/orders", ordersRouter);
 
 app.get(
 	"/app-openapi",
