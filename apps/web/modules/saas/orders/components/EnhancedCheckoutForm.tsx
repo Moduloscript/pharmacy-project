@@ -187,7 +187,7 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
   
   // Create Nigerian payment using enhanced system
   const createNigerianPayment = async (orderData: EnhancedCheckoutFormData) => {
-    const response = await fetch('/api/payments/create-checkout-link', {
+    const response = await fetch('/api/payments/benpharm-checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
