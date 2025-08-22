@@ -5,25 +5,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
-import { useToast } from '@/components/ui/use-toast'
+import { Button } from '@ui/components/button'
+import { Card, CardHeader, CardTitle, CardContent } from '@ui/components/card'
+import { Input } from '@ui/components/input'
+import { Label } from '@ui/components/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui/components/select'
+import { Textarea } from '@ui/components/textarea'
+import { Separator } from '@ui/components/separator'
+import { Badge } from '@ui/components/badge'
+import { RadioGroup, RadioGroupItem } from '@ui/components/radio-group'
+import { useCartToast } from '@saas/shared/hooks/use-toast'
 import { Loader2, CreditCard, Truck, Package, MapPin, Phone, User, Globe, CheckCircle } from 'lucide-react'
-import { nigerianStates, getLGAs, formatNaira } from '@/lib/nigerian-locations'
-import { 
-  selectedDeliveryTypeAtom,
-  deliveryAddressAtom,
-  selectedStateAtom,
-  selectedLGAAtom,
-  phoneNumberAtom
-} from '../../cart/lib/cart-store'
+import { nigerianStates, getLGAs, formatNaira } from '../../../../lib/nigerian-locations'
 
 // Enhanced atoms for Nigerian payment system integration
 const enhancedCheckoutFormAtom = atom({
@@ -32,6 +25,12 @@ const enhancedCheckoutFormAtom = atom({
   purchaseOrderNumber: '',
   useNigerianPayments: true // Auto-detect Nigerian payments
 })
+
+// Temporary atoms for checkout form state
+const selectedStateAtom = atom<string>('Edo')
+const selectedLGAAtom = atom<string>('')
+const deliveryAddressAtom = atom<string>('')
+const phoneNumberAtom = atom<string>('')
 
 const checkoutLoadingAtom = atom(false)
 const orderCompleteAtom = atom(false)
@@ -90,7 +89,7 @@ interface EnhancedCheckoutFormProps {
 }
 
 export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFormProps) {
-  const { toast } = useToast()
+  const cartToast = useCartToast()
   const queryClient = useQueryClient()
   
   // Atoms
@@ -157,10 +156,7 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
       
       if (data.paymentUrl) {
         // Redirect to Nigerian payment gateway
-        toast({
-          title: 'Redirecting to Payment Gateway',
-          description: 'You will be redirected to complete your payment.'
-        })
+        cartToast.showSuccess('Redirecting to Payment Gateway - You will be redirected to complete your payment.')
         
         setPaymentUrl(data.paymentUrl)
         
@@ -170,10 +166,7 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
         }, 2000)
       } else {
         // Direct order completed
-        toast({
-          title: 'Order Created Successfully!',
-          description: `Your order #${data.orderNumber} has been created.`
-        })
+        cartToast.showSuccess(`Order Created Successfully! Your order #${data.orderNumber} has been created.`)
         
         setOrderComplete(true)
         
@@ -189,11 +182,7 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
     },
     onError: (error) => {
       setIsLoading(false)
-      toast({
-        title: 'Order Creation Failed',
-        description: error.message,
-        variant: 'destructive'
-      })
+      cartToast.showError(`Order Creation Failed: ${error.message}`)
     }
   })
   

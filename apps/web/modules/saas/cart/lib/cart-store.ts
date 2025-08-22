@@ -105,7 +105,23 @@ export const addToCartAtom = atom(
     isWholesalePrice?: boolean;
   }) => {
     const currentItems = get(cartItemsAtom);
-    const unitPrice = isWholesalePrice ? product.wholesale_price : product.retail_price;
+    
+    // Helper function to parse prices and handle both camelCase and snake_case
+    const parsePrice = (price: any): number => {
+      if (typeof price === 'string') {
+        return parseFloat(price) || 0;
+      }
+      return typeof price === 'number' ? price : 0;
+    };
+    
+    // Get prices with fallback between camelCase and snake_case
+    const retailPrice = parsePrice(product.retailPrice || product.retail_price);
+    const wholesalePrice = parsePrice(product.wholesalePrice || product.wholesale_price);
+    const unitPrice = isWholesalePrice ? wholesalePrice : retailPrice;
+    
+    // Get stock quantity with fallback
+    const stockQuantity = product.stockQuantity || product.stock_quantity || 0;
+    const minOrderQty = product.minOrderQuantity || product.min_order_qty || 1;
     
     // Check if item already exists in cart
     const existingItemIndex = currentItems.findIndex(
@@ -118,8 +134,8 @@ export const addToCartAtom = atom(
       const newQuantity = updatedItems[existingItemIndex].quantity + quantity;
       
       // Validate against stock and minimum order quantity
-      const maxQuantity = Math.min(product.stock_quantity, 999);
-      const validatedQuantity = Math.min(Math.max(newQuantity, product.min_order_qty), maxQuantity);
+      const maxQuantity = Math.min(stockQuantity, 999);
+      const validatedQuantity = Math.min(Math.max(newQuantity, minOrderQty), maxQuantity);
       
       updatedItems[existingItemIndex] = {
         ...updatedItems[existingItemIndex],
@@ -130,8 +146,8 @@ export const addToCartAtom = atom(
     } else {
       // Add new item to cart
       const validatedQuantity = Math.min(
-        Math.max(quantity, product.min_order_qty),
-        product.stock_quantity
+        Math.max(quantity, minOrderQty),
+        stockQuantity
       );
       
       const newItem: CartItem = {
@@ -154,10 +170,14 @@ export const updateCartItemQuantityAtom = atom(
     const currentItems = get(cartItemsAtom);
     const updatedItems = currentItems.map(item => {
       if (item.id === itemId) {
+        // Get field values with fallback between camelCase and snake_case
+        const stockQuantity = item.product.stockQuantity || item.product.stock_quantity || 0;
+        const minOrderQty = item.product.minOrderQuantity || item.product.min_order_qty || 1;
+        
         // Validate quantity against product constraints
         const validatedQuantity = Math.min(
-          Math.max(quantity, item.product.min_order_qty),
-          item.product.stock_quantity
+          Math.max(quantity, minOrderQty),
+          stockQuantity
         );
         
         return { ...item, quantity: validatedQuantity };
@@ -215,18 +235,23 @@ export const validateCartAtom = atom((get) => {
   const errors: string[] = [];
   
   items.forEach(item => {
+    // Get field values with fallback between camelCase and snake_case
+    const stockQuantity = item.product.stockQuantity || item.product.stock_quantity || 0;
+    const minOrderQty = item.product.minOrderQuantity || item.product.min_order_qty || 1;
+    const isActive = item.product.isActive ?? item.product.is_active ?? true;
+    
     // Check stock availability
-    if (item.quantity > item.product.stock_quantity) {
-      errors.push(`${item.product.name}: Only ${item.product.stock_quantity} units available`);
+    if (item.quantity > stockQuantity) {
+      errors.push(`${item.product.name}: Only ${stockQuantity} units available`);
     }
     
     // Check minimum order quantity
-    if (item.quantity < item.product.min_order_qty) {
-      errors.push(`${item.product.name}: Minimum order quantity is ${item.product.min_order_qty}`);
+    if (item.quantity < minOrderQty) {
+      errors.push(`${item.product.name}: Minimum order quantity is ${minOrderQty}`);
     }
     
     // Check if product is still active
-    if (!item.product.is_active) {
+    if (!isActive) {
       errors.push(`${item.product.name}: Product is no longer available`);
     }
   });

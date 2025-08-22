@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import { OrderHistory } from '@/modules/saas/orders/components/OrderHistory'
+import { OrderHistory } from '@/modules/saas/orders'
 
 export const metadata: Metadata = {
   title: 'Order History - BenPharm Online',

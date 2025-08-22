@@ -21,12 +21,18 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { OrganzationSelect } from "../../organizations/components/OrganizationSelect";
+import { useAtomValue } from "jotai";
+import { cartSummaryAtom } from "@saas/cart/lib/cart-store";
+import { useCartDrawer } from "@saas/cart/hooks/use-cart-drawer";
+import { CartDrawer } from "@saas/cart/components/CartDrawer";
 
 export function NavBar() {
 	const t = useTranslations();
 	const pathname = usePathname();
 	const { user } = useSession();
 	const { activeOrganization } = useActiveOrganization();
+	const cartSummary = useAtomValue(cartSummaryAtom);
+	const { isOpen: isCartOpen, openDrawer: openCartDrawer, closeDrawer: closeCartDrawer } = useCartDrawer();
 
 	const { useSidebarLayout } = config.ui.saas;
 
@@ -47,6 +53,8 @@ export function NavBar() {
 			href: "/app/cart",
 			icon: ShoppingCartIcon,
 			isActive: pathname === "/app/cart",
+			// Only show drawer when NOT on cart page - otherwise navigate to cart page
+			...(pathname !== "/app/cart" ? { onClick: openCartDrawer } : {}),
 		},
 		{
 			label: "Orders",
@@ -179,30 +187,72 @@ export function NavBar() {
 				>
 					{menuItems.map((menuItem) => (
 						<li key={menuItem.href}>
-							<Link
-								href={menuItem.href}
-								className={cn(
-									"flex items-center gap-2 whitespace-nowrap border-b-2 px-1 pb-3",
-									[
-										menuItem.isActive
-											? "border-primary font-bold"
-											: "border-transparent",
-									],
-									{
-										"md:-mx-6 md:border-b-0 md:border-l-2 md:px-6 md:py-2":
-											useSidebarLayout,
-									},
-								)}
-							>
-								<menuItem.icon
-									className={`size-4 shrink-0 ${
-										menuItem.isActive
-											? "text-primary"
-											: "opacity-50"
-									}`}
-								/>
-								<span>{menuItem.label}</span>
-							</Link>
+							{menuItem.onClick ? (
+								<button
+									onClick={(e) => {
+										e.preventDefault();
+										menuItem.onClick();
+									}}
+									className={cn(
+										"flex items-center gap-2 whitespace-nowrap border-b-2 px-1 pb-3 relative w-full text-left",
+										[
+											menuItem.isActive
+												? "border-primary font-bold"
+												: "border-transparent",
+										],
+										{
+											"md:-mx-6 md:border-b-0 md:border-l-2 md:px-6 md:py-2":
+												useSidebarLayout,
+										},
+									)}
+								>
+									<menuItem.icon
+										className={`size-4 shrink-0 ${
+											menuItem.isActive
+												? "text-primary"
+												: "opacity-50"
+										}`}
+									/>
+									<span>{menuItem.label}</span>
+									{/* Cart Badge */}
+									{menuItem.href === '/app/cart' && !cartSummary.isEmpty && (
+										<span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
+											{cartSummary.totalQuantity > 99 ? '99+' : cartSummary.totalQuantity}
+										</span>
+									)}
+								</button>
+							) : (
+								<Link
+									href={menuItem.href}
+									className={cn(
+										"flex items-center gap-2 whitespace-nowrap border-b-2 px-1 pb-3 relative",
+										[
+											menuItem.isActive
+												? "border-primary font-bold"
+												: "border-transparent",
+										],
+										{
+											"md:-mx-6 md:border-b-0 md:border-l-2 md:px-6 md:py-2":
+												useSidebarLayout,
+										},
+									)}
+								>
+									<menuItem.icon
+										className={`size-4 shrink-0 ${
+											menuItem.isActive
+												? "text-primary"
+												: "opacity-50"
+										}`}
+									/>
+									<span>{menuItem.label}</span>
+									{/* Cart Badge */}
+									{menuItem.href === '/app/cart' && !cartSummary.isEmpty && (
+										<span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
+											{cartSummary.totalQuantity > 99 ? '99+' : cartSummary.totalQuantity}
+										</span>
+									)}
+								</Link>
+							)}
 						</li>
 					))}
 				</ul>
@@ -218,6 +268,12 @@ export function NavBar() {
 					<UserMenu showUserName />
 				</div>
 			</div>
+			
+			{/* Cart Drawer */}
+			<CartDrawer 
+				isOpen={isCartOpen} 
+				onClose={closeCartDrawer} 
+			/>
 		</nav>
 	);
 }

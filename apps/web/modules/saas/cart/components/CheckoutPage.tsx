@@ -25,9 +25,12 @@ import {
 import { 
   cartSummaryAtom,
   validateCartAtom,
-  deliveryOptionAtom,
-  clearCartAtom
+  selectedDeliveryAtom,
+  clearCartAtom,
+  cartItemsAtom
 } from '../lib/cart-store';
+import { CheckoutService, CheckoutData, CheckoutResult } from '../lib/checkout';
+import { useCartToast } from '../../shared/hooks/use-toast';
 import { CartItem } from './CartItem';
 import Link from 'next/link';
 
@@ -58,9 +61,11 @@ interface PaymentMethod {
 
 export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) {
   const cartSummary = useAtomValue(cartSummaryAtom);
+  const cartItems = useAtomValue(cartItemsAtom);
   const cartValidation = useAtomValue(validateCartAtom);
-  const [deliveryOption, setDeliveryOption] = useAtom(deliveryOptionAtom);
+  const [selectedDelivery, setSelectedDelivery] = useAtom(selectedDeliveryAtom);
   const [, clearCart] = useAtom(clearCartAtom);
+  const cartToast = useCartToast();
 
   const [currentStep, setCurrentStep] = useState<'shipping' | 'payment' | 'review'>('shipping');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -113,31 +118,59 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
 
   const handlePlaceOrder = async () => {
     if (!agreedToTerms) {
-      alert('Please agree to the terms and conditions');
+      cartToast.showError('Please agree to the terms and conditions');
       return;
     }
 
     if (!cartValidation.isValid) {
-      alert('Please fix cart issues before placing order');
+      cartToast.showError('Please fix cart issues: ' + cartValidation.errors.join(', '));
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      // Simulate order processing
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      const newOrderId = `ORD-${Date.now()}`;
-      setOrderId(newOrderId);
-      setOrderComplete(true);
-      clearCart();
+      // Prepare checkout data
+      const checkoutData: CheckoutData = {
+        shippingAddress,
+        deliveryMethod: selectedDelivery,
+        paymentMethod: paymentMethod.type,
+        paymentDetails: paymentMethod.type === 'card' ? {
+          cardNumber: paymentMethod.cardNumber,
+          expiryDate: paymentMethod.expiryDate,
+          cvv: paymentMethod.cvv
+        } : undefined,
+        customerNotes: shippingAddress.instructions,
+        prescriptionFiles: prescriptionFiles.length > 0 ? prescriptionFiles : undefined
+      };
 
-      if (onOrderComplete) {
-        onOrderComplete(newOrderId);
+      // Process checkout
+      const result: CheckoutResult = await CheckoutService.processCheckout(
+        cartItems,
+        checkoutData,
+        cartSummary
+      );
+
+      if (result.success && result.order) {
+        setOrderId(result.order.id);
+        setOrderComplete(true);
+        clearCart();
+        cartToast.showSuccess('Order placed successfully!');
+
+        if (onOrderComplete) {
+          onOrderComplete(result.order.id);
+        }
+
+        // Redirect if needed (for payment)
+        if (result.redirectUrl && paymentMethod.type !== 'cash') {
+          // For non-cash payments, we might want to redirect
+          // window.location.href = result.redirectUrl;
+        }
+      } else {
+        cartToast.showError(result.error || 'Failed to place order');
       }
     } catch (error) {
-      alert('Failed to place order. Please try again.');
+      cartToast.showError('Failed to place order. Please try again.');
       console.error('Order placement failed:', error);
     } finally {
       setIsProcessing(false);
@@ -355,7 +388,7 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                 {/* Delivery Options */}
                 <div className="mb-6">
                   <Label className="text-base font-semibold mb-3 block">Delivery Option</Label>
-                  <RadioGroup value={deliveryOption} onValueChange={setDeliveryOption}>
+                  <RadioGroup value={selectedDelivery} onValueChange={setSelectedDelivery}>
                     <div className="flex items-center space-x-2 p-3 border rounded-lg">
                       <RadioGroupItem value="standard" id="standard" />
                       <Label htmlFor="standard" className="flex items-center justify-between w-full cursor-pointer">
@@ -584,7 +617,10 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-3">Delivery Option</h3>
                     <div className="p-4 bg-gray-50 rounded-lg text-sm">
-                      <p className="capitalize">{deliveryOption.replace('_', ' ')} Delivery</p>
+                      <p className="capitalize">{selectedDelivery.replace('_', ' ')} Delivery</p>
+                      <p className="text-gray-600 mt-1">
+                        Estimated: {CheckoutService.estimateDeliveryDate(selectedDelivery, shippingAddress.city).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
                 </div>

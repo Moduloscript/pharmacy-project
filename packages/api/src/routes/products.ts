@@ -129,6 +129,7 @@ productsRouter.get('/', zValidator('query', productsQuerySchema), async (c) => {
     // Format products with extracted image URLs and refresh if needed
     const formattedProducts = await Promise.all(products.map(async product => {
       let imageUrl = null;
+      let refreshedImages = null;
       
       // Handle both JSON string and already parsed arrays
       if (product.images) {
@@ -141,20 +142,35 @@ productsRouter.get('/', zValidator('query', productsQuerySchema), async (c) => {
           }
           
           if (Array.isArray(images) && images.length > 0) {
-            const firstImage = images[0];
-            if (firstImage?.url) {
-              // Check if URL looks like a Supabase signed URL that might be expired
-              if (firstImage.key && firstImage.url.includes('supabase.co')) {
+            // Refresh all image URLs that might be expired
+            refreshedImages = await Promise.all(images.map(async (image) => {
+              if (image?.key && image?.url && image.url.includes('supabase.co')) {
                 try {
-                  const refreshedUrl = await imageService.refreshImageUrl(firstImage.key);
-                  imageUrl = refreshedUrl;
+                  // Check if URL is expired by testing a HEAD request
+                  const testResponse = await fetch(image.url, { method: 'HEAD' });
+                  if (!testResponse.ok && (testResponse.status === 400 || testResponse.status === 403)) {
+                    // URL is expired, refresh it
+                    const refreshedUrl = await imageService.refreshImageUrl(image.key);
+                    return { ...image, url: refreshedUrl };
+                  }
                 } catch (refreshError) {
-                  console.warn(`Failed to refresh URL for image ${firstImage.key}:`, refreshError);
-                  imageUrl = firstImage.url; // Use original if refresh fails
+                  console.warn(`Failed to refresh URL for image ${image.key}:`, refreshError);
+                  try {
+                    // Fallback: try refreshing without testing first
+                    const refreshedUrl = await imageService.refreshImageUrl(image.key);
+                    return { ...image, url: refreshedUrl };
+                  } catch (fallbackError) {
+                    console.error(`Fallback refresh also failed for image ${image.key}:`, fallbackError);
+                    return image; // Use original if all refresh attempts fail
+                  }
                 }
-              } else {
-                imageUrl = firstImage.url;
               }
+              return image;
+            }));
+            
+            // Set primary image URL from first refreshed image
+            if (refreshedImages.length > 0) {
+              imageUrl = refreshedImages[0]?.url;
             }
           }
         } catch (error) {
@@ -166,6 +182,7 @@ productsRouter.get('/', zValidator('query', productsQuerySchema), async (c) => {
         ...product,
         imageUrl,
         image_url: imageUrl, // Add snake_case version for frontend compatibility
+        images: refreshedImages || product.images, // Use refreshed images if available
       };
     }));
 
@@ -197,8 +214,10 @@ productsRouter.get('/:id', async (c) => {
       return c.json({ error: 'Product not found' }, 404);
     }
     
-    // Extract primary image URL from images JSON (improved logic)
+    // Extract and refresh image URLs if needed
     let imageUrl = null;
+    let refreshedImages = null;
+    
     if (product.images) {
       try {
         let images;
@@ -209,18 +228,48 @@ productsRouter.get('/:id', async (c) => {
         }
         
         if (Array.isArray(images) && images.length > 0) {
-          imageUrl = images[0]?.url || null;
+          // Refresh all image URLs that might be expired
+          refreshedImages = await Promise.all(images.map(async (image) => {
+            if (image?.key && image?.url && image.url.includes('supabase.co')) {
+              try {
+                // Check if URL is expired by testing a HEAD request
+                const testResponse = await fetch(image.url, { method: 'HEAD' });
+                if (!testResponse.ok && (testResponse.status === 400 || testResponse.status === 403)) {
+                  // URL is expired, refresh it
+                  const refreshedUrl = await imageService.refreshImageUrl(image.key);
+                  return { ...image, url: refreshedUrl };
+                }
+              } catch (refreshError) {
+                console.warn(`Failed to refresh URL for image ${image.key}:`, refreshError);
+                try {
+                  // Fallback: try refreshing without testing first
+                  const refreshedUrl = await imageService.refreshImageUrl(image.key);
+                  return { ...image, url: refreshedUrl };
+                } catch (fallbackError) {
+                  console.error(`Fallback refresh also failed for image ${image.key}:`, fallbackError);
+                  return image; // Use original if all refresh attempts fail
+                }
+              }
+            }
+            return image;
+          }));
+          
+          // Set primary image URL from first refreshed image
+          if (refreshedImages.length > 0) {
+            imageUrl = refreshedImages[0]?.url;
+          }
         }
       } catch (error) {
         console.error('Error parsing product images for single product ID', product.id, ':', error);
       }
     }
     
-    // Format product with extracted imageUrl
+    // Format product with extracted and refreshed imageUrl
     const formattedProduct = {
       ...product,
       imageUrl, // Add the extracted primary image URL
       image_url: imageUrl, // Also add snake_case version for compatibility
+      images: refreshedImages || product.images, // Use refreshed images if available
     };
     
     return c.json({ product: formattedProduct });

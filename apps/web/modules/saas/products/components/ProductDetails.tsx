@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useAtom, useAtomValue } from 'jotai';
+import React, { useState, useCallback } from 'react';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Button } from '@ui/components/button';
 import { Card } from '@ui/components/card';
 import { Badge } from '@ui/components/badge';
@@ -14,6 +14,8 @@ import {
   bulkOrderAtom,
   updateBulkOrderAtom
 } from '../lib/store';
+import { addToCartAtom } from '../../cart/lib/cart-store';
+import { useCartToast } from '@saas/shared/hooks/use-toast';
 import {
   Shield,
   Package,
@@ -43,8 +45,10 @@ export function ProductDetails({
   onAddToCart,
   className 
 }: ProductDetailsProps) {
+  // All hooks must be called unconditionally at the top of the component
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
   
   // Use TanStack Query for data fetching
   const { data, isLoading, error } = useProduct(productId);
@@ -55,7 +59,63 @@ export function ProductDetails({
   const pricingPrefs = useAtomValue(pricingPreferencesAtom);
   const [bulkOrder, setBulkOrder] = useAtom(bulkOrderAtom);
   const [, updateBulkOrder] = useAtom(updateBulkOrderAtom);
+  
+  // Cart integration - use provided onAddToCart or default to cart store
+  const addToCartAction = useSetAtom(addToCartAtom);
+  const cartToast = useCartToast();
 
+  // Define callbacks unconditionally but guard against null product
+  const handleAddToCart = useCallback(async () => {
+    // Prevent multiple rapid clicks or missing product
+    if (isAddingToCart || !product) {
+      return;
+    }
+
+    try {
+      setIsAddingToCart(true);
+      
+      if (onAddToCart) {
+        await onAddToCart(product, quantity);
+        // Only show toast if custom onAddToCart doesn't handle it
+        cartToast.showAddedToCart(product.name, quantity);
+      } else {
+        // Use cart store as default
+        addToCartAction({ 
+          product, 
+          quantity, 
+          isWholesalePrice: pricingPrefs.showWholesalePrice 
+        });
+        // Show success toast only after successful cart action
+        cartToast.showAddedToCart(product.name, quantity);
+      }
+      
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      cartToast.showError(
+        'Failed to add item to cart. Please try again.',
+        {
+          action: {
+            label: 'Retry',
+            onClick: handleAddToCart
+          }
+        }
+      );
+    } finally {
+      setIsAddingToCart(false);
+    }
+  }, [isAddingToCart, onAddToCart, product, quantity, pricingPrefs.showWholesalePrice, addToCartAction, cartToast]);
+
+  const handleAddToBulkOrder = useCallback(() => {
+    if (!product) return;
+    
+    updateBulkOrder({
+      productId: product.id,
+      quantity,
+      unitPrice: pricingPrefs.showWholesalePrice ? (product.wholesalePrice || product.wholesale_price) : (product.retailPrice || product.retail_price)
+    });
+  }, [product, quantity, pricingPrefs.showWholesalePrice, updateBulkOrder]);
+
+  // Early returns after all hooks are called
   if (isLoading) {
     return (
       <div className={cn('space-y-6', className)}>
@@ -105,23 +165,21 @@ export function ProductDetails({
     );
   }
 
-  const handleAddToCart = () => {
-    if (onAddToCart) {
-      onAddToCart(product, quantity);
+  // Convert string prices to numbers and handle both camelCase and snake_case field names
+  const parsePrice = (price) => {
+    if (typeof price === 'string') {
+      return parseFloat(price) || 0;
     }
+    return typeof price === 'number' ? price : 0;
   };
 
-  const handleAddToBulkOrder = () => {
-    updateBulkOrder({
-      productId: product.id,
-      quantity,
-      unitPrice: pricingPrefs.showWholesalePrice ? (product.wholesalePrice || product.wholesale_price) : (product.retailPrice || product.retail_price)
-    });
-  };
+  const retailPriceValue = parsePrice(product.retailPrice || product.retail_price);
+  const wholesalePriceValue = parsePrice(product.wholesalePrice || product.wholesale_price);
+  const stockQuantity = product.stockQuantity || product.stock_quantity || 0;
 
-  const currentPrice = pricingPrefs.showWholesalePrice ? (product.wholesalePrice || product.wholesale_price) : (product.retailPrice || product.retail_price);
-  const wholesalePrice = product.wholesalePrice || product.wholesale_price || 0;
-  const retailPrice = product.retailPrice || product.retail_price;
+  const currentPrice = pricingPrefs.showWholesalePrice ? wholesalePriceValue : retailPriceValue;
+  const wholesalePrice = wholesalePriceValue;
+  const retailPrice = retailPriceValue;
   const savings = retailPrice - wholesalePrice;
   const discountPercent = Math.round((savings / retailPrice) * 100);
 
@@ -134,7 +192,7 @@ export function ProductDetails({
           <div className="aspect-square rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border border-gray-200 dark:border-gray-700 overflow-hidden shadow-lg">
             {product.images?.[selectedImageIndex] ? (
               <img
-                src={product.images[selectedImageIndex]}
+                src={typeof product.images[selectedImageIndex] === 'string' ? product.images[selectedImageIndex] : product.images[selectedImageIndex]?.url}
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
@@ -160,7 +218,7 @@ export function ProductDetails({
                   )}
                 >
                   <img
-                    src={image}
+                    src={typeof image === 'string' ? image : image?.url}
                     alt={`${product.name} ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
@@ -245,7 +303,7 @@ export function ProductDetails({
 
           {/* Enhanced Stock Status */}
           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-            {product.stock_quantity > 0 ? (
+            {stockQuantity > 0 ? (
               <div className="flex items-center gap-2">
                 <CheckCircle className="size-5 text-green-500 dark:text-green-400" />
                 <div>
@@ -253,7 +311,7 @@ export function ProductDetails({
                     In Stock
                   </span>
                   <span className="text-xs text-gray-600 dark:text-gray-400 ml-1">
-                    ({product.stock_quantity} units available)
+                    ({stockQuantity} units available)
                   </span>
                 </div>
               </div>
@@ -340,7 +398,7 @@ export function ProductDetails({
                     id="quantity"
                     type="number"
                     min="1"
-                    max={product.stock_quantity}
+                    max={stockQuantity}
                     value={quantity}
                     onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                     className="w-20 text-center border-0 focus:ring-0 bg-transparent"
@@ -348,8 +406,8 @@ export function ProductDetails({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setQuantity(Math.min(product.stock_quantity, quantity + 1))}
-                    disabled={quantity >= product.stock_quantity}
+                    onClick={() => setQuantity(Math.min(stockQuantity, quantity + 1))}
+                    disabled={quantity >= stockQuantity}
                     className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
                   >
                     <Plus className="size-4" />
@@ -369,17 +427,26 @@ export function ProductDetails({
             <div className="flex gap-3">
               <Button
                 onClick={handleAddToCart}
-                disabled={product.stock_quantity <= 0}
+                disabled={stockQuantity <= 0 || isAddingToCart}
                 className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 dark:from-green-500 dark:to-emerald-500 dark:hover:from-green-400 dark:hover:to-emerald-400 text-white font-medium shadow-md hover:shadow-lg transition-all"
               >
-                <ShoppingCart className="size-4 mr-2" />
-                Add to Cart
+                {isAddingToCart ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="size-4 mr-2" />
+                    Add to Cart
+                  </>
+                )}
               </Button>
               
               <Button
                 variant="outline"
                 onClick={handleAddToBulkOrder}
-                disabled={product.stock_quantity <= 0}
+                disabled={stockQuantity <= 0}
                 className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:hover:bg-blue-900/30 font-medium"
               >
                 <Package className="size-4 mr-2" />

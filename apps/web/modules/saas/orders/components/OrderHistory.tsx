@@ -2,12 +2,12 @@
 
 import { atom, useAtom } from 'jotai'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { useToast } from '@/components/ui/use-toast'
+import { Button } from '@ui/components/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@ui/components/card'
+import { Input } from '@ui/components/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui/components/select'
+import { Badge } from '@ui/components/badge'
+import { toast } from 'sonner'
 import { 
   Loader2, 
   Package, 
@@ -107,7 +107,6 @@ interface Order {
 }
 
 export function OrderHistory() {
-  const { toast } = useToast()
   const queryClient = useQueryClient()
   
   // State
@@ -148,20 +147,13 @@ export function OrderHistory() {
       return response.json()
     },
     onSuccess: (data, orderId) => {
-      toast({
-        title: 'Order Cancelled',
-        description: 'Your order has been successfully cancelled'
-      })
+      toast.success('Your order has been successfully cancelled')
       
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       setSelectedOrder(null)
     },
     onError: (error) => {
-      toast({
-        title: 'Cancellation Failed',
-        description: error.message,
-        variant: 'destructive'
-      })
+      toast.error('Cancellation Failed: ' + error.message)
     }
   })
   
