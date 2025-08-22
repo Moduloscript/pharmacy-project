@@ -15,11 +15,17 @@ import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import { authMiddleware } from "../../middleware/auth";
 import { getPurchases } from "./lib/purchases";
+import { benpharmiPaymentsRouter } from "./benpharm-checkout";
+import { webhooksRouter } from "./webhooks";
+import { callbacksRouter } from "./callbacks";
 
 const plans = config.payments.plans as Config["payments"]["plans"];
 
 export const paymentsRouter = new Hono()
 	.basePath("/payments")
+	.route('/', benpharmiPaymentsRouter)
+	.route('/', webhooksRouter)
+	.route('/', callbacksRouter)
 	.get(
 		"/purchases",
 		authMiddleware,
