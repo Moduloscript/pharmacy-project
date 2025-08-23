@@ -140,7 +140,7 @@ export class FlutterwaveProvider implements NigerianPaymentProvider {
         tx_ref: order.orderNumber,
         amount: order.totalAmount,
         currency: 'NGN',
-        redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/payments/callback`,
+        redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/callback`,
         payment_options: 'card,banktransfer,ussd,mobilemoney',
         customer: {
           email: order.customer.email,

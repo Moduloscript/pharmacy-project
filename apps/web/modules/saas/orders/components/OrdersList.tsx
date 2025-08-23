@@ -302,14 +302,14 @@ export function OrdersList({
               {/* Status Filter */}
               <div>
                 <Label>Order Status</Label>
-                <Select value={statusFilter.join(',')} onValueChange={(value) => {
-                  setStatusFilter(value ? value.split(',') as OrderStatus[] : []);
+                <Select value={statusFilter.length > 0 ? statusFilter.join(',') : 'all'} onValueChange={(value) => {
+                  setStatusFilter(value && value !== 'all' ? value.split(',') as OrderStatus[] : []);
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All statuses</SelectItem>
+                    <SelectItem value="all">All statuses</SelectItem>
                     {statusOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
@@ -322,14 +322,14 @@ export function OrdersList({
               {/* Payment Status Filter */}
               <div>
                 <Label>Payment Status</Label>
-                <Select value={paymentStatusFilter.join(',')} onValueChange={(value) => {
-                  setPaymentStatusFilter(value ? value.split(',') as PaymentStatus[] : []);
+                <Select value={paymentStatusFilter.length > 0 ? paymentStatusFilter.join(',') : 'all'} onValueChange={(value) => {
+                  setPaymentStatusFilter(value && value !== 'all' ? value.split(',') as PaymentStatus[] : []);
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="All payments" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All payments</SelectItem>
+                    <SelectItem value="all">All payments</SelectItem>
                     {paymentStatusOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}

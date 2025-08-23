@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { logger } from '@repo/logs';
 import crypto from 'crypto';
+import { updateOrderStatusWithValidation } from '@repo/payments/lib/validation-guards';
 
 const app = new Hono();
 
@@ -276,15 +277,32 @@ async function processFlutterwavePayment(data: any) {
   try {
     const paymentStatus = mapFlutterwaveStatus(data.status);
     
-    // TODO: Update order status in database
-    await updateOrderStatus(data.tx_ref, paymentStatus, {
+    const paymentData = {
       gateway: 'FLUTTERWAVE',
       gatewayReference: data.flw_ref,
-      amount: data.amount / 100, // Convert from kobo to naira
+      amount: data.amount, // Flutterwave returns amount in the specified currency (naira), no division
       currency: data.currency,
       paymentMethod: data.payment_type,
-      paidAt: new Date(data.created_at)
-    });
+      paidAt: new Date(data.created_at),
+      customerEmail: data.customer?.email
+    };
+    
+    // Validate payment amounts before updating
+    const validation = await updateOrderStatusWithValidation(data.tx_ref, paymentStatus, paymentData);
+    
+    if (!validation.success) {
+      logger.error('Flutterwave payment validation failed', {
+        txRef: data.tx_ref,
+        error: validation.error
+      });
+      return {
+        success: false,
+        error: validation.error || 'Payment validation failed'
+      };
+    }
+    
+    // Update order status in database (after validation)
+    await updateOrderStatus(data.tx_ref, paymentStatus, paymentData);
 
     return {
       success: true,
@@ -302,15 +320,31 @@ async function processPaystackPayment(data: any) {
   try {
     const paymentStatus = mapPaystackStatus(data.status);
     
-    // TODO: Update order status in database
-    await updateOrderStatus(data.reference, paymentStatus, {
+    const paymentData = {
       gateway: 'PAYSTACK',
       gatewayReference: data.id,
       amount: data.amount / 100, // Convert from kobo to naira
       currency: data.currency,
       paymentMethod: data.channel,
       paidAt: new Date(data.paid_at)
-    });
+    };
+    
+    // Validate payment amounts before updating
+    const validation = await updateOrderStatusWithValidation(data.reference, paymentStatus, paymentData);
+    
+    if (!validation.success) {
+      logger.error('Paystack payment validation failed', {
+        reference: data.reference,
+        error: validation.error
+      });
+      return {
+        success: false,
+        error: validation.error || 'Payment validation failed'
+      };
+    }
+    
+    // Update order status in database (after validation)
+    await updateOrderStatus(data.reference, paymentStatus, paymentData);
 
     return {
       success: true,
@@ -328,15 +362,31 @@ async function processOpayPayment(data: any) {
   try {
     const paymentStatus = mapOpayStatus(data.status);
     
-    // TODO: Update order status in database
-    await updateOrderStatus(data.reference, paymentStatus, {
+    const paymentData = {
       gateway: 'OPAY',
       gatewayReference: data.orderNo,
       amount: data.amount.total / 100, // Convert from kobo to naira
       currency: data.amount.currency,
       paymentMethod: 'opay',
       paidAt: new Date()
-    });
+    };
+    
+    // Validate payment amounts before updating
+    const validation = await updateOrderStatusWithValidation(data.reference, paymentStatus, paymentData);
+    
+    if (!validation.success) {
+      logger.error('OPay payment validation failed', {
+        reference: data.reference,
+        error: validation.error
+      });
+      return {
+        success: false,
+        error: validation.error || 'Payment validation failed'
+      };
+    }
+    
+    // Update order status in database (after validation)
+    await updateOrderStatus(data.reference, paymentStatus, paymentData);
 
     return {
       success: true,
@@ -452,30 +502,181 @@ function mapOpayStatus(status: string): 'SUCCESS' | 'FAILED' | 'PENDING' | 'ABAN
   }
 }
 
-// Database update function (implement based on your database)
+// Database update function with proper implementation
 async function updateOrderStatus(reference: string, status: string, paymentData: any) {
-  // TODO: Implement database update logic
-  // Example using Prisma:
-  /*
-  await db.order.update({
-    where: { paymentReference: reference },
-    data: { 
-      paymentStatus: status,
-      paymentGateway: paymentData.gateway,
-      gatewayReference: paymentData.gatewayReference,
-      paidAmount: paymentData.amount,
-      paidAt: status === 'SUCCESS' ? paymentData.paidAt : null,
-      updatedAt: new Date(),
-    },
-  });
-  */
+  try {
+    // Import db connection
+    const { db } = await import('@repo/database');
+    
+    // Check if order exists and isn't already paid (idempotency)
+    const existingOrder = await db.order.findFirst({
+      where: {
+        OR: [
+          { paymentReference: reference },
+          { orderNumber: reference }
+        ]
+      }
+    });
 
-  logger.info('Order status updated', {
-    reference,
-    status,
-    gateway: paymentData.gateway,
-    amount: paymentData.amount
-  });
+    if (!existingOrder) {
+      logger.warn('Order not found for payment reference', { reference });
+
+      // Fallback (Option B): persist payment even when Order is missing, if we can resolve a customer
+      const dbStatus = mapStatusToDbEnum(status);
+      const user = paymentData.customerEmail
+        ? await db.user.findUnique({ where: { email: paymentData.customerEmail } })
+        : null;
+      const customer = user
+        ? await db.customer.findUnique({ where: { userId: user.id } })
+        : null;
+
+      if (!customer) {
+        logger.warn('Could not resolve customer for orphan payment; skipping persist', {
+          reference,
+          customerEmail: paymentData.customerEmail,
+        });
+        return { success: false, error: 'Order not found and customer unresolved' };
+      }
+
+      // Create or update payment record (transactionId is not unique, so do manual upsert)
+      const orphanExisting = await db.payment.findFirst({
+        where: { transactionId: reference }
+      });
+
+      if (orphanExisting) {
+        await db.payment.update({
+          where: { id: orphanExisting.id },
+          data: {
+            status: dbStatus,
+            gatewayReference: paymentData.gatewayReference,
+            gatewayResponse: JSON.stringify(paymentData),
+            updatedAt: new Date(),
+          },
+        });
+      } else {
+        await db.payment.create({
+          data: {
+            customerId: customer.id,
+            orderId: null,
+            amount: paymentData.amount,
+            currency: paymentData.currency || 'NGN',
+            method: paymentData.gateway as any,
+            status: dbStatus,
+            gatewayReference: paymentData.gatewayReference,
+            transactionId: reference,
+            gatewayResponse: JSON.stringify(paymentData),
+            gatewayFee: paymentData.gatewayFee || 0,
+            appFee: paymentData.appFee || 0,
+          },
+        });
+      }
+
+      logger.info('Persisted payment without order (fallback path)', {
+        reference,
+        customerId: customer.id,
+        gateway: paymentData.gateway,
+        status: dbStatus,
+      });
+
+      return { success: true };
+    }
+
+    if (existingOrder.paymentStatus === 'COMPLETED' && status === 'SUCCESS') {
+      logger.info('Order already marked as paid, skipping update', { 
+        reference, 
+        orderId: existingOrder.id 
+      });
+      return { success: true, alreadyProcessed: true };
+    }
+
+    // Map payment statuses to database enum
+    const dbStatus = mapStatusToDbEnum(status);
+    
+    // Update order with payment information
+    const updatedOrder = await db.order.update({
+      where: { id: existingOrder.id },
+      data: { 
+        paymentStatus: dbStatus,
+        paymentMethod: paymentData.gateway as any,
+        paymentReference: reference,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create or update payment record (transactionId is not unique, so do manual upsert)
+    const existingPayment = await db.payment.findFirst({
+      where: { transactionId: reference }
+    });
+
+    if (existingPayment) {
+      await db.payment.update({
+        where: { id: existingPayment.id },
+        data: {
+          status: dbStatus,
+          gatewayReference: paymentData.gatewayReference,
+          gatewayResponse: JSON.stringify(paymentData),
+          updatedAt: new Date(),
+        }
+      });
+    } else {
+      await db.payment.create({
+        data: {
+          customerId: existingOrder.customerId,
+          orderId: existingOrder.id,
+          amount: paymentData.amount,
+          currency: paymentData.currency || 'NGN',
+          method: paymentData.gateway as any,
+          status: dbStatus,
+          gatewayReference: paymentData.gatewayReference,
+          transactionId: reference,
+          gatewayResponse: JSON.stringify(paymentData),
+          gatewayFee: paymentData.gatewayFee || 0,
+          appFee: paymentData.appFee || 0,
+        }
+      });
+    }
+
+    // Create order tracking entry for successful payments
+    if (status === 'SUCCESS') {
+      await db.orderTracking.create({
+        data: {
+          orderId: existingOrder.id,
+          status: 'PROCESSING',
+          notes: `Payment completed via ${paymentData.gateway} - ${reference}`,
+        }
+      });
+    }
+
+    logger.info('Order status updated successfully', {
+      reference,
+      orderId: existingOrder.id,
+      status: dbStatus,
+      gateway: paymentData.gateway,
+      amount: paymentData.amount
+    });
+
+    return { success: true, orderId: existingOrder.id, status: dbStatus };
+    
+  } catch (error) {
+    logger.error('Failed to update order status', {
+      reference,
+      status,
+      gateway: paymentData.gateway,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+    return { success: false, error: error instanceof Error ? error.message : 'Database error' };
+  }
+}
+
+// Helper function to map payment status to database enum
+function mapStatusToDbEnum(status: string): 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'CANCELLED' {
+  switch (status) {
+    case 'SUCCESS': return 'COMPLETED';
+    case 'FAILED': return 'FAILED';
+    case 'PENDING': return 'PENDING';
+    case 'ABANDONED': return 'CANCELLED';
+    default: return 'PENDING';
+  }
 }
 
 export { app as webhooksRouter };

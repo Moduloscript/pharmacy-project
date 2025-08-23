@@ -1,0 +1,48 @@
+{
+  "timestamp": "2025-08-23T04:06:00Z",
+  "test_type": "comprehensive_payment_verification",
+  "database": "ehuuqltrlfcmrsiwgrml",
+  "counts": {
+    "payments": 2,
+    "orders": 2,
+    "customers": 2,
+    "users": 4
+  },
+  "test_results": {
+    "new_test_order": {
+      "order_id": "test_order_1755921934",
+      "order_number": "ORD-1755921934",
+      "total": "2700.00",
+      "payment_reference": "TEST_REF_1755921934",
+      "status": "PROCESSING",
+      "payment_status": "COMPLETED"
+    },
+    "new_test_payment": {
+      "payment_id": "test_payment_1755921943",
+      "gateway_reference": "FLW-TEST-1755921943",
+      "amount": "2700.00",
+      "status": "COMPLETED",
+      "completed_at": "2025-08-23 04:05:51.717"
+    },
+    "integrity_checks": {
+      "payment_order_link": "✅ PASS - Payment and order amounts match (2700.00)",
+      "status_consistency": "✅ PASS - Payment: COMPLETED, Order: PROCESSING/COMPLETED",
+      "foreign_key_integrity": "✅ PASS - Payment links to correct order",
+      "timestamp_consistency": "✅ PASS - Completion timestamps recorded"
+    }
+  },
+  "issues_found": {
+    "existing_data_issue": {
+      "severity": "HIGH",
+      "description": "Existing payment (cmenpcf620003u3a8jgmzs1dw) shows ₦25.00 but linked order (cmenpbg6d0001u3a8oew4s7tp) shows ₦2500.00",
+      "recommendation": "Investigate webhook processing logic - possible truncation or decimal issue in payment amount"
+    }
+  },
+  "recommendations": [
+    "✅ New payment flow works correctly",
+    "⚠️  Review existing payment records for amount discrepancies", 
+    "✅ Database relationships and foreign keys functioning properly",
+    "✅ Status transitions working as expected",
+    "🔄 Consider implementing automated verification scripts for webhook processing"
+  ]
+}

@@ -227,9 +227,13 @@ app.get('/:orderId', async (c) => {
           select: {
             id: true,
             businessName: true,
-            contactName: true,
-            email: true,
-            phone: true
+            phone: true,
+            user: {
+              select: {
+                name: true,
+                email: true
+              }
+            }
           }
         },
         orderItems: {
@@ -292,8 +296,8 @@ app.get('/:orderId', async (c) => {
           customer: {
             id: order.customer.id,
             businessName: order.customer.businessName,
-            contactName: order.customer.contactName,
-            email: order.customer.email,
+            contactName: order.customer.user.name,
+            email: order.customer.user.email,
             phone: order.customer.phone
           },
           items: order.orderItems.map(item => ({

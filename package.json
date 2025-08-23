@@ -4,6 +4,7 @@
 	"scripts": {
 		"build": "dotenv -c -- turbo build",
 		"dev": "dotenv -c -- turbo dev --concurrency 15",
+		"dev:ngrok": "node scripts/dev-with-ngrok.js",
 		"start": "dotenv -c -- turbo start",
 		"lint": "biome lint .",
 		"clean": "turbo clean",
@@ -18,6 +19,7 @@
 		"@repo/tsconfig": "workspace:*",
 		"@types/node": "^22.13.5",
 		"dotenv-cli": "^8.0.0",
+		"ngrok": "5.0.0-beta.2",
 		"turbo": "^2.4.3",
 		"typescript": "5.7.3"
 	},

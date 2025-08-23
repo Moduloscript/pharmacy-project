@@ -27,7 +27,8 @@
 			"default": "./index.ts"
 		},
 		"./types": "./types.ts",
-		"./lib/helper": "./src/lib/helper.ts"
+		"./lib/helper": "./src/lib/helper.ts",
+		"./lib/validation-guards": "./src/lib/validation-guards.ts"
 	},
 	"name": "@repo/payments",
 	"scripts": {

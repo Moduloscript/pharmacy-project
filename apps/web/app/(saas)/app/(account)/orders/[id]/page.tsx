@@ -6,11 +6,13 @@ export const metadata: Metadata = {
   description: 'View detailed information about your order'
 }
 
-export default function OrderDetailsPage({ params }: { params: { id: string } }) {
+export default async function OrderDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  
   return (
     <div className="container mx-auto py-6 px-4">
       <div className="max-w-4xl mx-auto">
-        <OrderDetails orderId={params.id} />
+        <OrderDetails orderId={id} />
       </div>
     </div>
   )

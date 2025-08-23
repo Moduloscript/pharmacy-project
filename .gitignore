@@ -62,4 +62,7 @@ node_modules/
 
 # Task files
 # tasks.json
-# tasks/ 
+# tasks/
+
+# ngrok development files
+.ngrok-urls.json
