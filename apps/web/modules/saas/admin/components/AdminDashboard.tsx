@@ -9,7 +9,7 @@ import { Label } from '@ui/components/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui/components/select';
 import { cn } from '@ui/lib';
 import {
-  DashboardIcon,
+  LayoutDashboard as DashboardIcon,
   RefreshCwIcon,
   SettingsIcon,
   BellIcon,
@@ -137,7 +137,7 @@ export function AdminDashboard({ className }: AdminDashboardProps) {
         <div className="flex items-center space-x-3">
           {/* Real-time toggle */}
           <Button
-            variant={realtimeEnabled ? "default" : "outline"}
+            variant={realtimeEnabled ? "primary" : "outline"}
             size="sm"
             onClick={() => setRealtimeEnabled(!realtimeEnabled)}
             className={realtimeEnabled ? "bg-green-600 hover:bg-green-700" : ""}
@@ -231,14 +231,14 @@ export function AdminDashboard({ className }: AdminDashboardProps) {
             <div>
               <Label>Category</Label>
               <Select
-                value={filters.category || ''}
-                onValueChange={(value) => updateFilter('category', value || undefined)}
+                value={filters.category || 'all'}
+                onValueChange={(value) => updateFilter('category', value === 'all' ? undefined : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   <SelectItem value="pain_relief">Pain Relief</SelectItem>
                   <SelectItem value="antibiotics">Antibiotics</SelectItem>
                   <SelectItem value="vitamins">Vitamins</SelectItem>
@@ -307,7 +307,7 @@ export function AdminDashboard({ className }: AdminDashboardProps) {
               </div>
             </div>
             <Link href="/app/admin/inventory/alerts">
-              <Button size="sm" variant="destructive">
+              <Button size="sm" variant="error">
                 View All Alerts
               </Button>
             </Link>

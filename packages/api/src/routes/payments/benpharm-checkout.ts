@@ -35,11 +35,8 @@ const benpharmiCheckoutSchema = z.object({
 
 type BenpharmiCheckoutRequest = z.infer<typeof benpharmiCheckoutSchema>;
 
-// Apply auth middleware
-app.use('*', authMiddleware);
-
-// BenPharm checkout endpoint
-app.post('/benpharm-checkout', zValidator('json', benpharmiCheckoutSchema), async (c) => {
+// BenPharm checkout endpoint - with auth middleware applied specifically to this route
+app.post('/benpharm-checkout', authMiddleware, zValidator('json', benpharmiCheckoutSchema), async (c) => {
   const user = c.get('user');
   const data = c.req.valid('json');
 
@@ -52,11 +49,55 @@ app.post('/benpharm-checkout', zValidator('json', benpharmiCheckoutSchema), asyn
       itemCount: data.items.length
     });
 
+    // Generate a stable business reference and pre-create Order (Option A)
+    const reference = `BP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const { db } = await import('@repo/database');
+
+    // Ensure a customer record exists for this user
+    let customer = await db.customer.findUnique({ where: { userId: user.id } });
+    if (!customer) {
+      customer = await db.customer.create({
+        data: {
+          userId: user.id,
+          customerType: 'RETAIL',
+          phone: data.customer.phone,
+          country: 'Nigeria',
+        },
+      });
+    }
+
+    // Compute order totals in naira (totalAmount is in kobo)
+    const totalNaira = data.totalAmount / 100;
+    const deliveryFeeNaira = (data.deliveryFee ?? 0) / 100;
+    const discountNaira = 0;
+    const taxNaira = 0;
+    const subtotalNaira = Math.max(0, totalNaira - deliveryFeeNaira - discountNaira + taxNaira);
+
+    // Create the Order ahead of gateway initialization so the webhook can link it
+    await db.order.create({
+      data: {
+        orderNumber: reference,
+        customerId: customer.id,
+        deliveryAddress: data.deliveryAddress ?? '',
+        deliveryCity: data.customer.state, // No city in payload; reuse state as placeholder
+        deliveryState: data.customer.state,
+        deliveryLGA: data.customer.lga ?? null,
+        deliveryPhone: data.customer.phone,
+        subtotal: subtotalNaira,
+        deliveryFee: deliveryFeeNaira,
+        discount: discountNaira,
+        tax: taxNaira,
+        total: totalNaira,
+        paymentStatus: 'PENDING',
+        paymentReference: reference,
+      },
+    });
+
     // Determine payment gateway (prioritize Flutterwave for Nigerian users)
     const gateway = data.gateway || 'FLUTTERWAVE';
 
-    // Create payment based on selected gateway
-    const paymentResult = await createBenpharmiPayment(data, gateway);
+    // Create payment based on selected gateway using the same reference
+    const paymentResult = await createBenpharmiPayment(data, gateway, reference);
 
     if (paymentResult.success) {
       logger.info('BenPharm payment created successfully', {
@@ -73,8 +114,8 @@ app.post('/benpharm-checkout', zValidator('json', benpharmiCheckoutSchema), asyn
         message: 'Payment created successfully'
       });
     } else {
-      // Try fallback gateways
-      const fallbackResult = await handlePaymentFallback(data, gateway);
+      // Try fallback gateways (reuse same reference)
+      const fallbackResult = await handlePaymentFallback(data, gateway, reference);
       
       if (fallbackResult.success) {
         return c.json({
@@ -107,9 +148,7 @@ app.post('/benpharm-checkout', zValidator('json', benpharmiCheckoutSchema), asyn
 });
 
 // Create payment with specified gateway
-async function createBenpharmiPayment(data: BenpharmiCheckoutRequest, gateway: string) {
-  const reference = `BP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
+async function createBenpharmiPayment(data: BenpharmiCheckoutRequest, gateway: string, reference: string) {
   try {
     switch (gateway) {
       case 'FLUTTERWAVE':
@@ -156,8 +195,8 @@ async function createFlutterwavePayment(data: BenpharmiCheckoutRequest, referenc
       amount: data.totalAmount / 100, // Convert from kobo to naira
       currency: 'NGN',
       redirect_url: process.env.NEXT_PUBLIC_APP_URL 
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/payments/callback` 
-        : data.redirectUrl || 'https://benpharm.ng/payments/callback',
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/callback` 
+        : data.redirectUrl || 'https://benpharm.ng/api/payments/callback',
       payment_options: 'card,banktransfer,ussd,mobilemoney,opay',
       customer: {
         email: data.customer.email,
@@ -267,11 +306,11 @@ async function createOpayPayment(data: BenpharmiCheckoutRequest, reference: stri
         currency: 'NGN'
       },
       returnUrl: process.env.NEXT_PUBLIC_APP_URL 
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/payments/callback` 
-        : data.redirectUrl || 'https://benpharm.ng/payments/callback',
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/callback` 
+        : data.redirectUrl || 'https://benpharm.ng/api/payments/callback',
       cancelUrl: process.env.NEXT_PUBLIC_APP_URL 
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/payments/cancel` 
-        : 'https://benpharm.ng/payments/cancel',
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/cancel` 
+        : 'https://benpharm.ng/api/payments/cancel',
       notifyUrl: process.env.NEXT_PUBLIC_APP_URL 
         ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/webhook/opay` 
         : 'https://benpharm.ng/api/payments/webhook/opay',
@@ -382,8 +421,8 @@ async function createPaystackPayment(data: BenpharmiCheckoutRequest, reference: 
       currency: 'NGN',
       email: data.customer.email,
       callback_url: process.env.NEXT_PUBLIC_APP_URL 
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/payments/callback` 
-        : data.redirectUrl || 'https://benpharm.ng/payments/callback',
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/callback` 
+        : data.redirectUrl || 'https://benpharm.ng/api/payments/callback',
       channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer', 'opay'],
       metadata: {
         orderId: data.productId,
@@ -483,11 +522,11 @@ async function createPaystackPayment(data: BenpharmiCheckoutRequest, reference: 
 }
 
 // Handle gateway fallback
-async function handlePaymentFallback(data: BenpharmiCheckoutRequest, failedGateway: string) {
+async function handlePaymentFallback(data: BenpharmiCheckoutRequest, failedGateway: string, reference: string) {
   const fallbackOrder = ['FLUTTERWAVE', 'OPAY', 'PAYSTACK'].filter(g => g !== failedGateway);
   
   for (const gateway of fallbackOrder) {
-    const result = await createBenpharmiPayment(data, gateway);
+    const result = await createBenpharmiPayment(data, gateway, reference);
     if (result.success) {
       return { ...result, gateway };
     }

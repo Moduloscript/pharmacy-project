@@ -158,7 +158,8 @@ export function OrderHistory() {
   })
   
   const handleStatusFilter = (status: string) => {
-    setFilters(prev => ({ ...prev, status, page: 1 }))
+    const filterValue = status === 'all' ? '' : status
+    setFilters(prev => ({ ...prev, status: filterValue, page: 1 }))
   }
   
   const handleSearch = (search: string) => {
@@ -237,13 +238,13 @@ export function OrderHistory() {
             </div>
             
             <div className="flex gap-2">
-              <Select value={filters.status} onValueChange={handleStatusFilter}>
+              <Select value={filters.status || 'all'} onValueChange={handleStatusFilter}>
                 <SelectTrigger className="w-[150px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="RECEIVED">Received</SelectItem>
                   <SelectItem value="PROCESSING">Processing</SelectItem>
                   <SelectItem value="READY">Ready</SelectItem>

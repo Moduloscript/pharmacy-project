@@ -4,6 +4,35 @@
 
 This document establishes the standardized workflow for developing BenPharm Online using both the comprehensive TASKS.md planning document and TaskMaster AI for task management.
 
+> **📋 Essential Reading**: Before starting development, also review **WARP.md** for repository architecture, technology stack, Nigerian-specific integrations, and development environment setup instructions.
+
+---
+
+## 📖 **Rule 0: Review WARP.md for Technical Context**
+
+### **Before Starting Any Development:**
+- ✅ **Read WARP.md** - Contains repository architecture, tech stack details, and Nigerian-specific requirements
+- ✅ **Understand the monorepo structure** - Know where to find packages, apps, and shared configurations
+- ✅ **Set up development environment** - Follow the exact commands and environment variable setup
+- ✅ **Learn the Nigerian integrations** - Payment gateways, WhatsApp/SMS, currency formatting
+
+### **WARP.md Contains Critical Information About:**
+- 🏗️ **Monorepo architecture** with TurboRepo + pnpm workspaces
+- 💳 **Nigerian payment gateway priority** (Flutterwave → OPay → Paystack)
+- 📱 **WhatsApp/SMS integration patterns** for notifications
+- 🇳🇬 **Nigerian data validation** (phone numbers, NAFDAC codes, currency)
+- ⚙️ **Environment setup** and required API keys
+- 🧪 **Testing strategy** and coverage requirements
+
+### **Reference Workflow:**
+```bash
+# Step 1: Review technical context
+1. Read WARP.md for architecture and Nigerian requirements
+2. Check TASKS.md for specific implementation details
+3. Update TaskMaster AI with task progress
+4. Implement following both technical and workflow guidelines
+```
+
 ---
 
 ## 📋 **Rule 1: Reference TASKS.md for Implementation Details**
@@ -160,11 +189,12 @@ POST   /api/products - Create product (admin only)
 ### **Technical Reference Workflow:**
 ```
 1. Start task in TaskMaster AI
-2. Open TASKS.md to relevant section
-3. Copy file paths and technical specifications
-4. Implement following provided patterns
-5. Update progress in TaskMaster AI
-6. Return to TASKS.md for any clarifications
+2. Review WARP.md for architecture/Nigerian requirements context
+3. Open TASKS.md to relevant section
+4. Copy file paths and technical specifications
+5. Implement following provided patterns (TASKS.md) and tech stack (WARP.md)
+6. Update progress in TaskMaster AI
+7. Return to TASKS.md/WARP.md for any clarifications
 ```
 
 ---
@@ -211,7 +241,8 @@ taskmaster list-tasks --filter dependencies
 # 3. Set task status
 taskmaster set-status --task-id [ID] --status "in progress"
 
-# 4. Open TASKS.md to relevant section
+# 4. Review WARP.md for technical context (architecture, Nigerian requirements)
+# 5. Open TASKS.md to relevant section
 # Reference technical specifications
 ```
 
@@ -256,13 +287,13 @@ taskmaster set-status --task-id [ID] --status "review" # or "blocked"
 
 ## 💡 **Best Practices Summary**
 
-| **Planning & Strategy** | **Task Management** | **Implementation** |
-|------------------------|-------------------|-------------------|
-| Use TASKS.md | Use TaskMaster AI | Reference both |
-| Strategic decisions | Progress tracking | Technical specs |
-| Technical specifications | Status updates | Code examples |
-| Nigerian requirements | Dependencies | File paths |
-| Budget/timeline | Team coordination | Patterns |
+| **Technical Context** | **Planning & Strategy** | **Task Management** | **Implementation** |
+|---------------------|------------------------|-------------------|-------------------|
+| Use WARP.md | Use TASKS.md | Use TaskMaster AI | Reference all three |
+| Architecture & setup | Strategic decisions | Progress tracking | Technical specs |
+| Nigerian integrations | Technical specifications | Status updates | Code examples |
+| Environment config | Nigerian requirements | Dependencies | File paths |
+| Testing strategy | Budget/timeline | Team coordination | Patterns |
 
 ---
 
@@ -276,4 +307,4 @@ Track these metrics to ensure workflow effectiveness:
 
 ---
 
-**Remember: TASKS.md is your implementation Bible, TaskMaster AI is your progress tracker. Use both consistently for maximum effectiveness!** 🚀
+**Remember: WARP.md provides technical context, TASKS.md is your implementation Bible, TaskMaster AI is your progress tracker. Use all three consistently for maximum effectiveness!** 🚀

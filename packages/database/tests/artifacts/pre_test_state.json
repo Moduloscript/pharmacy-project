@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-08-23T03:59:39Z",
+  "test_type": "comprehensive_payment_verification",
+  "database": "ehuuqltrlfcmrsiwgrml",
+  "counts": {
+    "payments": 1,
+    "orders": 1,
+    "customers": 2,
+    "users": 4
+  },
+  "existing_data": {
+    "latest_payment": {
+      "id": "cmenpcf620003u3a8jgmzs1dw",
+      "method": "FLUTTERWAVE",
+      "status": "COMPLETED",
+      "amount": "25.00",
+      "gatewayReference": "FLW-MOCK-daa01a8a0985b11136f973b8810bb9f7",
+      "createdAt": "2025-08-23 03:30:54.794"
+    },
+    "latest_order": {
+      "id": "cmenpbg6d0001u3a8oew4s7tp",
+      "status": "RECEIVED",
+      "total": "2500.00",
+      "createdAt": "2025-08-23 03:30:09.436",
+      "paymentReference": "BP_1755919808722_084ag44b1"
+    }
+  }
+}

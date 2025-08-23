@@ -2,12 +2,14 @@
 
 import { EnhancedCheckoutForm } from '@/modules/saas/orders/components/EnhancedCheckoutForm'
 import { useRouter } from 'next/navigation'
+import { use } from 'react'
 
 interface CheckoutPageProps {
-  searchParams: { success?: string; orderId?: string }
+  searchParams: Promise<{ success?: string; orderId?: string }>
 }
 
 export default function CheckoutPage({ searchParams }: CheckoutPageProps) {
+  const params = use(searchParams)
   const router = useRouter()
   
   const handleCheckoutSuccess = (orderId: string) => {
