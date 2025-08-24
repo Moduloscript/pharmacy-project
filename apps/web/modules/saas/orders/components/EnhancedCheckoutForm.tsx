@@ -16,7 +16,7 @@ import { Badge } from '@ui/components/badge'
 import { RadioGroup, RadioGroupItem } from '@ui/components/radio-group'
 import { useCartToast } from '@saas/shared/hooks/use-toast'
 import { Loader2, CreditCard, Truck, Package, MapPin, Phone, User, Globe, CheckCircle } from 'lucide-react'
-import { nigerianStates, getLGAs, formatNaira } from '../../../../lib/nigerian-locations'
+import { nigerianStates, getLGAs, formatNaira } from '@/lib/nigerian-locations'
 import { 
   selectedStateAtom, 
   selectedLGAAtom, 
@@ -24,6 +24,10 @@ import {
   phoneNumberAtom,
   cartItemsAtom,
   cartSummaryAtom,
+  clearCartAtom,
+  startCheckoutWithExpirationAtom,
+  endCheckoutWithExpirationAtom,
+  startPaymentWithExpirationAtom,
   type CartItem
 } from '../../cart/lib/cart-store'
 
@@ -88,6 +92,10 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
   const [isLoading, setIsLoading] = useAtom(checkoutLoadingAtom)
   const [orderComplete, setOrderComplete] = useAtom(orderCompleteAtom)
   const [paymentUrl, setPaymentUrl] = useAtom(paymentUrlAtom)
+  const [, clearCart] = useAtom(clearCartAtom)
+  const [, startCheckoutWithExpiration] = useAtom(startCheckoutWithExpirationAtom)
+  const [, endCheckoutWithExpiration] = useAtom(endCheckoutWithExpirationAtom)
+  const [, startPaymentWithExpiration] = useAtom(startPaymentWithExpirationAtom)
   const selectedState = useAtomValue(selectedStateAtom)
   const selectedLGA = useAtomValue(selectedLGAAtom)
   const deliveryAddress = useAtomValue(deliveryAddressAtom)
@@ -164,8 +172,11 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
           window.location.href = data.paymentUrl!
         }, 2000)
       } else {
-        // Direct order completed
+        // Direct order completed - clear cart immediately
         cartToast.showSuccess(`Order Created Successfully! Your order #${data.orderNumber} has been created.`)
+        
+        // Clear cart for direct orders (cash on delivery, invoice, etc.)
+        clearCart('order_completed')
         
         setOrderComplete(true)
         

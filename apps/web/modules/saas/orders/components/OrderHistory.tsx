@@ -23,6 +23,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { formatNaira } from '@/lib/nigerian-locations'
+import { CollapsibleOrderCard } from './CollapsibleOrderCard'
 import Link from 'next/link'
 
 // Local atoms for order management
@@ -172,6 +173,7 @@ export function OrderHistory() {
   
   const handleCancelOrder = (orderId: string) => {
     if (confirm('Are you sure you want to cancel this order?')) {
+      setSelectedOrder(orderId)
       cancelOrderMutation.mutate(orderId)
     }
   }
@@ -268,121 +270,15 @@ export function OrderHistory() {
         </CardContent>
       </Card>
       
-      {/* Orders List */}
+      {/* Orders List - Now with Collapsible Cards */}
       <div className="space-y-4">
         {orders.map((order: Order) => (
-          <Card key={order.id} className="overflow-hidden shadow-md border-0 hover:shadow-lg transition-all duration-300 dark:bg-slate-800">
-            <CardHeader className="pb-3 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 border-b border-slate-100 dark:border-slate-700">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <CardTitle className="text-xl font-semibold text-slate-900 dark:text-slate-100">Order #{order.orderNumber}</CardTitle>
-                  <div className="flex items-center gap-2 mt-2 text-sm text-slate-500 dark:text-slate-400">
-                    <Calendar className="h-4 w-4 text-indigo-500" />
-                    {new Date(order.createdAt).toLocaleDateString('en-GB', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric'
-                    })}
-                  </div>
-                </div>
-                
-                <div className="flex flex-col sm:items-end gap-3">
-                  <span className={`px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider ${getStatusColor(order.status)}`}>
-                    {order.status}
-                  </span>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{formatNaira(order.total)}</p>
-                </div>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-4 p-6">
-              {/* Order Details with Material Design */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg dark:bg-slate-900">
-                  <div className="p-2 bg-white rounded-lg shadow-sm dark:bg-slate-800">
-                    <Truck className="h-4 w-4 text-indigo-500" />
-                  </div>
-                  <span className="capitalize text-sm font-medium text-slate-700 dark:text-slate-300">{order.deliveryMethod.toLowerCase()} Delivery</span>
-                </div>
-                
-                {order.deliveryMethod !== 'PICKUP' && (
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg dark:bg-slate-900">
-                    <div className="p-2 bg-white rounded-lg shadow-sm dark:bg-slate-800">
-                      <MapPin className="h-4 w-4 text-emerald-500" />
-                    </div>
-                    <span className="truncate text-sm font-medium text-slate-700 dark:text-slate-300">{order.deliveryCity}, {order.deliveryState}</span>
-                  </div>
-                )}
-                
-                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg dark:bg-slate-900">
-                  <div className="p-2 bg-white rounded-lg shadow-sm dark:bg-slate-800">
-                    <CreditCard className="h-4 w-4 text-amber-500" />
-                  </div>
-                  <span className={`text-sm font-medium px-3 py-1 rounded-full ${
-                    order.paymentStatus === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' :
-                    order.paymentStatus === 'PENDING' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
-                    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                  }`}>
-                    {order.paymentStatus}
-                  </span>
-                </div>
-              </div>
-              
-              {/* Items Preview with Material Design */}
-              <div className="border-t-2 border-slate-100 dark:border-slate-700 pt-4">
-                <p className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">
-                  {(order.items?.length ?? 0) || (order as any).itemsCount || 0} item{(((order.items?.length ?? 0) || (order as any).itemsCount || 0) !== 1) ? 's' : ''}
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {order.items.slice(0, 3).map((item: OrderItem) => (
-                    <div key={item.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
-                      <span className="truncate font-medium text-slate-700 dark:text-slate-300">{item.product.name}</span>
-                      <span className="ml-2 px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold dark:bg-indigo-900/30 dark:text-indigo-300">x{item.quantity}</span>
-                    </div>
-                  ))}
-                  {order.items.length > 3 && (
-                    <div className="p-3 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg text-center border border-dashed border-slate-300 dark:border-slate-600">
-                      <span className="text-sm font-medium text-slate-600 dark:text-slate-400">+{order.items.length - 3} more items</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Material Design Actions */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t-2 border-slate-100 dark:border-slate-700">
-                <Link href={`/app/orders/${order.id}`} className="flex-1">
-                  <Button className="w-full h-11 bg-indigo-500 hover:bg-indigo-600 text-white shadow-md hover:shadow-lg transition-all duration-200 rounded-lg font-medium">
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Details
-                  </Button>
-                </Link>
-                
-                {['RECEIVED', 'PROCESSING'].includes(order.status) && (
-                  <Button
-                    onClick={() => handleCancelOrder(order.id)}
-                    disabled={cancelOrderMutation.isPending}
-                    className="flex-1 sm:flex-initial h-11 bg-white hover:bg-red-50 text-red-600 border-2 border-red-200 hover:border-red-300 dark:bg-slate-900 dark:hover:bg-red-900/20 dark:border-red-800 rounded-lg font-medium transition-all duration-200"
-                  >
-                    {cancelOrderMutation.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Cancelling...
-                      </>
-                    ) : (
-                      'Cancel Order'
-                    )}
-                  </Button>
-                )}
-                
-                {order.status === 'DELIVERED' && (
-                  <Button className="flex-1 sm:flex-initial h-11 bg-emerald-500 hover:bg-emerald-600 text-white shadow-md hover:shadow-lg transition-all duration-200 rounded-lg font-medium">
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Reorder Items
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <CollapsibleOrderCard 
+            key={order.id}
+            order={order}
+            onCancelOrder={handleCancelOrder}
+            isLoading={cancelOrderMutation.isPending && selectedOrder === order.id}
+          />
         ))}
       </div>
       

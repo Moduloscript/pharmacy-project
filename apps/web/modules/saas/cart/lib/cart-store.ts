@@ -1,8 +1,140 @@
 'use client';
 
 import { atom } from 'jotai';
-import { atomWithStorage } from 'jotai/utils';
+import { atomWithStorage, type SyncStorage } from 'jotai/utils';
 import type { Product } from '../../products/lib/api';
+import { 
+  cartSessionStateAtom, 
+  currentSessionAtom,
+  SessionManager,
+  initializeSessionAtom,
+  updateSessionActivityAtom,
+  startCheckoutSessionAtom,
+  completeSessionAtom,
+  isSessionActiveAtom,
+  type CartSession 
+} from './session-manager';
+import { 
+  cartExpirationManager, 
+  useCartExpiration,
+  type ExpirationEvent 
+} from './cart-expiration-manager';
+
+// ---------- Per-session/per-tab cart storage (sessionStorage) ----------
+
+function getRawSessionState(): { session?: { id: string; createdAt: string; status: string }; metadata?: { tabId?: string } } | null {
+  try {
+    if (typeof window === 'undefined') return null;
+    // Prefer sessionStorage (tab-scoped), fallback to legacy localStorage
+    const rawSession = sessionStorage.getItem('benpharm-cart-session');
+    if (rawSession) return JSON.parse(rawSession);
+    const rawLocal = localStorage.getItem('benpharm-cart-session');
+    return rawLocal ? JSON.parse(rawLocal) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getSessionAndTabIds(): { sessionId: string; tabId: string } {
+  const state = getRawSessionState();
+  const sessionId = state?.session?.id || 'no-session';
+  let tabId = state?.metadata?.tabId;
+  if (!tabId) {
+    try {
+      // fallback tab id
+      tabId = sessionStorage.getItem('cart_tab_id') || `tab_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      sessionStorage.setItem('cart_tab_id', tabId);
+    } catch {
+      tabId = 'no-tab';
+    }
+  }
+  return { sessionId, tabId };
+}
+
+function perSessionCartKey(): string {
+  const { sessionId, tabId } = getSessionAndTabIds();
+  return `benpharm-cart-items-${sessionId}-${tabId}`;
+}
+
+function shouldAllowLegacyMigrationForThisSession(): boolean {
+  try {
+    if (typeof window === 'undefined') return false;
+    const state = getRawSessionState();
+    const sessionId = state?.session?.id;
+    if (!sessionId) return false;
+
+    const legacyLockKey = 'benpharm-cart-legacy-session-id';
+    const lockedSessionId = localStorage.getItem(legacyLockKey);
+    if (!lockedSessionId) {
+      // First time: lock migration to current session id so future sessions won't import legacy
+      localStorage.setItem(legacyLockKey, sessionId);
+      return true;
+    }
+    // Allow migration only for the locked session id
+    return lockedSessionId === sessionId;
+  } catch {
+    return false;
+  }
+}
+
+const sessionCartStorage: SyncStorage<unknown> = {
+  getItem: (key, initialValue) => {
+    try {
+      if (typeof window === 'undefined') return initialValue;
+      const dynKey = perSessionCartKey();
+
+      // Prefer sessionStorage (per-tab)
+      const fromSession = sessionStorage.getItem(dynKey);
+      if (fromSession != null) {
+        return JSON.parse(fromSession);
+      }
+
+      // Fallback to localStorage under same dynKey (survives reloads in same tab)
+      const fromLocalDyn = localStorage.getItem(dynKey);
+      if (fromLocalDyn != null) {
+        return JSON.parse(fromLocalDyn);
+      }
+
+      // One-time legacy migration gate: only for the session that first locks legacy
+      const legacy = localStorage.getItem('benpharm-cart-items');
+      if (legacy && shouldAllowLegacyMigrationForThisSession()) {
+        try {
+          const parsed = JSON.parse(legacy);
+          sessionStorage.setItem(dynKey, JSON.stringify(parsed));
+          return parsed;
+        } catch {
+          // ignore malformed legacy
+        }
+      }
+
+      return initialValue;
+    } catch {
+      return initialValue;
+    }
+  },
+  setItem: (key, newValue) => {
+    try {
+      if (typeof window === 'undefined') return;
+      const dynKey = perSessionCartKey();
+      const str = JSON.stringify(newValue);
+      sessionStorage.setItem(dynKey, str);
+      // mirror to localStorage to survive full reloads (optional)
+      localStorage.setItem(dynKey, str);
+    } catch {
+      // noop
+    }
+  },
+  removeItem: (key) => {
+    try {
+      if (typeof window === 'undefined') return;
+      const dynKey = perSessionCartKey();
+      sessionStorage.removeItem(dynKey);
+      localStorage.removeItem(dynKey);
+    } catch {
+      // noop
+    }
+  },
+};
 
 // Cart item interface
 export interface CartItem {
@@ -52,9 +184,39 @@ export const DELIVERY_OPTIONS: DeliveryOption[] = [
   }
 ];
 
-// Cart state atoms
-export const cartItemsAtom = atomWithStorage<CartItem[]>('benpharm-cart-items', [])
+// Enhanced cart state atoms with session awareness
+// cartItemsAtom now uses per-session/per-tab dynamic keys via sessionCartStorage
+export const cartItemsAtom = atomWithStorage<CartItem[]>('benpharm-cart-items', [], sessionCartStorage)
 export const selectedDeliveryAtom = atomWithStorage<DeliveryOption['id']>('benpharm-delivery', 'pickup')
+
+// Session-aware cart management
+export const sessionAwareCartAtom = atom(
+  (get) => {
+    const items = get(cartItemsAtom);
+    const session = get(currentSessionAtom);
+    const isActive = get(isSessionActiveAtom);
+    
+    // If session is not active, return empty cart
+    if (!isActive) {
+      return [];
+    }
+    
+    return items;
+  },
+  (get, set, items: CartItem[]) => {
+    // Ensure session is initialized before updating cart
+    const session = get(currentSessionAtom);
+    if (!session) {
+      set(initializeSessionAtom);
+    }
+    
+    // Update cart items
+    set(cartItemsAtom, items);
+    
+    // Update session activity
+    set(updateSessionActivityAtom);
+  }
+);
 
 // Checkout form atoms - these were missing and causing import errors
 export const selectedStateAtom = atom<string>('Edo')
@@ -63,11 +225,13 @@ export const deliveryAddressAtom = atom<string>('')
 export const phoneNumberAtom = atom<string>('')
 export const selectedDeliveryTypeAtom = atom<DeliveryOption['id']>('pickup')
 
-// Cart summary calculations
+// Enhanced cart summary with session awareness
 export const cartSummaryAtom = atom((get) => {
-  const items = get(cartItemsAtom);
+  const items = get(sessionAwareCartAtom); // Use session-aware cart
   const selectedDeliveryId = get(selectedDeliveryAtom);
   const selectedDelivery = DELIVERY_OPTIONS.find(d => d.id === selectedDeliveryId) || DELIVERY_OPTIONS[0];
+  const session = get(currentSessionAtom);
+  const isActive = get(isSessionActiveAtom);
 
   const subtotal = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
   const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -98,8 +262,10 @@ export const cartSummaryAtom = atom((get) => {
     total,
     totalQuantity,
     selectedDelivery,
-    isEmpty: items.length === 0,
-    requiresPrescription: items.some(item => item.product.is_prescription_required || item.product.isPrescriptionRequired)
+    isEmpty: items.length === 0 || !isActive,
+    requiresPrescription: items.some(item => item.product.is_prescription_required || item.product.isPrescriptionRequired),
+    session,
+    isActive
   };
 });
 
@@ -111,7 +277,13 @@ export const addToCartAtom = atom(
     quantity?: number; 
     isWholesalePrice?: boolean;
   }) => {
-    const currentItems = get(cartItemsAtom);
+    // Ensure session is active before adding to cart
+    const isActive = get(isSessionActiveAtom);
+    if (!isActive) {
+      set(initializeSessionAtom);
+    }
+    
+    const currentItems = get(sessionAwareCartAtom);
     
     // Helper function to parse prices and handle both camelCase and snake_case
     const parsePrice = (price: any): number => {
@@ -149,7 +321,7 @@ export const addToCartAtom = atom(
         quantity: validatedQuantity
       };
       
-      set(cartItemsAtom, updatedItems);
+      set(sessionAwareCartAtom, updatedItems);
     } else {
       // Add new item to cart
       const validatedQuantity = Math.min(
@@ -166,7 +338,7 @@ export const addToCartAtom = atom(
         addedAt: new Date()
       };
       
-      set(cartItemsAtom, [...currentItems, newItem]);
+      set(sessionAwareCartAtom, [...currentItems, newItem]);
     }
   }
 );
@@ -205,10 +377,29 @@ export const removeFromCartAtom = atom(
   }
 );
 
+// Enhanced clear cart with session management
 export const clearCartAtom = atom(
   null,
-  (_get, set) => {
+  (
+    get,
+    set,
+    reason: 'manual' | 'payment_success' | 'order_completed' | 'session_expired' = 'manual'
+  ) => {
     set(cartItemsAtom, []);
+    
+    // Handle session based on clear reason
+    if (reason === 'payment_success' || reason === 'order_completed') {
+      // Mark session as completed for successful flow
+      set(completeSessionAtom);
+      // Create new session for future shopping
+      setTimeout(() => set(initializeSessionAtom), 100);
+    } else if (reason === 'session_expired') {
+      // Initialize new session for expired session
+      set(initializeSessionAtom);
+    } else {
+      // Manual clear - just update activity
+      set(updateSessionActivityAtom);
+    }
   }
 );
 
@@ -263,6 +454,144 @@ export const validateCartAtom = atom((get) => {
   };
 });
 
+// Cart expiration event handling atom
+export const handleCartExpirationAtom = atom(
+  null,
+  (get, set, expirationEvent: ExpirationEvent) => {
+    console.log('Cart expired:', expirationEvent.reason);
+    
+    // Clear cart due to expiration
+    set(clearCartAtom, 'session_expired');
+    
+    // Dispatch custom event for UI components
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cart-expiration-warning', {
+        detail: {
+          reason: expirationEvent.reason,
+          itemCount: expirationEvent.itemCount,
+          lastActivity: expirationEvent.lastActivity
+        }
+      }));
+    }
+  }
+);
+
+// Cart activity tracking atoms
+export const extendCartLifetimeAtom = atom(
+  null,
+  (get, set, activityType: 'browsing' | 'checkout' | 'payment' | 'idle' = 'browsing') => {
+    // Update session activity
+    set(updateSessionActivityAtom);
+    
+    // Extend cart expiration
+    cartExpirationManager.extendCartLifetime(activityType);
+    
+    // Dispatch cart activity event
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cart_activity', {
+        detail: { activityType }
+      }));
+    }
+  }
+);
+
+// Initialize cart expiration when needed
+export const initializeCartExpirationAtom = atom(
+  null,
+  (get, set) => {
+    // Initialize cart expiration manager
+    cartExpirationManager.initialize();
+    
+    // Set up event listener for cart expiration
+    if (typeof window !== 'undefined') {
+      const handleExpiration = (event: CustomEvent<ExpirationEvent>) => {
+        set(handleCartExpirationAtom, event.detail);
+      };
+      
+      window.addEventListener('cart-expired', handleExpiration as EventListener);
+      
+      // Cleanup function (would be called in component unmount)
+      return () => {
+        window.removeEventListener('cart-expired', handleExpiration as EventListener);
+        cartExpirationManager.cleanup();
+      };
+    }
+  }
+);
+
+// Enhanced add to cart with activity tracking
+export const addToCartWithActivityAtom = atom(
+  null,
+  (get, set, params: { product: Product; quantity?: number; isWholesalePrice?: boolean }) => {
+    // Add to cart normally
+    set(addToCartAtom, params);
+    
+    // Extend cart lifetime
+    set(extendCartLifetimeAtom, 'browsing');
+  }
+);
+
+// Enhanced update cart with activity tracking
+export const updateCartWithActivityAtom = atom(
+  null,
+  (get, set, params: { itemId: string; quantity: number }) => {
+    // Update cart normally
+    set(updateCartItemQuantityAtom, params);
+    
+    // Extend cart lifetime
+    set(extendCartLifetimeAtom, 'browsing');
+  }
+);
+
+// Enhanced remove from cart with activity tracking
+export const removeFromCartWithActivityAtom = atom(
+  null,
+  (get, set, itemId: string) => {
+    // Remove from cart normally
+    set(removeFromCartAtom, itemId);
+    
+    // Extend cart lifetime
+    set(extendCartLifetimeAtom, 'browsing');
+  }
+);
+
+// Checkout session management atoms
+export const startCheckoutWithExpirationAtom = atom(
+  null,
+  (get, set) => {
+    // Start checkout session
+    set(startCheckoutSessionAtom);
+    
+    // Switch to checkout mode with shorter timeout
+    cartExpirationManager.startCheckoutMode();
+    
+    // Extend lifetime to reset timeout
+    set(extendCartLifetimeAtom, 'checkout');
+  }
+);
+
+export const endCheckoutWithExpirationAtom = atom(
+  null,
+  (get, set) => {
+    // End checkout mode
+    cartExpirationManager.endCheckoutMode();
+    
+    // Return to normal browsing mode
+    set(extendCartLifetimeAtom, 'browsing');
+  }
+);
+
+export const startPaymentWithExpirationAtom = atom(
+  null,
+  (get, set) => {
+    // Start payment mode (maintains session during payment)
+    cartExpirationManager.startPaymentMode();
+    
+    // Extend lifetime for payment process
+    set(extendCartLifetimeAtom, 'payment');
+  }
+);
+
 // Cart persistence and sync atoms
 export const syncCartAtom = atom(
   null,
@@ -271,6 +600,14 @@ export const syncCartAtom = atom(
     // For now, we'll just validate against current product data
     const items = get(cartItemsAtom);
     
+    // Check for concurrent sessions
+    const hasConcurrentSessions = cartExpirationManager.handleConcurrentSessions();
+    
+    if (hasConcurrentSessions) {
+      console.log('Concurrent sessions detected, extending cart lifetime');
+      set(extendCartLifetimeAtom, 'browsing');
+    }
+    
     // TODO: Fetch latest product data and validate cart items
     // TODO: Remove items that are no longer available
     // TODO: Update prices if they've changed
@@ -278,3 +615,6 @@ export const syncCartAtom = atom(
     console.log('Cart sync completed', { itemCount: items.length });
   }
 );
+
+// Export the useCartExpiration hook for components
+export { useCartExpiration };

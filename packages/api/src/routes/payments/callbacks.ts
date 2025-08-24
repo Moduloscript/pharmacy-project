@@ -9,9 +9,12 @@ const app = new Hono();
 app.get('/callback', async (c) => {
   try {
     const query = c.req.query();
-    const reference = query.tx_ref || query.reference || query.trxref;
+    const gatewayParam = (query.gateway || query.provider || '').toUpperCase();
+    const reference = query.tx_ref || query.reference || query.trxref || query.orderNo;
     const status = query.status;
-    const gateway = detectGatewayFromQuery(query);
+    const gateway = (gatewayParam && ['FLUTTERWAVE', 'PAYSTACK', 'OPAY'].includes(gatewayParam))
+      ? gatewayParam
+      : detectGatewayFromQuery(query);
 
     logger.info('Payment callback received', {
       gateway,
@@ -208,33 +211,39 @@ app.get('/callback/paystack', async (c) => {
 app.get('/callback/opay', async (c) => {
   try {
     const query = c.req.query();
-    const reference = query.reference;
-    const orderNo = query.orderNo;
-    const status = query.status;
+    const reference = query.reference || query.orderNo;
+    const statusHint = query.status;
 
-    logger.info('OPay callback received', { reference, orderNo, status });
+    logger.info('OPay callback received', { reference, statusHint });
 
-    const paymentReference = reference || orderNo;
-    if (!paymentReference) {
+    if (!reference) {
       return c.redirect(`${getAppUrl()}/app/checkout/error?message=Invalid OPay reference`);
     }
 
-    // For OPay, we might need to implement their verification API
-    // For now, we'll trust the callback status with basic validation
-    if (status === 'SUCCESS') {
-      const successUrl = new URL(`${getAppUrl()}/app/checkout/success`);
-      successUrl.searchParams.set('reference', paymentReference);
-      successUrl.searchParams.set('status', 'SUCCESS');
-      successUrl.searchParams.set('gateway', 'OPAY');
-      
-      return c.redirect(successUrl.toString());
-    } else {
-      const errorUrl = new URL(`${getAppUrl()}/app/checkout/error`);
-      errorUrl.searchParams.set('reference', paymentReference);
-      errorUrl.searchParams.set('message', 'Payment was not successful');
-      
-      return c.redirect(errorUrl.toString());
+    // Perform server-side verification to prevent spoofed success URLs
+    const verification = await verifyOpayPayment(reference);
+
+    if (verification.success) {
+      const finalStatus = verification.status;
+      if (finalStatus === 'SUCCESS') {
+        const successUrl = new URL(`${getAppUrl()}/app/checkout/success`);
+        successUrl.searchParams.set('reference', reference);
+        successUrl.searchParams.set('status', finalStatus);
+        successUrl.searchParams.set('gateway', 'OPAY');
+        successUrl.searchParams.set('amount', String(verification.amount ?? ''));
+        return c.redirect(successUrl.toString());
+      } else if (finalStatus === 'PENDING') {
+        const pendingUrl = new URL(`${getAppUrl()}/app/checkout/pending`);
+        pendingUrl.searchParams.set('reference', reference);
+        pendingUrl.searchParams.set('gateway', 'OPAY');
+        return c.redirect(pendingUrl.toString());
+      }
     }
+
+    const errorUrl = new URL(`${getAppUrl()}/app/checkout/error`);
+    errorUrl.searchParams.set('reference', reference);
+    errorUrl.searchParams.set('message', verification.error || 'Payment verification failed');
+    return c.redirect(errorUrl.toString());
 
   } catch (error) {
     logger.error('OPay callback error', {
@@ -564,16 +573,15 @@ async function findOrCreateCustomer(customerData: any) {
 
 // Helper functions
 function detectGatewayFromQuery(query: Record<string, string>): string {
-  // Detect gateway based on query parameters
-  if (query.tx_ref && query.status) {
-    return 'FLUTTERWAVE';
-  }
-  if (query.reference && query.trxref) {
-    return 'PAYSTACK';
-  }
-  if (query.orderNo) {
-    return 'OPAY';
-  }
+  // Prefer explicit hints when present
+  const explicit = (query.gateway || query.provider || '').toUpperCase();
+  if (['FLUTTERWAVE', 'PAYSTACK', 'OPAY'].includes(explicit)) return explicit;
+
+  // Heuristic detection based on known params
+  if (query.tx_ref && query.status) return 'FLUTTERWAVE';
+  if (query.reference && query.trxref) return 'PAYSTACK';
+  if (query.orderNo || (query.reference && (query.status === 'SUCCESS' || query.status === 'FAIL'))) return 'OPAY';
+
   return 'UNKNOWN';
 }
 
@@ -588,15 +596,7 @@ async function verifyPaymentByGateway(reference: string, gateway: string, query:
     case 'PAYSTACK':
       return await verifyPaystackPayment(reference);
     case 'OPAY':
-      // For OPay, we might trust the callback for now
-      return {
-        success: true,
-        status: query.status === 'SUCCESS' ? 'SUCCESS' : 'FAILED',
-        amount: parseFloat(query.amount) || 0,
-        currency: 'NGN',
-        gateway: 'OPAY',
-        gatewayReference: query.orderNo
-      };
+      return await verifyOpayPayment(reference);
     default:
       return { success: false, error: 'Unknown gateway' };
   }
@@ -661,6 +661,58 @@ async function verifyPaystackPayment(reference: string) {
     }
 
     return { success: false, error: result.message || 'Verification failed' };
+  } catch (error) {
+    return { success: false, error: 'Network error' };
+  }
+}
+
+async function verifyOpayPayment(reference: string) {
+  try {
+    const apiBase = process.env.NODE_ENV === 'production'
+      ? 'https://liveapi.opaycheckout.com'
+      : 'https://testapi.opaycheckout.com';
+    const apiUrl = `${apiBase}/api/v1/international/cashier/status`;
+
+    const payload = {
+      reference,
+      country: 'NG',
+    } as any;
+
+    const payloadString = JSON.stringify(payload);
+    const signature = crypto
+      .createHmac('sha512', process.env.OPAY_SECRET_KEY || '')
+      .update(payloadString)
+      .digest('hex');
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'MerchantId': process.env.OPAY_MERCHANT_ID || '',
+        'Authorization': `Bearer ${signature}`,
+      },
+      body: payloadString,
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (response.ok && result.code === '00000') {
+      const data = result.data || {};
+      const amountKobo = data?.amount?.total ?? 0;
+      const currency = data?.amount?.currency || 'NGN';
+      const status = data?.status || 'PENDING';
+
+      return {
+        success: true,
+        status: mapOpayStatus(status),
+        amount: typeof amountKobo === 'number' ? amountKobo / 100 : 0,
+        currency,
+        gateway: 'OPAY',
+        gatewayReference: data?.orderNo || reference,
+      };
+    }
+
+    return { success: false, error: (result && result.message) || 'Verification failed' };
   } catch (error) {
     return { success: false, error: 'Network error' };
   }
