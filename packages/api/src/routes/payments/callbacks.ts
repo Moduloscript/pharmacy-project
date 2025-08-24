@@ -252,6 +252,16 @@ app.get('/callback/opay', async (c) => {
     if (verification.success) {
       const finalStatus = verification.status;
       if (finalStatus === 'SUCCESS') {
+        // Fallback persistence: if OPay webhook notifyUrl was not configured or failed,
+        // update the order/payment now based on verified status.
+        try {
+          await finalizeOpayPayment(finalReference, verification);
+        } catch (e) {
+          logger.warn('OPay callback fallback persistence failed (will rely on webhook if available)', {
+            reference: finalReference,
+            error: (e as Error)?.message,
+          });
+        }
         const successUrl = new URL(`${getAppUrl()}/app/checkout/success`);
         successUrl.searchParams.set('reference', finalReference);
         successUrl.searchParams.set('status', finalStatus);
@@ -694,9 +704,9 @@ async function verifyPaystackPayment(reference: string) {
 
 async function verifyOpayPayment(reference: string) {
   try {
-    const opaySecretKey = process.env.OPAY_SECRET_KEY;
-    const opayPublicKey = process.env.OPAY_PUBLIC_KEY;
-    const opayMerchantId = process.env.OPAY_MERCHANT_ID;
+    const opaySecretKey = (process.env.OPAY_SECRET_KEY || '').trim();
+    const opayPublicKey = (process.env.OPAY_PUBLIC_KEY || '').trim();
+    const opayMerchantId = (process.env.OPAY_MERCHANT_ID || '').trim();
     
     if (!opaySecretKey || !opayPublicKey || !opayMerchantId) {
       logger.error('OPay configuration missing for verification');
@@ -708,31 +718,30 @@ async function verifyOpayPayment(reference: string) {
       : 'https://testapi.opaycheckout.com';
     const apiUrl = `${apiBase}/api/v1/international/cashier/status`;
 
-    const payload = {
-      reference,
-      country: 'NG',
-    };
+    // Build payload in canonical order and serialize deterministically
+    const payload = { country: 'NG', reference };
+    const payloadString = JSON.stringify(payload, ['country', 'reference']);
 
-    const payloadString = JSON.stringify(payload);
-    
-    // OPay uses HMAC-SHA512 signature for authentication
-    // The signature is created from the payload + secret key
-    const signature = crypto
-      .createHmac('sha512', opaySecretKey)
-      .update(payloadString)
-      .digest('hex');
+    // Signature Authentication: HMAC-SHA512 over the exact JSON body using Secret Key
+    const hmacLower = crypto.createHmac('sha512', opaySecretKey).update(payloadString, 'utf8').digest('hex');
+    const signature = hmacLower.toUpperCase();
 
+    // Log request summary (no secrets)
     logger.info('OPay verification request', {
       reference,
       merchantId: opayMerchantId,
       apiUrl,
-      hasSignature: !!signature
+      authScheme: 'signature-auth',
+      payloadString,
+      signaturePreview: signature.substring(0, 12) + '...'
     });
 
+    // Send request using Signature Authentication per docs
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         'MerchantId': opayMerchantId,
         'Authorization': `Bearer ${signature}`,
       },
@@ -746,7 +755,8 @@ async function verifyOpayPayment(reference: string) {
       statusCode: response.status,
       resultCode: result.code,
       message: result.message,
-      hasData: !!result.data
+      hasData: !!result.data,
+      authScheme: 'signature-auth',
     });
 
     if (response.ok && result.code === '00000') {
@@ -766,11 +776,13 @@ async function verifyOpayPayment(reference: string) {
     }
 
     // Handle specific OPay error codes
-    if (result.code === '02001') {
+    if (result.code === '02000') {
+      return { success: false, error: 'Authentication failed' };
+    } else if (result.code === '02001') {
       return { success: false, error: 'Invalid request format' };
     } else if (result.code === '02002') {
-      return { success: false, error: 'Authentication failed' };
-    } else if (result.code === '02003') {
+      return { success: false, error: 'Merchant not configured for this function' };
+    } else if (result.code === '02006') {
       return { success: false, error: 'Transaction not found' };
     }
 
@@ -825,6 +837,93 @@ function mapOpayStatus(status: string): 'SUCCESS' | 'FAILED' | 'PENDING' | 'ABAN
       return 'ABANDONED';
     default:
       return 'PENDING'; // Default to pending for unknown statuses
+  }
+}
+
+// Minimal fallback order/payment finalize for OPay when webhook notifyUrl is missing
+async function finalizeOpayPayment(reference: string, verification: any) {
+  try {
+    // Find existing order by reference created during checkout
+    const existingOrder = await db.order.findFirst({
+      where: {
+        OR: [
+          { orderNumber: reference },
+          { paymentReference: reference },
+        ],
+      },
+    });
+
+    if (!existingOrder) {
+      logger.warn('No order found for OPay callback finalize; skipping', { reference });
+      return;
+    }
+
+    // If already completed, skip
+    if (existingOrder.paymentStatus === 'COMPLETED') {
+      return;
+    }
+
+    // Update order status and create/update payment record
+    const dbStatus = 'COMPLETED' as const;
+
+    await db.order.update({
+      where: { id: existingOrder.id },
+      data: {
+        paymentStatus: dbStatus,
+        paymentMethod: 'OPAY' as any,
+        paymentReference: reference,
+        updatedAt: new Date(),
+      },
+    });
+
+    const existingPayment = await db.payment.findFirst({ where: { transactionId: reference } });
+
+    const amount = Number(verification.amount || 0);
+    const currency = verification.currency || 'NGN';
+    const gatewayReference = verification.gatewayReference || reference;
+
+    if (existingPayment) {
+      await db.payment.update({
+        where: { id: existingPayment.id },
+        data: {
+          status: dbStatus,
+          gatewayReference,
+          amount,
+          currency,
+          method: 'OPAY' as any,
+          updatedAt: new Date(),
+        },
+      });
+    } else {
+      await db.payment.create({
+        data: {
+          customerId: existingOrder.customerId,
+          orderId: existingOrder.id,
+          amount,
+          currency,
+          method: 'OPAY' as any,
+          status: dbStatus,
+          gatewayReference,
+          transactionId: reference,
+          gatewayResponse: JSON.stringify({ source: 'callback-fallback', verification }),
+          gatewayFee: 0,
+          appFee: 0,
+        },
+      });
+    }
+
+    logger.info('OPay callback fallback persistence completed', {
+      reference,
+      orderId: existingOrder.id,
+      gatewayReference,
+      amount,
+    });
+  } catch (error) {
+    logger.error('Error in finalizeOpayPayment', {
+      reference,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    throw error;
   }
 }
 
