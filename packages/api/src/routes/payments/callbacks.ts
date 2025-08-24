@@ -211,37 +211,63 @@ app.get('/callback/paystack', async (c) => {
 app.get('/callback/opay', async (c) => {
   try {
     const query = c.req.query();
-    const reference = query.reference || query.orderNo;
-    const statusHint = query.status;
+    // OPay may return the reference in different ways depending on configuration
+    // Check multiple possible parameter names
+    const reference = query.reference || query.orderNo || query.ref || query.order_no || query.txRef;
+    const statusHint = query.status || query.paymentStatus;
+    
+    // If no reference in URL, try to get the last payment reference from session/cookie
+    // This is needed because OPay sometimes redirects without parameters
+    let finalReference = reference;
+    
+    if (!finalReference) {
+      // Check if there's a reference passed via the gateway parameter
+      // Sometimes the reference is appended after the gateway parameter
+      const urlPath = c.req.url;
+      const refMatch = urlPath.match(/reference=([^&]+)/i) || urlPath.match(/orderNo=([^&]+)/i);
+      if (refMatch) {
+        finalReference = refMatch[1];
+      }
+    }
 
-    logger.info('OPay callback received', { reference, statusHint });
+    logger.info('OPay callback received', { 
+      reference: finalReference, 
+      statusHint,
+      queryParams: Object.keys(query),
+      fullUrl: c.req.url 
+    });
 
-    if (!reference) {
-      return c.redirect(`${getAppUrl()}/app/checkout/error?message=Invalid OPay reference`);
+    if (!finalReference) {
+      logger.error('OPay callback missing reference', {
+        query,
+        url: c.req.url,
+        headers: c.req.header()
+      });
+      return c.redirect(`${getAppUrl()}/app/checkout/error?message=Invalid OPay reference - Payment reference not found in callback`);
     }
 
     // Perform server-side verification to prevent spoofed success URLs
-    const verification = await verifyOpayPayment(reference);
+    const verification = await verifyOpayPayment(finalReference);
 
     if (verification.success) {
       const finalStatus = verification.status;
       if (finalStatus === 'SUCCESS') {
         const successUrl = new URL(`${getAppUrl()}/app/checkout/success`);
-        successUrl.searchParams.set('reference', reference);
+        successUrl.searchParams.set('reference', finalReference);
         successUrl.searchParams.set('status', finalStatus);
         successUrl.searchParams.set('gateway', 'OPAY');
         successUrl.searchParams.set('amount', String(verification.amount ?? ''));
         return c.redirect(successUrl.toString());
       } else if (finalStatus === 'PENDING') {
         const pendingUrl = new URL(`${getAppUrl()}/app/checkout/pending`);
-        pendingUrl.searchParams.set('reference', reference);
+        pendingUrl.searchParams.set('reference', finalReference);
         pendingUrl.searchParams.set('gateway', 'OPAY');
         return c.redirect(pendingUrl.toString());
       }
     }
 
     const errorUrl = new URL(`${getAppUrl()}/app/checkout/error`);
-    errorUrl.searchParams.set('reference', reference);
+    errorUrl.searchParams.set('reference', finalReference);
     errorUrl.searchParams.set('message', verification.error || 'Payment verification failed');
     return c.redirect(errorUrl.toString());
 
@@ -734,6 +760,31 @@ function mapPaystackStatus(status: string): 'SUCCESS' | 'FAILED' | 'PENDING' | '
     case 'failed': return 'FAILED';
     case 'pending': return 'PENDING';
     default: return 'ABANDONED';
+  }
+}
+
+function mapOpayStatus(status: string): 'SUCCESS' | 'FAILED' | 'PENDING' | 'ABANDONED' {
+  const normalizedStatus = status?.toUpperCase();
+  switch (normalizedStatus) {
+    case 'SUCCESS':
+    case 'SUCCESSFUL':
+    case 'COMPLETED':
+      return 'SUCCESS';
+    case 'FAILED':
+    case 'FAIL':
+    case 'ERROR':
+      return 'FAILED';
+    case 'PENDING':
+    case 'PROCESSING':
+    case 'INITIAL':
+      return 'PENDING';
+    case 'CANCELLED':
+    case 'CANCELED':
+    case 'ABANDONED':
+    case 'EXPIRED':
+      return 'ABANDONED';
+    default:
+      return 'PENDING'; // Default to pending for unknown statuses
   }
 }
 
