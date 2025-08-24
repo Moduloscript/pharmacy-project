@@ -33,6 +33,8 @@ const benpharmiCheckoutSchema = z.object({
   deliveryFee: z.number().min(0).optional(),
   deliveryMethod: z.enum(['STANDARD', 'EXPRESS', 'PICKUP']).optional(),
   gateway: z.enum(['FLUTTERWAVE', 'OPAY', 'PAYSTACK']).optional(),
+  // Optional OPay preferred method (omit to show all methods)
+  opayPayMethod: z.enum(['BankCard', 'BankTransfer', 'BankUSSD', 'OPay']).optional(),
   purchaseOrderNumber: z.string().optional()
 });
 
@@ -51,6 +53,36 @@ app.post('/benpharm-checkout', authMiddleware, zValidator('json', benpharmiCheck
       totalAmount: data.totalAmount,
       itemCount: data.items.length
     });
+
+    // Derive client IP for gateway risk controls
+    // Use environment variable for default IP (security best practice)
+    const DEFAULT_IP = process.env.DEFAULT_CLIENT_IP || '127.0.0.1';
+    
+    const forwardedFor = c.req.header('x-forwarded-for');
+    const realIp = c.req.header('x-real-ip');
+    const cfConnectingIp = c.req.header('cf-connecting-ip');
+    
+    let clientIp = DEFAULT_IP;
+    
+    if (forwardedFor) {
+      const firstIp = forwardedFor.split(',')[0]?.trim();
+      if (firstIp && firstIp.length >= 7 && firstIp.length <= 50) {
+        clientIp = firstIp;
+      }
+    } else if (realIp && realIp.length >= 7 && realIp.length <= 50) {
+      clientIp = realIp;
+    } else if (cfConnectingIp && cfConnectingIp.length >= 7 && cfConnectingIp.length <= 50) {
+      clientIp = cfConnectingIp;
+    }
+    
+    // Validate IP length for OPay requirements (7-50 characters)
+    if (clientIp.length < 7 || clientIp.length > 50) {
+      logger.warn('Invalid IP length for OPay, using default', { 
+        originalIp: clientIp, 
+        length: clientIp.length 
+      });
+      clientIp = DEFAULT_IP;
+    }
 
     // Generate a stable business reference and pre-create Order (Option A)
     const reference = `BP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -123,39 +155,57 @@ app.post('/benpharm-checkout', authMiddleware, zValidator('json', benpharmiCheck
 
     // Determine payment gateway (prioritize Flutterwave for Nigerian users)
     const gateway = data.gateway || 'FLUTTERWAVE';
+    const userSpecifiedGateway = Boolean(data.gateway);
 
     // Create payment based on selected gateway using the same reference
-    const paymentResult = await createBenpharmiPayment(data, gateway, reference);
+    const paymentResult = await createBenpharmiPayment(data, gateway, reference, clientIp);
 
     if (paymentResult.success) {
       logger.info('BenPharm payment created successfully', {
         gateway,
-        paymentReference: paymentResult.reference,
-        paymentUrl: paymentResult.paymentUrl ? 'generated' : 'none'
+        paymentReference: (paymentResult as any).reference,
+        paymentUrl: (paymentResult as any).paymentUrl ? 'generated' : 'none'
       });
 
       return c.json({
         success: true,
-        checkoutLink: paymentResult.paymentUrl,
-        reference: paymentResult.reference,
+        checkoutLink: (paymentResult as any).paymentUrl,
+        reference: (paymentResult as any).reference,
         gateway: gateway,
         message: 'Payment created successfully'
       });
     } else {
-      // Try fallback gateways (reuse same reference)
-      const fallbackResult = await handlePaymentFallback(data, gateway, reference);
+      // If the user explicitly selected a gateway (e.g., OPay), do not silently fallback.
+      // Surface the error so configuration can be fixed rather than masking with another provider.
+      if (userSpecifiedGateway) {
+        logger.error('Primary gateway failed and fallback disabled due to explicit selection', {
+          selectedGateway: gateway,
+          reference,
+          error: (paymentResult as any).error
+        });
+        return c.json({
+          success: false,
+          error: {
+            message: `${gateway} payment failed`,
+            details: (paymentResult as any).error || 'Gateway error'
+          }
+        }, 502);
+      }
+
+      // Otherwise, try fallback gateways (reuse same reference)
+      const fallbackResult = await handlePaymentFallback(data, gateway, reference, clientIp);
       
       if (fallbackResult.success) {
         return c.json({
           success: true,
-          checkoutLink: fallbackResult.paymentUrl,
-          reference: fallbackResult.reference,
-          gateway: fallbackResult.gateway,
+          checkoutLink: (fallbackResult as any).paymentUrl,
+          reference: (fallbackResult as any).reference,
+          gateway: (fallbackResult as any).gateway,
           message: 'Payment created with fallback gateway'
         });
       }
 
-      throw new Error(fallbackResult.error || 'All payment gateways failed');
+      throw new Error((fallbackResult as any).error || 'All payment gateways failed');
     }
 
   } catch (error) {
@@ -176,13 +226,13 @@ app.post('/benpharm-checkout', authMiddleware, zValidator('json', benpharmiCheck
 });
 
 // Create payment with specified gateway
-async function createBenpharmiPayment(data: BenpharmiCheckoutRequest, gateway: string, reference: string) {
+async function createBenpharmiPayment(data: BenpharmiCheckoutRequest, gateway: string, reference: string, clientIp?: string) {
   try {
     switch (gateway) {
       case 'FLUTTERWAVE':
         return await createFlutterwavePayment(data, reference);
       case 'OPAY':
-        return await createOpayPayment(data, reference);
+        return await createOpayPayment(data, reference, clientIp);
       case 'PAYSTACK':
         return await createPaystackPayment(data, reference);
       default:
@@ -201,7 +251,7 @@ async function createBenpharmiPayment(data: BenpharmiCheckoutRequest, gateway: s
 }
 
 // Flutterwave implementation
-async function createFlutterwavePayment(data: BenpharmiCheckoutRequest, reference: string) {
+async function createFlutterwavePayment(data: BenpharmiCheckoutRequest, reference: string, clientIp?: string) {
   const flwSecretKey = process.env.FLUTTERWAVE_SECRET_KEY;
   const flwPublicKey = process.env.FLUTTERWAVE_PUBLIC_KEY;
   
@@ -223,9 +273,9 @@ async function createFlutterwavePayment(data: BenpharmiCheckoutRequest, referenc
       amount: data.totalAmount / 100, // Convert from kobo to naira
       currency: 'NGN',
       redirect_url: process.env.NEXT_PUBLIC_APP_URL 
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/callback` 
-        : data.redirectUrl || 'https://benpharm.ng/api/payments/callback',
-      payment_options: 'card,banktransfer,ussd,mobilemoney,opay',
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/callback/flutterwave` 
+        : data.redirectUrl || 'https://benpharm.ng/api/payments/callback/flutterwave',
+      payment_options: 'card,banktransfer,ussd,mobilemoney',
       customer: {
         email: data.customer.email,
         phonenumber: data.customer.phone,
@@ -308,7 +358,7 @@ async function createFlutterwavePayment(data: BenpharmiCheckoutRequest, referenc
 }
 
 // OPay implementation
-async function createOpayPayment(data: BenpharmiCheckoutRequest, reference: string) {
+async function createOpayPayment(data: BenpharmiCheckoutRequest, reference: string, clientIp?: string) {
   const opaySecretKey = process.env.OPAY_SECRET_KEY;
   const opayPublicKey = process.env.OPAY_PUBLIC_KEY;
   const opayMerchantId = process.env.OPAY_MERCHANT_ID;
@@ -321,40 +371,46 @@ async function createOpayPayment(data: BenpharmiCheckoutRequest, reference: stri
     };
   }
 
-  // OPay uses different URLs for sandbox vs production
-  const apiUrl = process.env.NODE_ENV === 'production'
-    ? 'https://payapi.opaycheckout.com/api/v1/international/payment/create'
-    : 'https://sandboxapi.opaycheckout.com/api/v1/international/payment/create';
+  // OPay Cashier endpoints (staging vs production)
+  const apiBase = process.env.NODE_ENV === 'production'
+    ? 'https://liveapi.opaycheckout.com'
+    : 'https://testapi.opaycheckout.com';
+  const apiUrl = `${apiBase}/api/v1/international/cashier/create`;
 
   try {
     const payload = {
+      country: 'NG',
       reference,
       amount: {
         total: data.totalAmount, // OPay expects amount in kobo
         currency: 'NGN'
       },
       returnUrl: process.env.NEXT_PUBLIC_APP_URL 
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/callback` 
-        : data.redirectUrl || 'https://benpharm.ng/api/payments/callback',
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/callback/opay?gateway=OPAY` 
+        : 'https://benpharm.ng/api/payments/callback/opay?gateway=OPAY',
+      callbackUrl: process.env.NEXT_PUBLIC_APP_URL 
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/webhook/opay` 
+        : 'https://benpharm.ng/api/payments/webhook/opay',
       cancelUrl: process.env.NEXT_PUBLIC_APP_URL 
         ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/cancel` 
         : 'https://benpharm.ng/api/payments/cancel',
-      notifyUrl: process.env.NEXT_PUBLIC_APP_URL 
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/webhook/opay` 
-        : 'https://benpharm.ng/api/payments/webhook/opay',
-      payMethods: ['BankCard', 'BankTransfer', 'BankUSSD', 'OPay'],
-      merchantId: opayMerchantId,
+      customerVisitSource: 'BROWSER',
+      evokeOpay: false,
+      expireAt: 30, // minutes
+      userClientIP: clientIp || process.env.DEFAULT_CLIENT_IP || '127.0.0.1',
       userInfo: {
+        userEmail: data.customer.email,
         userId: data.customer.email,
-        userPhone: data.customer.phone,
+        userMobile: data.customer.phone,
         userName: data.customer.name
       },
       product: {
         name: `BenPharm Order - ${data.items.map(item => item.name).join(', ')}`,
         description: `Payment for ${data.items.length} items from BenPharm Online Pharmacy`
       },
-      userClientIP: '127.0.0.1', // Should be actual client IP in production
-      expireTime: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutes
+      // Only include payMethod when provided; otherwise OPay shows all supported methods
+      ...(data.opayPayMethod ? { payMethod: data.opayPayMethod } : {}),
+      // Optional: carry through metadata for internal reconciliation
       callbackParam: JSON.stringify({
         orderId: data.productId,
         customerState: data.customer.state,
@@ -372,13 +428,13 @@ async function createOpayPayment(data: BenpharmiCheckoutRequest, reference: stri
       customer: payload.userInfo.userId
     });
 
-    // OPay requires specific header format
+    // OPay requires Public Key for payment creation (not secret key)
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'MerchantId': opayMerchantId,
-        'Authorization': `Bearer ${opaySecretKey}`,
+        'Authorization': `Bearer ${opayPublicKey}`, // Use PUBLIC key for payment creation
       },
       body: JSON.stringify(payload),
     });
@@ -429,7 +485,7 @@ async function createOpayPayment(data: BenpharmiCheckoutRequest, reference: stri
 }
 
 // Paystack implementation
-async function createPaystackPayment(data: BenpharmiCheckoutRequest, reference: string) {
+async function createPaystackPayment(data: BenpharmiCheckoutRequest, reference: string, clientIp?: string) {
   const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
   
   if (!paystackSecretKey) {
@@ -449,9 +505,9 @@ async function createPaystackPayment(data: BenpharmiCheckoutRequest, reference: 
       currency: 'NGN',
       email: data.customer.email,
       callback_url: process.env.NEXT_PUBLIC_APP_URL 
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/callback` 
-        : data.redirectUrl || 'https://benpharm.ng/api/payments/callback',
-      channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer', 'opay'],
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/callback/paystack` 
+        : 'https://benpharm.ng/api/payments/callback/paystack',
+      channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer'],
       metadata: {
         orderId: data.productId,
         customer_name: data.customer.name,
@@ -550,11 +606,11 @@ async function createPaystackPayment(data: BenpharmiCheckoutRequest, reference: 
 }
 
 // Handle gateway fallback
-async function handlePaymentFallback(data: BenpharmiCheckoutRequest, failedGateway: string, reference: string) {
+async function handlePaymentFallback(data: BenpharmiCheckoutRequest, failedGateway: string, reference: string, clientIp?: string) {
   const fallbackOrder = ['FLUTTERWAVE', 'OPAY', 'PAYSTACK'].filter(g => g !== failedGateway);
   
   for (const gateway of fallbackOrder) {
-    const result = await createBenpharmiPayment(data, gateway, reference);
+    const result = await createBenpharmiPayment(data, gateway, reference, clientIp);
     if (result.success) {
       return { ...result, gateway };
     }
