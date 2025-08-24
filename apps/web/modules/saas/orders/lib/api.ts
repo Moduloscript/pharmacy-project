@@ -68,6 +68,7 @@ export class OrdersAPI {
       ...data,
       orders: data.orders.map((order: any) => ({
         ...order,
+        itemsCount: order.itemsCount || order.items?.length || 0,
         createdAt: new Date(order.createdAt),
         updatedAt: new Date(order.updatedAt),
         estimatedDelivery: order.estimatedDelivery ? new Date(order.estimatedDelivery) : undefined,
@@ -76,16 +77,16 @@ export class OrdersAPI {
           ...order.paymentInfo,
           paidAt: order.paymentInfo.paidAt ? new Date(order.paymentInfo.paidAt) : undefined,
         },
-        tracking: order.tracking.map((t: any) => ({
+        tracking: order.tracking?.map((t: any) => ({
           ...t,
           updatedAt: new Date(t.updatedAt),
           estimatedDelivery: t.estimatedDelivery ? new Date(t.estimatedDelivery) : undefined,
-        })),
-        prescriptionFiles: order.prescriptionFiles.map((f: any) => ({
+        })) || [],
+        prescriptionFiles: order.prescriptionFiles?.map((f: any) => ({
           ...f,
           uploadedAt: new Date(f.uploadedAt),
           verifiedAt: f.verifiedAt ? new Date(f.verifiedAt) : undefined,
-        })),
+        })) || [],
       })),
     };
   }
@@ -105,6 +106,7 @@ export class OrdersAPI {
     const order = await response.json();
     return {
       ...order,
+      itemsCount: order.itemsCount || order.items?.length || 0,
       createdAt: new Date(order.createdAt),
       updatedAt: new Date(order.updatedAt),
       estimatedDelivery: order.estimatedDelivery ? new Date(order.estimatedDelivery) : undefined,
@@ -113,16 +115,16 @@ export class OrdersAPI {
         ...order.paymentInfo,
         paidAt: order.paymentInfo.paidAt ? new Date(order.paymentInfo.paidAt) : undefined,
       },
-      tracking: order.tracking.map((t: any) => ({
+      tracking: order.tracking?.map((t: any) => ({
         ...t,
         updatedAt: new Date(t.updatedAt),
         estimatedDelivery: t.estimatedDelivery ? new Date(t.estimatedDelivery) : undefined,
-      })),
-      prescriptionFiles: order.prescriptionFiles.map((f: any) => ({
+      })) || [],
+      prescriptionFiles: order.prescriptionFiles?.map((f: any) => ({
         ...f,
         uploadedAt: new Date(f.uploadedAt),
         verifiedAt: f.verifiedAt ? new Date(f.verifiedAt) : undefined,
-      })),
+      })) || [],
     };
   }
 
@@ -344,7 +346,16 @@ export class OrdersAPI {
       throw new Error(`Failed to fetch order stats: ${response.statusText}`);
     }
     
-    return response.json();
+    const result = await response.json();
+    
+    // Handle the success/data response format from the backend
+    if (result.success && result.data) {
+      return result.data;
+    } else if (result.error) {
+      throw new Error(result.error.message || 'Failed to fetch order statistics');
+    }
+    
+    return result; // Fallback for direct data response
   }
 
   /**

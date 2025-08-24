@@ -150,6 +150,7 @@ app.get('/', async (c) => {
           actualDelivery: order.actualDelivery,
           createdAt: order.createdAt,
           updatedAt: order.updatedAt,
+          itemsCount: order.orderItems.length,
           items: order.orderItems.map(item => ({
             id: item.id,
             productId: item.productId,
@@ -158,7 +159,7 @@ app.get('/', async (c) => {
               name: item.product.name,
               brandName: item.product.brandName,
               genericName: item.product.genericName,
-              images: item.product.images ? JSON.parse(item.product.images) : [],
+              images: item.product.images || [],
               nafdacNumber: item.product.nafdacNumber
             },
             quantity: item.quantity,
@@ -192,6 +193,135 @@ app.get('/', async (c) => {
       error: { 
         code: 'INTERNAL_ERROR', 
         message: 'Failed to fetch orders' 
+      }
+    }, 500)
+  }
+})
+
+// Get order statistics for current customer
+app.get('/stats', async (c) => {
+  const user = c.get('user')
+  const dateFrom = c.req.query('dateFrom') ? new Date(c.req.query('dateFrom')!) : undefined
+  const dateTo = c.req.query('dateTo') ? new Date(c.req.query('dateTo')!) : undefined
+  
+  try {
+    const customer = await db.customer.findUnique({
+      where: { userId: user.id }
+    })
+    
+    if (!customer) {
+      return c.json({
+        success: false,
+        error: { 
+          code: 'CUSTOMER_NOT_FOUND', 
+          message: 'Customer profile not found' 
+        }
+      }, 404)
+    }
+    
+    // Build date filter for current month and total stats
+    const now = new Date()
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    
+    // Base where clause for customer's orders
+    const baseWhere = { customerId: customer.id }
+    
+    // Get total orders count
+    const totalOrders = await db.order.count({ where: baseWhere })
+    
+    // Get active orders (not delivered, cancelled, or refunded)
+    const activeOrders = await db.order.count({
+      where: {
+        ...baseWhere,
+        status: {
+          notIn: ['DELIVERED', 'CANCELLED']
+        }
+      }
+    })
+    
+    // Get this month's orders count
+    const thisMonthOrders = await db.order.count({
+      where: {
+        ...baseWhere,
+        createdAt: {
+          gte: thisMonth,
+          lt: nextMonth
+        }
+      }
+    })
+    
+    // Get total revenue and calculate savings (difference from retail prices)
+    const allOrders = await db.order.findMany({
+      where: baseWhere,
+      select: {
+        total: true,
+        subtotal: true,
+        discount: true,
+        orderItems: {
+          select: {
+            quantity: true,
+            unitPrice: true,
+            product: {
+              select: {
+                retailPrice: true
+              }
+            }
+          }
+        }
+      }
+    })
+    
+    const totalRevenue = allOrders.reduce((sum, order) => sum + Number(order.total), 0)
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
+    
+    // Calculate total savings (difference between retail and actual paid prices)
+    const totalSavings = allOrders.reduce((savings, order) => {
+      const orderSavings = order.orderItems.reduce((itemSavings, item) => {
+        const retailTotal = Number(item.product.retailPrice || item.unitPrice) * item.quantity
+        const paidTotal = Number(item.unitPrice) * item.quantity
+        return itemSavings + Math.max(0, retailTotal - paidTotal)
+      }, 0)
+      return savings + orderSavings + Number(order.discount)
+    }, 0)
+    
+    // Get status breakdown
+    const statusBreakdown = await db.order.groupBy({
+      where: baseWhere,
+      by: ['status'],
+      _count: { id: true }
+    })
+    
+    const statusStats = statusBreakdown.reduce((acc, item) => {
+      acc[item.status.toLowerCase()] = item._count.id
+      return acc
+    }, {} as Record<string, number>)
+    
+    return c.json({
+      success: true,
+      data: {
+        totalOrders,
+        totalRevenue,
+        averageOrderValue,
+        activeOrders,
+        thisMonthOrders,
+        totalSavings,
+        pendingOrders: statusStats.received || 0,
+        processingOrders: statusStats.processing || 0,
+        deliveredOrders: statusStats.delivered || 0,
+        cancelledOrders: statusStats.cancelled || 0,
+        statusBreakdown: statusStats,
+        paymentStatusBreakdown: {}, // TODO: Add payment status grouping if needed
+        monthlyRevenue: [] // TODO: Add monthly breakdown if needed
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching order stats:', error)
+    return c.json({
+      success: false,
+      error: { 
+        code: 'INTERNAL_ERROR', 
+        message: 'Failed to fetch order statistics' 
       }
     }, 500)
   }
@@ -293,6 +423,7 @@ app.get('/:orderId', async (c) => {
           internalNotes: order.internalNotes,
           createdAt: order.createdAt,
           updatedAt: order.updatedAt,
+          itemsCount: order.orderItems.length,
           customer: {
             id: order.customer.id,
             businessName: order.customer.businessName,

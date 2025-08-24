@@ -23,14 +23,14 @@ export function MiniCart({
   size = 'default'
 }: MiniCartProps) {
   const cartSummary = useAtomValue(cartSummaryAtom);
-  const { isOpen, openDrawer, closeDrawer } = useCartDrawer();
+  const { isOpen, toggleDrawer, closeDrawer } = useCartDrawer();
 
   return (
     <>
       <Button
         variant={variant}
         size={size}
-        onClick={openDrawer}
+        onClick={toggleDrawer}
         className={className}
         aria-label={`Shopping cart with ${cartSummary.totalQuantity} items`}
       >

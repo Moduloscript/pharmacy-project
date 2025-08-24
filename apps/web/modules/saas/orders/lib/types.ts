@@ -80,8 +80,8 @@ export interface Order {
   customerName: string;
   customerEmail: string;
   
-  // Order Items
-  items: OrderItem[];
+  // Order Items - support both formats for backward compatibility
+  items?: OrderItem[];
   itemsCount: number;
   
   // Pricing
@@ -138,12 +138,15 @@ export interface OrderStats {
   totalOrders: number;
   totalRevenue: number;
   averageOrderValue: number;
+  activeOrders: number;
+  thisMonthOrders: number;
+  totalSavings: number;
   pendingOrders: number;
   processingOrders: number;
   deliveredOrders: number;
   cancelledOrders: number;
-  prescriptionOrders: number;
-  statusBreakdown: Record<OrderStatus, number>;
+  prescriptionOrders?: number; // Optional, may not be provided by all endpoints
+  statusBreakdown: Record<string, number>; // Changed to string for lowercase status keys
   paymentStatusBreakdown: Record<PaymentStatus, number>;
   monthlyRevenue: Array<{
     month: string;

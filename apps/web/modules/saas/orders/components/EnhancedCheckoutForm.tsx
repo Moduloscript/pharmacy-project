@@ -205,6 +205,9 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
           lga: orderData.deliveryLGA
         },
         items: cartData?.data?.items?.map((item: CartItem) => ({
+          // Include productId (and sku if available) so backend can persist real order items
+          productId: item.product.id,
+          sku: (item.product as any)?.sku || undefined,
           name: item.product.name,
           quantity: item.quantity,
           unitPrice: item.unitPrice * 100 // Convert to kobo

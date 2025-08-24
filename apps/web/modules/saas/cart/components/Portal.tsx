@@ -19,9 +19,8 @@ export function Portal({ children, rootId = 'cart-portal-root' }: PortalProps) {
     if (!portalRoot) {
       portalRoot = document.createElement('div');
       portalRoot.id = rootId;
-      // Set a very high z-index on the portal root itself
-      portalRoot.style.position = 'relative';
-      portalRoot.style.zIndex = '999999';
+      // Don't assign a huge z-index here – let children control their own stacking
+      // This avoids creating a parent stacking context that eclipses global UI (e.g. toasts)
       document.body.appendChild(portalRoot);
     }
 

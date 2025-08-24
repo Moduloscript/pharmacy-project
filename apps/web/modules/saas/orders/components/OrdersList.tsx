@@ -179,121 +179,151 @@ export function OrdersList({
   const totalPages = searchResult?.totalPages || 0;
 
   return (
-    <div className={cn('space-y-6', className)}>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-          <p className="text-gray-600 mt-1">{description}</p>
-        </div>
+    <div className={cn('space-y-8', className)}>
+      {/* Simple Header */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-8 dark:bg-slate-900 dark:border-slate-800">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-slate-100 rounded-lg dark:bg-slate-800">
+              <PackageIcon className="h-8 w-8 text-slate-700 dark:text-slate-300" strokeWidth={1.5} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">{title}</h1>
+              <p className="text-slate-600 mt-1 text-lg dark:text-slate-400">{description}</p>
+            </div>
+          </div>
 
-        <div className="flex items-center space-x-3">
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <FilterIcon className="size-4 mr-2" />
-            Filters
-          </Button>
+          <div className="flex items-center space-x-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`rounded-lg transition-all duration-200 ${showFilters ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+            >
+              <FilterIcon className="size-4 mr-2" strokeWidth={1.5} />
+              Filters
+            </Button>
 
-          <Button
-            variant="outline"
-            onClick={handleExportOrders}
-            disabled={!orders.length}
-          >
-            <DownloadIcon className="size-4 mr-2" />
-            Export
-          </Button>
+            <Button
+              variant="outline"
+              onClick={handleExportOrders}
+              disabled={!orders.length}
+              className="rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200"
+            >
+              <DownloadIcon className="size-4 mr-2" strokeWidth={1.5} />
+              Export
+            </Button>
 
-          <Button onClick={() => refetch()}>
-            <RefreshCwIcon className="size-4 mr-2" />
-            Refresh
-          </Button>
+            <Button 
+              onClick={() => refetch()}
+              className="bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-all duration-200 dark:bg-slate-700 dark:hover:bg-slate-600"
+            >
+              <RefreshCwIcon className="size-4 mr-2" strokeWidth={1.5} />
+              Refresh
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Simple Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Orders</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalOrders}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 bg-white rounded-lg overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-slate-100 rounded-lg dark:bg-slate-800">
+                  <PackageIcon className="size-6 text-slate-700 dark:text-slate-300" strokeWidth={1.5} />
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Total Orders</p>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{stats.totalOrders}</p>
+                </div>
               </div>
-              <PackageIcon className="size-8 text-blue-600" />
-            </div>
-            <div className="mt-2 flex items-center text-sm">
-              <TrendingUpIcon className="size-4 text-green-600 mr-1" />
-              <span className="text-green-600">+12% from last month</span>
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                +12% from last month
+              </div>
             </div>
           </Card>
 
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Revenue</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  ₦{stats.totalRevenue.toLocaleString()}
-                </p>
+          <Card className="border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 bg-white rounded-lg overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-slate-100 rounded-lg dark:bg-slate-800">
+                  <TrendingUpIcon className="size-6 text-slate-700 dark:text-slate-300" strokeWidth={1.5} />
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Total Revenue</p>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                    ₦{stats.totalRevenue.toLocaleString()}
+                  </p>
+                </div>
               </div>
-              <TrendingUpIcon className="size-8 text-green-600" />
-            </div>
-            <div className="mt-2 flex items-center text-sm">
-              <TrendingUpIcon className="size-4 text-green-600 mr-1" />
-              <span className="text-green-600">+8% from last month</span>
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                +8% from last month
+              </div>
             </div>
           </Card>
 
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Avg Order Value</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  ₦{Math.round(stats.averageOrderValue).toLocaleString()}
-                </p>
+          <Card className="border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 bg-white rounded-lg overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-slate-100 rounded-lg dark:bg-slate-800">
+                  <TrendingDownIcon className="size-6 text-slate-700 dark:text-slate-300" strokeWidth={1.5} />
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Avg Order Value</p>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                    ₦{Math.round(stats.averageOrderValue).toLocaleString()}
+                  </p>
+                </div>
               </div>
-              <TrendingDownIcon className="size-8 text-orange-600" />
-            </div>
-            <div className="mt-2 flex items-center text-sm">
-              <TrendingDownIcon className="size-4 text-orange-600 mr-1" />
-              <span className="text-orange-600">-3% from last month</span>
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                -3% from last month
+              </div>
             </div>
           </Card>
 
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Pending Orders</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.pendingOrders}</p>
+          <Card className="border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 bg-white rounded-lg overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-slate-100 rounded-lg dark:bg-slate-800">
+                  <CalendarIcon className="size-6 text-slate-700 dark:text-slate-300" strokeWidth={1.5} />
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Pending Orders</p>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{stats.pendingOrders}</p>
+                </div>
               </div>
-              <CalendarIcon className="size-8 text-yellow-600" />
-            </div>
-            <div className="mt-2">
-              <Badge className="bg-yellow-100 text-yellow-800">
-                Requires attention
-              </Badge>
+              <div>
+                <span className="text-sm text-slate-600 bg-slate-100 px-3 py-1 rounded-md dark:text-slate-400 dark:bg-slate-800">
+                  Requires attention
+                </span>
+              </div>
             </div>
           </Card>
         </div>
       )}
 
-      {/* Search and Filters */}
-      <Card className="p-6">
-        <div className="space-y-4">
-          {/* Search Bar */}
+      {/* Simple Search and Filters */}
+      <Card className="border border-slate-200 shadow-sm bg-white rounded-lg overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+        <div className="p-8 space-y-6">
+          {/* Simple Search Bar */}
           <div className="flex items-center space-x-4">
             <div className="flex-1 relative">
-              <SearchIcon className="size-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+              <SearchIcon className="size-5 text-slate-400 absolute left-4 top-1/2 transform -translate-y-1/2" strokeWidth={1.5} />
               <Input
                 placeholder="Search orders by number, customer name, or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-12 h-12 rounded-lg border-slate-200 focus:border-slate-400 focus:ring-slate-400/20 bg-white text-slate-900 placeholder-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-400 dark:focus:border-slate-500 dark:focus:ring-slate-500/20"
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
             </div>
-            <Button onClick={handleSearch}>Search</Button>
+            <Button 
+              onClick={handleSearch}
+              className="h-12 px-8 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-all duration-200 dark:bg-slate-700 dark:hover:bg-slate-600"
+            >
+              Search
+            </Button>
           </div>
 
           {/* Advanced Filters */}
@@ -305,7 +335,7 @@ export function OrdersList({
                 <Select value={statusFilter.length > 0 ? statusFilter.join(',') : 'all'} onValueChange={(value) => {
                   setStatusFilter(value && value !== 'all' ? value.split(',') as OrderStatus[] : []);
                 }}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-12 rounded-lg bg-white border-slate-200 text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 focus:ring-slate-400/20 dark:focus:ring-slate-500/20">
                     <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
                   <SelectContent>
@@ -325,7 +355,7 @@ export function OrdersList({
                 <Select value={paymentStatusFilter.length > 0 ? paymentStatusFilter.join(',') : 'all'} onValueChange={(value) => {
                   setPaymentStatusFilter(value && value !== 'all' ? value.split(',') as PaymentStatus[] : []);
                 }}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-12 rounded-lg bg-white border-slate-200 text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 focus:ring-slate-400/20 dark:focus:ring-slate-500/20">
                     <SelectValue placeholder="All payments" />
                   </SelectTrigger>
                   <SelectContent>
@@ -343,7 +373,7 @@ export function OrdersList({
               <div>
                 <Label>Date Range</Label>
                 <Select value={dateRange} onValueChange={setDateRange}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-12 rounded-lg bg-white border-slate-200 text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 focus:ring-slate-400/20 dark:focus:ring-slate-500/20">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

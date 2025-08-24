@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useAtomValue, useAtom } from 'jotai';
 import { Button } from '@ui/components/button';
 import { Card } from '@ui/components/card';
@@ -20,6 +21,8 @@ import {
 } from '../lib/cart-store';
 import { CartItem } from './CartItem';
 import { CartSummary } from './CartSummary';
+import { ConfirmationDialog } from './ConfirmationDialog';
+import { useCartToast } from '@saas/shared/hooks/use-toast';
 import { CartUtils } from '../lib/api';
 import Link from 'next/link';
 
@@ -43,10 +46,12 @@ export function ShoppingCart({
   const cartSummary = useAtomValue(cartSummaryAtom);
   const cartValidation = useAtomValue(validateCartAtom);
   const [, clearCart] = useAtom(clearCartAtom);
+  const cartToast = useCartToast();
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const handleCheckout = () => {
     if (!cartValidation.isValid) {
-      alert('Please fix cart issues before proceeding to checkout');
+      cartToast.showError('Please fix cart issues before proceeding to checkout');
       return;
     }
     
@@ -59,9 +64,12 @@ export function ShoppingCart({
   };
 
   const handleClearCart = () => {
-    if (window.confirm('Are you sure you want to remove all items from your cart?')) {
-      clearCart();
-    }
+    setShowClearConfirm(true);
+  };
+
+  const confirmClearCart = () => {
+    clearCart();
+    cartToast.showCartCleared();
   };
 
   const cartStats = CartUtils.getCartStats(cartSummary.items);
@@ -254,6 +262,18 @@ export function ShoppingCart({
           </div>
         )}
       </div>
+      
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={confirmClearCart}
+        title="Clear Shopping Cart"
+        description="Are you sure you want to remove all items from your cart? This action cannot be undone."
+        confirmText="Clear Cart"
+        cancelText="Cancel"
+        variant="destructive"
+      />
     </div>
   );
 }
