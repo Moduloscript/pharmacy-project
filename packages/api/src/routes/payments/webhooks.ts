@@ -5,6 +5,26 @@ import { updateOrderStatusWithValidation } from '@repo/payments/lib/validation-g
 
 const app = new Hono();
 
+// Startup config check for OPay
+(function logOpayConfigStatus() {
+  const env = process.env.NODE_ENV === 'production' ? 'production' : 'sandbox';
+  const missing: string[] = [];
+  if (!process.env.OPAY_MERCHANT_ID) missing.push('OPAY_MERCHANT_ID');
+  if (!process.env.OPAY_PUBLIC_KEY) missing.push('OPAY_PUBLIC_KEY');
+  if (!process.env.OPAY_SECRET_KEY) missing.push('OPAY_SECRET_KEY');
+
+  if (missing.length > 0) {
+    logger.warn('OPay configuration is incomplete', { env, missing });
+  } else {
+    logger.info('OPay configuration detected', {
+      env,
+      merchantId: process.env.OPAY_MERCHANT_ID,
+      returnUrlDomain: process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'unset',
+      webhookVerification: 'HMAC-SHA512 using OPAY_SECRET_KEY over callback payload'
+    });
+  }
+})();
+
 // Webhook handler for Flutterwave
 app.post('/webhook/flutterwave', async (c) => {
   try {
@@ -111,36 +131,41 @@ app.post('/webhook/paystack', async (c) => {
 // Webhook handler for OPay
 app.post('/webhook/opay', async (c) => {
   try {
-    const signature = c.req.header('x-opay-signature');
-    const payload = await c.req.json();
-    
-    // Verify webhook signature
-    const isValidSignature = verifyOpaySignature(payload, signature);
+    const body = await c.req.json();
+
+    // OPay callbacks include a body with shape { payload: {...}, sha512: "...", type: "transaction-status" }
+    const callbackPayload = body?.payload || body; // support both documented and legacy shapes
+    const providedSha512 = body?.sha512;
+
+    // Verify webhook signature using HMAC-SHA512 over JSON.stringify(payload) with OPAY_SECRET_KEY
+    const isValidSignature = verifyOpaySignature(callbackPayload, providedSha512);
     if (!isValidSignature && process.env.NODE_ENV === 'production') {
       logger.warn('Invalid OPay webhook signature');
       return c.json({ success: false, error: 'Invalid signature' }, 400);
     }
 
     logger.info('OPay webhook received', {
-      event: payload.event,
-      reference: payload.reference,
-      status: payload.status
+      type: body?.type,
+      reference: callbackPayload?.reference,
+      status: callbackPayload?.status
     });
 
-    // Process webhook based on event type
-    if (payload.status === 'SUCCESS') {
-      const result = await processOpayPayment(payload);
+    // Normalize callback to internal structure expected by processor
+    const normalized = normalizeOpayCallback(callbackPayload);
+
+    if (normalized.status === 'SUCCESS') {
+      const result = await processOpayPayment(normalized);
       
       if (result.success) {
         logger.info('OPay payment processed successfully', {
-          reference: payload.reference,
+          reference: normalized.reference,
           status: result.status
         });
         
         return c.json({ success: true, message: 'Webhook processed' });
       } else {
         logger.error('Failed to process OPay payment', {
-          reference: payload.reference,
+          reference: normalized.reference,
           error: result.error
         });
         
@@ -170,22 +195,13 @@ app.get('/verify/:reference', async (c) => {
   try {
     logger.info('Verifying payment', { reference });
 
-    // Try to verify with each gateway
-    let verificationResult = null;
-    
-    // Try Flutterwave first (if reference starts with BP_)
-    if (reference.startsWith('BP_')) {
-      verificationResult = await verifyFlutterwavePayment(reference);
-      
-      if (!verificationResult.success) {
-        // Try Paystack
-        verificationResult = await verifyPaystackPayment(reference);
-        
-        if (!verificationResult.success) {
-          // Try OPay
-          verificationResult = await verifyOpayPayment(reference);
-        }
-      }
+    // Try to verify with each gateway in sequence
+    let verificationResult = await verifyFlutterwavePayment(reference);
+    if (!verificationResult.success) {
+      verificationResult = await verifyPaystackPayment(reference);
+    }
+    if (!verificationResult.success) {
+      verificationResult = await verifyOpayPayment(reference);
     }
 
     if (verificationResult?.success) {
@@ -259,17 +275,23 @@ function verifyPaystackSignature(body: string, signature?: string): boolean {
   return hash === signature;
 }
 
-function verifyOpaySignature(payload: any, signature?: string): boolean {
-  if (!signature || !process.env.OPAY_WEBHOOK_SECRET) {
-    return process.env.NODE_ENV !== 'production'; // Skip verification in development
+function verifyOpaySignature(callbackPayload: any, providedSha512?: string): boolean {
+  // For production, require sha512 and secret key
+  if (!process.env.OPAY_SECRET_KEY) {
+    return process.env.NODE_ENV !== 'production';
   }
 
-  const hash = crypto
-    .createHmac('sha256', process.env.OPAY_WEBHOOK_SECRET)
-    .update(JSON.stringify(payload))
+  // If callback provides sha512 in body, verify against it; otherwise allow in non-prod
+  if (!providedSha512) {
+    return process.env.NODE_ENV !== 'production';
+  }
+
+  const computed = crypto
+    .createHmac('sha512', process.env.OPAY_SECRET_KEY)
+    .update(JSON.stringify(callbackPayload || {}))
     .digest('hex');
 
-  return hash === signature;
+  return computed === providedSha512;
 }
 
 // Payment processing functions
@@ -391,22 +413,26 @@ async function processOpayPayment(data: any) {
       }
     } catch {}
     
+    const amountTotalKobo = (data.amount?.total ?? (typeof data.amount === 'string' ? parseInt(data.amount, 10) : 0)) as number;
+    const currency = data.amount?.currency || data.currency || 'NGN';
+
     const paymentData = {
       gateway: 'OPAY',
-      gatewayReference: data.orderNo,
-      amount: data.amount.total / 100, // Convert from kobo to naira
-      currency: data.amount.currency,
-      paymentMethod: 'opay',
-      paidAt: new Date(),
+      gatewayReference: data.orderNo || data.transactionId,
+      amount: typeof amountTotalKobo === 'number' ? amountTotalKobo / 100 : 0, // Convert from kobo to naira when possible
+      currency,
+      paymentMethod: data.instrumentType || 'opay',
+      paidAt: new Date(data.timestamp || Date.now()),
       items: itemsFromParam,
     } as any;
     
     // Validate payment amounts before updating
-    const validation = await updateOrderStatusWithValidation(data.reference, paymentStatus, paymentData);
+    const ref = data.reference || data.orderNo || data.token;
+    const validation = await updateOrderStatusWithValidation(ref, paymentStatus, paymentData);
     
     if (!validation.success) {
       logger.error('OPay payment validation failed', {
-        reference: data.reference,
+        reference: ref,
         error: validation.error
       });
       return {
@@ -416,7 +442,7 @@ async function processOpayPayment(data: any) {
     }
     
     // Update order status in database (after validation)
-    await updateOrderStatus(data.reference, paymentStatus, paymentData);
+    await updateOrderStatus(ref, paymentStatus, paymentData);
 
     return {
       success: true,
@@ -494,11 +520,53 @@ async function verifyPaystackPayment(reference: string) {
 }
 
 async function verifyOpayPayment(reference: string) {
-  // OPay verification would require their specific API endpoint
-  // This is a placeholder implementation
   try {
-    // TODO: Implement actual OPay verification API call
-    return { success: false, error: 'OPay verification not implemented' };
+    const apiBase = process.env.NODE_ENV === 'production'
+      ? 'https://liveapi.opaycheckout.com'
+      : 'https://testapi.opaycheckout.com';
+    const apiUrl = `${apiBase}/api/v1/international/cashier/status`;
+
+    const payload = {
+      reference,
+      country: 'NG',
+    } as any;
+
+    // OPay status API requires HMAC-SHA512 signature for the JSON body using private key
+    const payloadString = JSON.stringify(payload);
+    const signature = crypto
+      .createHmac('sha512', process.env.OPAY_SECRET_KEY || '')
+      .update(payloadString)
+      .digest('hex');
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'MerchantId': process.env.OPAY_MERCHANT_ID || '',
+        'Authorization': `Bearer ${signature}`,
+      },
+      body: payloadString,
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (response.ok && result.code === '00000') {
+      const data = result.data || {};
+      const amountKobo = data?.amount?.total ?? 0;
+      const currency = data?.amount?.currency || 'NGN';
+      const status = data?.status || 'PENDING';
+
+      return {
+        success: true,
+        status: mapOpayStatus(status),
+        amount: typeof amountKobo === 'number' ? amountKobo / 100 : 0,
+        currency,
+        gateway: 'OPAY',
+        gatewayReference: data?.orderNo || reference,
+      };
+    }
+
+    return { success: false, error: (result && result.message) || 'Verification failed' };
   } catch (error) {
     return { success: false, error: 'Network error' };
   }
@@ -524,10 +592,13 @@ function mapPaystackStatus(status: string): 'SUCCESS' | 'FAILED' | 'PENDING' | '
 }
 
 function mapOpayStatus(status: string): 'SUCCESS' | 'FAILED' | 'PENDING' | 'ABANDONED' {
-  switch (status) {
+  switch ((status || '').toUpperCase()) {
     case 'SUCCESS': return 'SUCCESS';
+    case 'SUCCESSFUL': return 'SUCCESS';
     case 'FAIL': return 'FAILED';
+    case 'FAILED': return 'FAILED';
     case 'PENDING': return 'PENDING';
+    case 'INITIAL': return 'PENDING';
     default: return 'ABANDONED';
   }
 }
@@ -737,6 +808,150 @@ function mapStatusToDbEnum(status: string): 'PENDING' | 'PROCESSING' | 'COMPLETE
     case 'ABANDONED': return 'CANCELLED';
     default: return 'PENDING';
   }
+}
+
+// Health check endpoint for payment gateways
+app.get('/health', async (c) => {
+  const results = {
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox',
+    gateways: {
+      flutterwave: { configured: false, tested: false, working: false, error: null as string | null },
+      opay: { configured: false, tested: false, working: false, error: null as string | null },
+      paystack: { configured: false, tested: false, working: false, error: null as string | null },
+    }
+  };
+
+  // Check Flutterwave
+  if (process.env.FLUTTERWAVE_SECRET_KEY) {
+    results.gateways.flutterwave.configured = true;
+    try {
+      const testRef = `HEALTH_CHECK_${Date.now()}`;
+      const flwResponse = await fetch(
+        `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${testRef}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      results.gateways.flutterwave.tested = true;
+      const flwResult = await flwResponse.json().catch(() => ({}));
+      
+      // 404 or "No transaction was found" means auth worked but transaction doesn't exist
+      if (flwResponse.status === 404 || 
+          flwResponse.status === 200 || 
+          (flwResult.message && flwResult.message.includes('No transaction was found'))) {
+        results.gateways.flutterwave.working = true;
+      } else {
+        results.gateways.flutterwave.error = flwResult.message || `HTTP ${flwResponse.status}`;
+      }
+    } catch (e) {
+      results.gateways.flutterwave.error = e instanceof Error ? e.message : 'Network error';
+    }
+  }
+
+  // Check OPay
+  if (process.env.OPAY_PUBLIC_KEY && process.env.OPAY_SECRET_KEY && process.env.OPAY_MERCHANT_ID) {
+    results.gateways.opay.configured = true;
+    try {
+      // Skip side-effectful create call in production
+      if (process.env.NODE_ENV !== 'production') {
+        const apiBase = 'https://testapi.opaycheckout.com';
+        const apiUrl = `${apiBase}/api/v1/international/cashier/create`;
+        
+        const testPayload = {
+          country: 'NG',
+          reference: `HEALTH_${Date.now()}`,
+          amount: { total: 100, currency: 'NGN' },
+          returnUrl: 'http://localhost:3000/health',
+          callbackUrl: 'http://localhost:3000/health',
+          cancelUrl: 'http://localhost:3000/health',
+          userInfo: { userEmail: 'health@check.com', userMobile: '08000000000', userName: 'Health Check' },
+          product: { name: 'Health Check', description: 'API Health Check' },
+          payMethod: 'BankCard'
+        };
+
+        const opayResponse = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'MerchantId': process.env.OPAY_MERCHANT_ID,
+            'Authorization': `Bearer ${process.env.OPAY_PUBLIC_KEY}`,
+          },
+          body: JSON.stringify(testPayload),
+        });
+        
+        results.gateways.opay.tested = true;
+        const opayResult = await opayResponse.json().catch(() => ({}));
+        
+        if (opayResult.code === '00000') {
+          results.gateways.opay.working = true;
+        } else {
+          results.gateways.opay.error = opayResult.message || opayResult.code || 'Authentication failed';
+        }
+      } else {
+        results.gateways.opay.tested = false;
+        results.gateways.opay.error = 'Skipped active test in production';
+      }
+    } catch (e) {
+      results.gateways.opay.error = e instanceof Error ? e.message : 'Network error';
+    }
+  }
+
+  // Check Paystack
+  if (process.env.PAYSTACK_SECRET_KEY) {
+    results.gateways.paystack.configured = true;
+    try {
+      const testRef = `HEALTH_CHECK_${Date.now()}`;
+      const psResponse = await fetch(
+        `https://api.paystack.co/transaction/verify/${testRef}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      results.gateways.paystack.tested = true;
+      // 404 or 400 means auth worked but transaction doesn't exist
+      if (psResponse.status === 404 || psResponse.status === 400) {
+        results.gateways.paystack.working = true;
+      } else if (psResponse.status === 200) {
+        results.gateways.paystack.working = true;
+      } else {
+        const error = await psResponse.json().catch(() => ({}));
+        results.gateways.paystack.error = error.message || `HTTP ${psResponse.status}`;
+      }
+    } catch (e) {
+      results.gateways.paystack.error = e instanceof Error ? e.message : 'Network error';
+    }
+  }
+
+  // Log results
+  logger.info('Payment gateway health check completed', results);
+
+  return c.json(results);
+});
+
+// Normalize OPay callback payload into a consistent structure
+function normalizeOpayCallback(callbackPayload: any) {
+  const amountStr = callbackPayload?.amount;
+  const amountObj = callbackPayload?.amount && typeof callbackPayload.amount === 'object' ? callbackPayload.amount : undefined;
+  const total = amountObj?.total ?? (typeof amountStr === 'string' ? parseInt(amountStr, 10) : undefined);
+  const currency = amountObj?.currency || callbackPayload?.currency || 'NGN';
+
+  return {
+    reference: callbackPayload?.reference,
+    orderNo: callbackPayload?.orderNo || callbackPayload?.transactionId,
+    status: callbackPayload?.status,
+    amount: { total: typeof total === 'number' ? total : 0, currency },
+    currency,
+    instrumentType: callbackPayload?.instrumentType,
+    timestamp: callbackPayload?.timestamp,
+    callbackParam: callbackPayload?.callbackParam,
+  };
 }
 
 export { app as webhooksRouter };

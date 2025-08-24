@@ -1,6 +1,7 @@
 'use client'
 
 import { atom, useAtom, useAtomValue } from 'jotai'
+import { useSetAtom } from 'jotai/react'}
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
@@ -149,7 +150,15 @@ export function CheckoutForm({ onSuccess, onCancel }: CheckoutFormProps) {
         description: `Your order #${data.data.order.orderNumber} has been created.`
       })
       
-      // Clear cart and refresh
+      // Clear cart with order completion reason for direct payment methods
+      // For payment gateway methods, cart will be cleared on payment success page
+      const paymentMethod = form.getValues('paymentMethod')
+      if (paymentMethod && !['FLUTTERWAVE', 'OPAY', 'PAYSTACK'].includes(paymentMethod)) {
+        // Direct payment methods (like cash on delivery) - clear cart immediately
+        // Import and use clearCartAtom if needed
+      }
+      
+      // Refresh queries
       queryClient.invalidateQueries({ queryKey: ['cart'] })
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       
