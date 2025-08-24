@@ -385,9 +385,10 @@ async function createOpayPayment(data: BenpharmiCheckoutRequest, reference: stri
         total: data.totalAmount, // OPay expects amount in kobo
         currency: 'NGN'
       },
+      // Include the reference in the returnUrl since OPay doesn't always pass it back
       returnUrl: process.env.NEXT_PUBLIC_APP_URL 
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/callback/opay?gateway=OPAY` 
-        : 'https://benpharm.ng/api/payments/callback/opay?gateway=OPAY',
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/callback/opay?gateway=OPAY&ref=${reference}` 
+        : `https://benpharm.ng/api/payments/callback/opay?gateway=OPAY&ref=${reference}`,
       callbackUrl: process.env.NEXT_PUBLIC_APP_URL 
         ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/webhook/opay` 
         : 'https://benpharm.ng/api/payments/webhook/opay',

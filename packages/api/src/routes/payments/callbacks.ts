@@ -212,8 +212,8 @@ app.get('/callback/opay', async (c) => {
   try {
     const query = c.req.query();
     // OPay may return the reference in different ways depending on configuration
-    // Check multiple possible parameter names
-    const reference = query.reference || query.orderNo || query.ref || query.order_no || query.txRef;
+    // Check multiple possible parameter names including our custom 'ref' parameter
+    const reference = query.ref || query.reference || query.orderNo || query.order_no || query.txRef;
     const statusHint = query.status || query.paymentStatus;
     
     // If no reference in URL, try to get the last payment reference from session/cookie
