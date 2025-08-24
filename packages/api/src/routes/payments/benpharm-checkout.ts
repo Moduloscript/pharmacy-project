@@ -21,6 +21,9 @@ const benpharmiCheckoutSchema = z.object({
     lga: z.string().optional()
   }),
   items: z.array(z.object({
+    // productId/sku optional for backward compatibility, but recommended
+    productId: z.string().optional(),
+    sku: z.string().optional(),
     name: z.string(),
     quantity: z.number().positive(),
     unitPrice: z.number().positive()
@@ -74,7 +77,7 @@ app.post('/benpharm-checkout', authMiddleware, zValidator('json', benpharmiCheck
     const subtotalNaira = Math.max(0, totalNaira - deliveryFeeNaira - discountNaira + taxNaira);
 
     // Create the Order ahead of gateway initialization so the webhook can link it
-    await db.order.create({
+    const newOrder = await db.order.create({
       data: {
         orderNumber: reference,
         customerId: customer.id,
@@ -92,6 +95,31 @@ app.post('/benpharm-checkout', authMiddleware, zValidator('json', benpharmiCheck
         paymentReference: reference,
       },
     });
+
+    // Pre-create order items for better UX (no stock updates here)
+    try {
+      const itemsToCreate = (data.items || [])
+        .filter((it) => !!it.productId)
+        .map((it) => ({
+          orderId: newOrder.id,
+          productId: it.productId as string,
+          quantity: it.quantity,
+          unitPrice: Math.round(it.unitPrice) / 100, // kobo -> naira
+          subtotal: (Math.round(it.unitPrice) / 100) * it.quantity,
+          productName: it.name,
+          productSKU: it.sku ?? 'N/A',
+        }));
+
+      if (itemsToCreate.length > 0) {
+        await db.orderItem.createMany({ data: itemsToCreate });
+      }
+    } catch (e) {
+      // Non-fatal: items can be backfilled by webhook if needed
+      logger.warn('Failed to pre-create order items; will rely on webhook backfill', {
+        reference,
+        error: (e as Error)?.message,
+      });
+    }
 
     // Determine payment gateway (prioritize Flutterwave for Nigerian users)
     const gateway = data.gateway || 'FLUTTERWAVE';

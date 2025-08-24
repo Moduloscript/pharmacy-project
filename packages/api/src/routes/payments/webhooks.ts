@@ -276,6 +276,15 @@ function verifyOpaySignature(payload: any, signature?: string): boolean {
 async function processFlutterwavePayment(data: any) {
   try {
     const paymentStatus = mapFlutterwaveStatus(data.status);
+
+    // Try extract items from Flutterwave meta (we send JSON string of items)
+    let itemsFromMeta: any[] | undefined;
+    try {
+      const meta = data.meta || data?.customer?.meta;
+      if (meta?.items) {
+        itemsFromMeta = Array.isArray(meta.items) ? meta.items : JSON.parse(meta.items);
+      }
+    } catch {}
     
     const paymentData = {
       gateway: 'FLUTTERWAVE',
@@ -284,8 +293,9 @@ async function processFlutterwavePayment(data: any) {
       currency: data.currency,
       paymentMethod: data.payment_type,
       paidAt: new Date(data.created_at),
-      customerEmail: data.customer?.email
-    };
+      customerEmail: data.customer?.email,
+      items: itemsFromMeta,
+    } as any;
     
     // Validate payment amounts before updating
     const validation = await updateOrderStatusWithValidation(data.tx_ref, paymentStatus, paymentData);
@@ -319,6 +329,15 @@ async function processFlutterwavePayment(data: any) {
 async function processPaystackPayment(data: any) {
   try {
     const paymentStatus = mapPaystackStatus(data.status);
+
+    // Extract items from Paystack metadata (stringified JSON)
+    let itemsFromMeta: any[] | undefined;
+    try {
+      const meta = data.metadata;
+      if (meta?.items) {
+        itemsFromMeta = Array.isArray(meta.items) ? meta.items : JSON.parse(meta.items);
+      }
+    } catch {}
     
     const paymentData = {
       gateway: 'PAYSTACK',
@@ -326,8 +345,9 @@ async function processPaystackPayment(data: any) {
       amount: data.amount / 100, // Convert from kobo to naira
       currency: data.currency,
       paymentMethod: data.channel,
-      paidAt: new Date(data.paid_at)
-    };
+      paidAt: new Date(data.paid_at),
+      items: itemsFromMeta,
+    } as any;
     
     // Validate payment amounts before updating
     const validation = await updateOrderStatusWithValidation(data.reference, paymentStatus, paymentData);
@@ -361,6 +381,15 @@ async function processPaystackPayment(data: any) {
 async function processOpayPayment(data: any) {
   try {
     const paymentStatus = mapOpayStatus(data.status);
+
+    // Extract items from callbackParam if present
+    let itemsFromParam: any[] | undefined;
+    try {
+      if (data.callbackParam) {
+        const parsed = typeof data.callbackParam === 'string' ? JSON.parse(data.callbackParam) : data.callbackParam;
+        if (parsed?.items) itemsFromParam = parsed.items;
+      }
+    } catch {}
     
     const paymentData = {
       gateway: 'OPAY',
@@ -368,8 +397,9 @@ async function processOpayPayment(data: any) {
       amount: data.amount.total / 100, // Convert from kobo to naira
       currency: data.amount.currency,
       paymentMethod: 'opay',
-      paidAt: new Date()
-    };
+      paidAt: new Date(),
+      items: itemsFromParam,
+    } as any;
     
     // Validate payment amounts before updating
     const validation = await updateOrderStatusWithValidation(data.reference, paymentStatus, paymentData);
@@ -507,6 +537,12 @@ async function updateOrderStatus(reference: string, status: string, paymentData:
   try {
     // Import db connection
     const { db } = await import('@repo/database');
+
+    // Helper to normalize amounts that might be in kobo
+    const normalizeToNaira = (value: number) => {
+      if (typeof value !== 'number') return 0;
+      return value > 100000 ? Math.round(value) / 100 : value;
+    };
     
     // Check if order exists and isn't already paid (idempotency)
     const existingOrder = await db.order.findFirst({
@@ -602,6 +638,30 @@ async function updateOrderStatus(reference: string, status: string, paymentData:
         updatedAt: new Date(),
       },
     });
+
+    // Backfill order items if missing and we have metadata with productIds
+    try {
+      const currentItems = await db.orderItem.count({ where: { orderId: existingOrder.id } });
+      const metaItems: any[] | undefined = paymentData?.items;
+      if (currentItems === 0 && Array.isArray(metaItems) && metaItems.length > 0) {
+        const rows = metaItems
+          .filter((it: any) => !!it.productId)
+          .map((it: any) => ({
+            orderId: existingOrder.id,
+            productId: String(it.productId),
+            quantity: Number(it.quantity || 1),
+            unitPrice: normalizeToNaira(Number(it.unitPrice || 0)),
+            subtotal: normalizeToNaira(Number(it.unitPrice || 0)) * Number(it.quantity || 1),
+            productName: String(it.name || 'Unknown Product'),
+            productSKU: String(it.sku || 'N/A'),
+          }));
+        if (rows.length > 0) {
+          await db.orderItem.createMany({ data: rows });
+        }
+      }
+    } catch (e) {
+      logger.warn('Order items backfill skipped or failed', { reference, error: (e as Error)?.message });
+    }
 
     // Create or update payment record (transactionId is not unique, so do manual upsert)
     const existingPayment = await db.payment.findFirst({

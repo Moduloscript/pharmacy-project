@@ -35,16 +35,16 @@ const orderFiltersAtom = atom({
 
 const selectedOrderAtom = atom<string | null>(null)
 
-// Order status colors
+// Material Design status colors with controlled brightness
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'RECEIVED': return 'bg-blue-100 text-blue-800'
-    case 'PROCESSING': return 'bg-yellow-100 text-yellow-800'
-    case 'READY': return 'bg-purple-100 text-purple-800'
-    case 'DISPATCHED': return 'bg-orange-100 text-orange-800'
-    case 'DELIVERED': return 'bg-green-100 text-green-800'
-    case 'CANCELLED': return 'bg-red-100 text-red-800'
-    default: return 'bg-gray-100 text-gray-800'
+    case 'RECEIVED': return 'bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800'
+    case 'PROCESSING': return 'bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
+    case 'READY': return 'bg-purple-100 text-purple-700 border border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800'
+    case 'DISPATCHED': return 'bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
+    case 'DELIVERED': return 'bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
+    case 'CANCELLED': return 'bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800'
+    default: return 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
   }
 }
 
@@ -221,26 +221,26 @@ export function OrderHistory() {
   
   return (
     <div className="space-y-6">
-      {/* Filters and Search */}
-      <Card>
+      {/* Material Design Filters and Search */}
+      <Card className="shadow-md border-0 bg-white dark:bg-slate-800">
         <CardContent className="py-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-indigo-500 h-5 w-5" />
                 <Input
                   placeholder="Search orders by number..."
                   value={filters.search}
                   onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 h-12 rounded-lg border-2 border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 dark:border-slate-700 dark:focus:border-indigo-400 dark:bg-slate-900 transition-all duration-200"
                 />
               </div>
             </div>
             
             <div className="flex gap-2">
               <Select value={filters.status || 'all'} onValueChange={handleStatusFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <Filter className="h-4 w-4 mr-2" />
+                <SelectTrigger className="w-[180px] h-12 rounded-lg border-2 border-slate-200 dark:border-slate-700 dark:bg-slate-900 hover:border-indigo-300 transition-all duration-200">
+                  <Filter className="h-4 w-4 mr-2 text-indigo-500" />
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -271,13 +271,13 @@ export function OrderHistory() {
       {/* Orders List */}
       <div className="space-y-4">
         {orders.map((order: Order) => (
-          <Card key={order.id} className="overflow-hidden">
-            <CardHeader className="pb-3">
+          <Card key={order.id} className="overflow-hidden shadow-md border-0 hover:shadow-lg transition-all duration-300 dark:bg-slate-800">
+            <CardHeader className="pb-3 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 border-b border-slate-100 dark:border-slate-700">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <CardTitle className="text-lg">Order #{order.orderNumber}</CardTitle>
-                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
+                  <CardTitle className="text-xl font-semibold text-slate-900 dark:text-slate-100">Order #{order.orderNumber}</CardTitle>
+                  <div className="flex items-center gap-2 mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    <Calendar className="h-4 w-4 text-indigo-500" />
                     {new Date(order.createdAt).toLocaleDateString('en-GB', {
                       day: '2-digit',
                       month: 'short',
@@ -286,66 +286,72 @@ export function OrderHistory() {
                   </div>
                 </div>
                 
-                <div className="flex flex-col sm:items-end gap-2">
-                  <Badge className={getStatusColor(order.status)}>
+                <div className="flex flex-col sm:items-end gap-3">
+                  <span className={`px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider ${getStatusColor(order.status)}`}>
                     {order.status}
-                  </Badge>
-                  <p className="text-lg font-semibold">{formatNaira(order.total)}</p>
+                  </span>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{formatNaira(order.total)}</p>
                 </div>
               </div>
             </CardHeader>
             
-            <CardContent className="space-y-4">
-              {/* Order Details */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <Truck className="h-4 w-4 text-muted-foreground" />
-                  <span className="capitalize">{order.deliveryMethod.toLowerCase()} Delivery</span>
+            <CardContent className="space-y-4 p-6">
+              {/* Order Details with Material Design */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg dark:bg-slate-900">
+                  <div className="p-2 bg-white rounded-lg shadow-sm dark:bg-slate-800">
+                    <Truck className="h-4 w-4 text-indigo-500" />
+                  </div>
+                  <span className="capitalize text-sm font-medium text-slate-700 dark:text-slate-300">{order.deliveryMethod.toLowerCase()} Delivery</span>
                 </div>
                 
                 {order.deliveryMethod !== 'PICKUP' && (
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="truncate">{order.deliveryCity}, {order.deliveryState}</span>
+                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg dark:bg-slate-900">
+                    <div className="p-2 bg-white rounded-lg shadow-sm dark:bg-slate-800">
+                      <MapPin className="h-4 w-4 text-emerald-500" />
+                    </div>
+                    <span className="truncate text-sm font-medium text-slate-700 dark:text-slate-300">{order.deliveryCity}, {order.deliveryState}</span>
                   </div>
                 )}
                 
-                <div className="flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  <Badge variant="outline" className={
-                    order.paymentStatus === 'COMPLETED' ? 'border-green-200 text-green-800' :
-                    order.paymentStatus === 'FAILED' ? 'border-red-200 text-red-800' :
-                    'border-yellow-200 text-yellow-800'
-                  }>
+                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg dark:bg-slate-900">
+                  <div className="p-2 bg-white rounded-lg shadow-sm dark:bg-slate-800">
+                    <CreditCard className="h-4 w-4 text-amber-500" />
+                  </div>
+                  <span className={`text-sm font-medium px-3 py-1 rounded-full ${
+                    order.paymentStatus === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' :
+                    order.paymentStatus === 'PENDING' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
+                    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                  }`}>
                     {order.paymentStatus}
-                  </Badge>
+                  </span>
                 </div>
               </div>
               
-              {/* Items Preview */}
-              <div className="border-t pt-4">
-                <p className="text-sm font-medium mb-2">
-                  {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+              {/* Items Preview with Material Design */}
+              <div className="border-t-2 border-slate-100 dark:border-slate-700 pt-4">
+                <p className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">
+                  {(order.items?.length ?? 0) || (order as any).itemsCount || 0} item{(((order.items?.length ?? 0) || (order as any).itemsCount || 0) !== 1) ? 's' : ''}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {order.items.slice(0, 3).map((item: OrderItem) => (
-                    <div key={item.id} className="flex items-center justify-between text-sm p-2 bg-gray-50 rounded">
-                      <span className="truncate">{item.product.name}</span>
-                      <span className="ml-2 font-medium">x{item.quantity}</span>
+                    <div key={item.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
+                      <span className="truncate font-medium text-slate-700 dark:text-slate-300">{item.product.name}</span>
+                      <span className="ml-2 px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold dark:bg-indigo-900/30 dark:text-indigo-300">x{item.quantity}</span>
                     </div>
                   ))}
                   {order.items.length > 3 && (
-                    <div className="text-sm text-muted-foreground p-2 bg-gray-50 rounded text-center">
-                      +{order.items.length - 3} more items
+                    <div className="p-3 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg text-center border border-dashed border-slate-300 dark:border-slate-600">
+                      <span className="text-sm font-medium text-slate-600 dark:text-slate-400">+{order.items.length - 3} more items</span>
                     </div>
                   )}
                 </div>
               </div>
               
-              {/* Actions */}
-              <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
+              {/* Material Design Actions */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t-2 border-slate-100 dark:border-slate-700">
                 <Link href={`/app/orders/${order.id}`} className="flex-1">
-                  <Button variant="outline" className="w-full">
+                  <Button className="w-full h-11 bg-indigo-500 hover:bg-indigo-600 text-white shadow-md hover:shadow-lg transition-all duration-200 rounded-lg font-medium">
                     <Eye className="h-4 w-4 mr-2" />
                     View Details
                   </Button>
@@ -353,10 +359,9 @@ export function OrderHistory() {
                 
                 {['RECEIVED', 'PROCESSING'].includes(order.status) && (
                   <Button
-                    variant="destructive"
                     onClick={() => handleCancelOrder(order.id)}
                     disabled={cancelOrderMutation.isPending}
-                    className="flex-1 sm:flex-initial"
+                    className="flex-1 sm:flex-initial h-11 bg-white hover:bg-red-50 text-red-600 border-2 border-red-200 hover:border-red-300 dark:bg-slate-900 dark:hover:bg-red-900/20 dark:border-red-800 rounded-lg font-medium transition-all duration-200"
                   >
                     {cancelOrderMutation.isPending ? (
                       <>
@@ -370,8 +375,9 @@ export function OrderHistory() {
                 )}
                 
                 {order.status === 'DELIVERED' && (
-                  <Button variant="secondary" className="flex-1 sm:flex-initial">
-                    Reorder
+                  <Button className="flex-1 sm:flex-initial h-11 bg-emerald-500 hover:bg-emerald-600 text-white shadow-md hover:shadow-lg transition-all duration-200 rounded-lg font-medium">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Reorder Items
                   </Button>
                 )}
               </div>

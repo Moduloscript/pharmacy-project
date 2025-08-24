@@ -22,6 +22,7 @@ import {
   DELIVERY_OPTIONS,
   type DeliveryOption
 } from '../lib/cart-store';
+import { useCartToast } from '@saas/shared/hooks/use-toast';
 import { CartUtils } from '../lib/api';
 import { useState } from 'react';
 
@@ -49,6 +50,7 @@ export function CartSummary({
 
   const cartSummary = useAtomValue(cartSummaryAtom);
   const [, updateDelivery] = useAtom(updateDeliveryMethodAtom);
+  const cartToast = useCartToast();
 
   const handleDeliveryChange = (deliveryId: string) => {
     updateDelivery(deliveryId as DeliveryOption['id']);
@@ -66,12 +68,13 @@ export function CartSummary({
       if (discountAmount > 0) {
         setCouponDiscount(discountAmount);
         setCouponApplied(true);
+        cartToast.showSuccess(`Coupon code "${couponCode}" applied successfully!`);
       } else {
-        alert('Invalid or expired coupon code');
+        cartToast.showError('Invalid or expired coupon code');
       }
     } catch (error) {
       console.error('Error applying coupon:', error);
-      alert('Failed to apply coupon code');
+      cartToast.showError('Failed to apply coupon code');
     } finally {
       setIsApplyingCoupon(false);
     }

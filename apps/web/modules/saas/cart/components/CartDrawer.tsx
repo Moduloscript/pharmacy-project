@@ -7,6 +7,7 @@ import { Card } from '@ui/components/card';
 import { Badge } from '@ui/components/badge';
 import { cn } from '@ui/lib';
 import { Portal } from './Portal';
+import { ConfirmationDialog } from './ConfirmationDialog';
 import { 
   X, 
   ShoppingCart, 
@@ -40,6 +41,7 @@ export function CartDrawer({ isOpen, onClose, className }: CartDrawerProps) {
   const removeItem = useSetAtom(removeFromCartAtom);
   const clearCart = useSetAtom(clearCartAtom);
   const cartToast = useCartToast();
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const handleRemoveItem = useCallback((itemId: string, productName: string) => {
     removeItem(itemId);
@@ -57,10 +59,12 @@ export function CartDrawer({ isOpen, onClose, className }: CartDrawerProps) {
   }, [updateQuantity, cartToast, handleRemoveItem]);
 
   const handleClearCart = useCallback(() => {
-    if (window.confirm('Are you sure you want to clear your cart?')) {
-      clearCart();
-      cartToast.showCartCleared();
-    }
+    setShowClearConfirm(true);
+  }, []);
+
+  const confirmClearCart = useCallback(() => {
+    clearCart();
+    cartToast.showCartCleared();
   }, [clearCart, cartToast]);
 
   const handleCheckout = () => {
@@ -332,6 +336,18 @@ export function CartDrawer({ isOpen, onClose, className }: CartDrawerProps) {
           )}
         </div>
       </div>
+      
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={confirmClearCart}
+        title="Clear Shopping Cart"
+        description="Are you sure you want to clear your cart? This action cannot be undone."
+        confirmText="Clear Cart"
+        cancelText="Cancel"
+        variant="destructive"
+      />
     </Portal>
   );
 }
