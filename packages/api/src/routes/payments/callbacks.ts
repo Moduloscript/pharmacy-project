@@ -694,6 +694,15 @@ async function verifyPaystackPayment(reference: string) {
 
 async function verifyOpayPayment(reference: string) {
   try {
+    const opaySecretKey = process.env.OPAY_SECRET_KEY;
+    const opayPublicKey = process.env.OPAY_PUBLIC_KEY;
+    const opayMerchantId = process.env.OPAY_MERCHANT_ID;
+    
+    if (!opaySecretKey || !opayPublicKey || !opayMerchantId) {
+      logger.error('OPay configuration missing for verification');
+      return { success: false, error: 'OPay configuration missing' };
+    }
+
     const apiBase = process.env.NODE_ENV === 'production'
       ? 'https://liveapi.opaycheckout.com'
       : 'https://testapi.opaycheckout.com';
@@ -702,25 +711,43 @@ async function verifyOpayPayment(reference: string) {
     const payload = {
       reference,
       country: 'NG',
-    } as any;
+    };
 
     const payloadString = JSON.stringify(payload);
+    
+    // OPay uses HMAC-SHA512 signature for authentication
+    // The signature is created from the payload + secret key
     const signature = crypto
-      .createHmac('sha512', process.env.OPAY_SECRET_KEY || '')
+      .createHmac('sha512', opaySecretKey)
       .update(payloadString)
       .digest('hex');
+
+    logger.info('OPay verification request', {
+      reference,
+      merchantId: opayMerchantId,
+      apiUrl,
+      hasSignature: !!signature
+    });
 
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'MerchantId': process.env.OPAY_MERCHANT_ID || '',
+        'MerchantId': opayMerchantId,
         'Authorization': `Bearer ${signature}`,
       },
       body: payloadString,
     });
 
     const result = await response.json().catch(() => ({}));
+
+    logger.info('OPay verification response', {
+      reference,
+      statusCode: response.status,
+      resultCode: result.code,
+      message: result.message,
+      hasData: !!result.data
+    });
 
     if (response.ok && result.code === '00000') {
       const data = result.data || {};
@@ -738,8 +765,21 @@ async function verifyOpayPayment(reference: string) {
       };
     }
 
-    return { success: false, error: (result && result.message) || 'Verification failed' };
+    // Handle specific OPay error codes
+    if (result.code === '02001') {
+      return { success: false, error: 'Invalid request format' };
+    } else if (result.code === '02002') {
+      return { success: false, error: 'Authentication failed' };
+    } else if (result.code === '02003') {
+      return { success: false, error: 'Transaction not found' };
+    }
+
+    return { success: false, error: result.message || 'Verification failed' };
   } catch (error) {
+    logger.error('OPay verification error', {
+      reference,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
     return { success: false, error: 'Network error' };
   }
 }
