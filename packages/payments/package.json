@@ -28,7 +28,8 @@
 		},
 		"./types": "./types.ts",
 		"./lib/helper": "./src/lib/helper.ts",
-		"./lib/validation-guards": "./src/lib/validation-guards.ts"
+		"./lib/validation-guards": "./src/lib/validation-guards.ts",
+		"./lib/nigerian-utils": "./src/lib/nigerian-utils.ts"
 	},
 	"name": "@repo/payments",
 	"scripts": {

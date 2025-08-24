@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { logger } from '@repo/logs';
 import crypto from 'crypto';
 import { updateOrderStatusWithValidation } from '@repo/payments/lib/validation-guards';
+import { verifyOpaySignatureWithHmac, OpayCallbackBody } from '../../utils/opay-signature';
 
 const app = new Hono();
 
@@ -20,7 +21,7 @@ const app = new Hono();
       env,
       merchantId: process.env.OPAY_MERCHANT_ID,
       returnUrlDomain: process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'unset',
-      webhookVerification: 'HMAC-SHA512 using OPAY_SECRET_KEY over callback payload'
+      webhookVerification: 'HMAC-SHA3-512 using OPAY_SECRET_KEY over formatted callback payload fields'
     });
   }
 })();
@@ -131,56 +132,91 @@ app.post('/webhook/paystack', async (c) => {
 // Webhook handler for OPay
 app.post('/webhook/opay', async (c) => {
   try {
-    const body = await c.req.json();
+    // Log the source IP for security monitoring (OPay recommends IP whitelisting)
+    const sourceIp = c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown';
+    
+    const body = await c.req.json() as OpayCallbackBody;
 
     // OPay callbacks include a body with shape { payload: {...}, sha512: "...", type: "transaction-status" }
-    const callbackPayload = body?.payload || body; // support both documented and legacy shapes
-    const providedSha512 = body?.sha512;
-
-    // Verify webhook signature using HMAC-SHA512 over JSON.stringify(payload) with OPAY_SECRET_KEY
-    const isValidSignature = verifyOpaySignature(callbackPayload, providedSha512);
+    // Verify webhook signature using HMAC-SHA3-512 as per OPay documentation
+    const isValidSignature = verifyOpaySignatureWithHmac(body, process.env.OPAY_SECRET_KEY || '');
     if (!isValidSignature && process.env.NODE_ENV === 'production') {
-      logger.warn('Invalid OPay webhook signature');
-      return c.json({ success: false, error: 'Invalid signature' }, 400);
+      logger.warn('Invalid OPay webhook signature (HMAC-SHA3-512 verification failed)', {
+        sourceIp,
+        reference: body?.payload?.reference
+      });
+      // Return 200 to prevent retry attacks, but don't process the payment
+      return c.json({ success: false, error: 'Invalid signature' }, 200);
     }
+
+    const callbackPayload = body?.payload || body; // support both documented and legacy shapes
 
     logger.info('OPay webhook received', {
       type: body?.type,
       reference: callbackPayload?.reference,
-      status: callbackPayload?.status
+      status: callbackPayload?.status,
+      sourceIp,
+      transactionId: callbackPayload?.transactionId
     });
+
+    // Additional verification: Cross-check with Payment Status API as recommended by OPay
+    // This prevents replay attacks and ensures the callback is genuine
+    if (process.env.NODE_ENV === 'production' && callbackPayload?.reference) {
+      const verificationResult = await verifyOpayPayment(callbackPayload.reference);
+      if (!verificationResult.success || verificationResult.status !== mapOpayStatus(callbackPayload.status)) {
+        logger.warn('OPay callback cross-verification failed', {
+          reference: callbackPayload.reference,
+          callbackStatus: callbackPayload.status,
+          verifiedStatus: verificationResult.status,
+          sourceIp
+        });
+        // Return 200 OK but don't process to prevent retries
+        return c.json({ success: false, error: 'Cross-verification failed' }, 200);
+      }
+    }
 
     // Normalize callback to internal structure expected by processor
     const normalized = normalizeOpayCallback(callbackPayload);
 
-    if (normalized.status === 'SUCCESS') {
+    // Process different payment statuses, not just SUCCESS
+    if (normalized.status === 'SUCCESS' || normalized.status === 'FAIL' || normalized.status === 'CLOSE') {
       const result = await processOpayPayment(normalized);
       
       if (result.success) {
         logger.info('OPay payment processed successfully', {
           reference: normalized.reference,
-          status: result.status
+          status: result.status,
+          transactionId: callbackPayload?.transactionId
         });
         
-        return c.json({ success: true, message: 'Webhook processed' });
+        // Always return 200 OK for successful processing
+        return c.json({ success: true, message: 'Webhook processed' }, 200);
       } else {
         logger.error('Failed to process OPay payment', {
           reference: normalized.reference,
           error: result.error
         });
         
-        return c.json({ success: false, error: result.error }, 500);
+        // Return 200 to acknowledge receipt even if processing failed
+        // This prevents OPay from retrying for 72 hours
+        return c.json({ success: false, error: result.error }, 200);
       }
     }
 
-    return c.json({ success: true, message: 'Event not processed' });
+    // For other statuses (PENDING, etc.), acknowledge but don't process
+    logger.info('OPay webhook acknowledged but not processed', {
+      reference: normalized.reference,
+      status: normalized.status
+    });
+    return c.json({ success: true, message: 'Event acknowledged' }, 200);
 
   } catch (error) {
     logger.error('OPay webhook processing failed', {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
     
-    return c.json({ success: false, error: 'Webhook processing failed' }, 500);
+    // Still return 200 to prevent retries, but log the error
+    return c.json({ success: false, error: 'Webhook processing failed' }, 200);
   }
 });
 
@@ -275,7 +311,9 @@ function verifyPaystackSignature(body: string, signature?: string): boolean {
   return hash === signature;
 }
 
-function verifyOpaySignature(callbackPayload: any, providedSha512?: string): boolean {
+// Legacy verification function kept for backwards compatibility
+// New webhooks should use HMAC-SHA3-512 verification from opay-signature.ts
+function verifyOpaySignatureLegacy(callbackPayload: any, providedSha512?: string): boolean {
   // For production, require sha512 and secret key
   if (!process.env.OPAY_SECRET_KEY) {
     return process.env.NODE_ENV !== 'production';
@@ -531,19 +569,23 @@ async function verifyOpayPayment(reference: string) {
       country: 'NG',
     } as any;
 
-    // OPay status API requires HMAC-SHA512 signature for the JSON body using private key
+    // OPay status API requires a signature over the JSON body using the SECRET key
+    const secretKey = (process.env.OPAY_SECRET_KEY || '').trim();
+    const merchantId = (process.env.OPAY_MERCHANT_ID || '').trim();
     const payloadString = JSON.stringify(payload);
-    const signature = crypto
-      .createHmac('sha512', process.env.OPAY_SECRET_KEY || '')
-      .update(payloadString)
-      .digest('hex');
+    const signatureMode = (process.env.OPAY_STATUS_SIGNATURE_MODE || 'hmac').toLowerCase();
+    const signature = signatureMode === 'concat'
+      ? crypto.createHash('sha512').update(payloadString + secretKey).digest('hex')
+      : crypto.createHmac('sha512', secretKey).update(payloadString).digest('hex');
 
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'MerchantId': process.env.OPAY_MERCHANT_ID || '',
+        'Accept': 'application/json',
+'MerchantId': merchantId,
         'Authorization': `Bearer ${signature}`,
+        'Signature': signature,
       },
       body: payloadString,
     });
@@ -564,6 +606,17 @@ async function verifyOpayPayment(reference: string) {
         gateway: 'OPAY',
         gatewayReference: data?.orderNo || reference,
       };
+    }
+
+    // Handle specific OPay error codes per docs
+    if (result && result.code === '02000') {
+      return { success: false, error: 'Authentication failed' };
+    } else if (result && result.code === '02001') {
+      return { success: false, error: 'Request params not valid' };
+    } else if (result && result.code === '02002') {
+      return { success: false, error: 'Merchant not configured with this function' };
+    } else if (result && result.code === '02006') {
+      return { success: false, error: 'Transaction not found' };
     }
 
     return { success: false, error: (result && result.message) || 'Verification failed' };
@@ -866,7 +919,7 @@ app.get('/health', async (c) => {
           reference: `HEALTH_${Date.now()}`,
           amount: { total: 100, currency: 'NGN' },
           returnUrl: 'http://localhost:3000/health',
-          callbackUrl: 'http://localhost:3000/health',
+          notifyUrl: 'http://localhost:3000/health',
           cancelUrl: 'http://localhost:3000/health',
           userInfo: { userEmail: 'health@check.com', userMobile: '08000000000', userName: 'Health Check' },
           product: { name: 'Health Check', description: 'API Health Check' },

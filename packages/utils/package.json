@@ -5,6 +5,13 @@
 		"@repo/tsconfig": "workspace:*"
 	},
 	"main": "./index.ts",
+	"exports": {
+		".": {
+			"types": "./index.ts",
+			"default": "./index.ts"
+		},
+		"./nigerian-utils": "./src/nigerian-utils.ts"
+	},
 	"name": "@repo/utils",
 	"scripts": {
 		"type-check": "tsc --noEmit"
