@@ -70,51 +70,52 @@ export function NavBar() {
 		},
 	] : [];
 
-	const menuItems = [
-		{
-			label: t("app.menu.start"),
-			href: basePath,
-			icon: HomeIcon,
-			isActive: pathname === basePath,
-		},
-		// Add pharmaceutical menu items when organizations are disabled
-		...pharmaceuticalMenuItems,
-		{
-			label: t("app.menu.aiChatbot"),
-			href: activeOrganization
-				? `/app/${activeOrganization.slug}/chatbot`
-				: "/app/chatbot",
-			icon: BotMessageSquareIcon,
-			isActive: pathname.includes("/chatbot"),
-		},
-		...(activeOrganization
-			? [
-					{
-						label: t("app.menu.organizationSettings"),
-						href: `${basePath}/settings`,
-						icon: SettingsIcon,
-						isActive: pathname.startsWith(`${basePath}/settings/`),
-					},
-				]
-			: [
-					{
-						label: t("app.menu.accountSettings"),
-						href: "/app/settings",
-						icon: UserCog2Icon,
-						isActive: pathname.startsWith("/app/settings/"),
-					},
-				]),
-		...(user?.role === "admin"
-			? [
-					{
-						label: t("app.menu.admin"),
-						href: "/app/admin",
-						icon: UserCogIcon,
-						isActive: pathname.startsWith("/app/admin/"),
-					},
-				]
-			: []),
-	];
+	const isAdmin = user?.role === "admin";
+
+	const menuItems = isAdmin
+		? [
+				{
+					label: t("app.menu.admin"),
+					href: "/app/admin",
+					icon: UserCogIcon,
+					isActive: pathname.startsWith("/app/admin"),
+				},
+			]
+		: [
+				{
+					label: t("app.menu.start"),
+					href: basePath,
+					icon: HomeIcon,
+					isActive: pathname === basePath,
+				},
+				// Add pharmaceutical menu items when organizations are disabled
+				...pharmaceuticalMenuItems,
+				{
+					label: t("app.menu.aiChatbot"),
+					href: activeOrganization
+						? `/app/${activeOrganization.slug}/chatbot`
+						: "/app/chatbot",
+					icon: BotMessageSquareIcon,
+					isActive: pathname.includes("/chatbot"),
+				},
+				...(activeOrganization
+					? [
+							{
+								label: t("app.menu.organizationSettings"),
+								href: `${basePath}/settings`,
+								icon: SettingsIcon,
+								isActive: pathname.startsWith(`${basePath}/settings/`),
+							},
+						]
+					: [
+							{
+								label: t("app.menu.accountSettings"),
+								href: "/app/settings",
+								icon: UserCog2Icon,
+								isActive: pathname.startsWith("/app/settings/"),
+							},
+						]),
+			];
 
 	return (
 		<nav

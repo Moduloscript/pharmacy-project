@@ -11,6 +11,7 @@ import { Textarea } from '@ui/components/textarea';
 import { RadioGroup, RadioGroupItem } from '@ui/components/radio-group';
 import { Checkbox } from '@ui/components/checkbox';
 import { cn } from '@ui/lib';
+import { Alert, AlertDescription, AlertTitle } from '@ui/components/alert';
 import { 
   ShoppingCartIcon, 
   ArrowLeftIcon, 
@@ -192,9 +193,9 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="p-8 text-center max-w-md">
-          <ShoppingCartIcon className="size-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Your cart is empty</h2>
-          <p className="text-gray-600 mb-4">Add some items to your cart before checkout</p>
+<ShoppingCartIcon className="size-16 text-muted-foreground mx-auto mb-4" />
+<h2 className="text-xl font-semibold text-card-foreground mb-2">Your cart is empty</h2>
+<p className="text-muted-foreground mb-4">Add some items to your cart before checkout</p>
           <Link href="/app/products">
             <Button>Continue Shopping</Button>
           </Link>
@@ -207,9 +208,9 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="p-8 text-center max-w-md">
-          <CheckCircleIcon className="size-16 text-green-600 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Order Placed Successfully!</h2>
-          <p className="text-gray-600 mb-4">
+<CheckCircleIcon className="size-16 text-success mx-auto mb-4" />
+<h2 className="text-xl font-semibold text-card-foreground mb-2">Order Placed Successfully!</h2>
+<p className="text-muted-foreground mb-4">
             Your order {orderId} has been placed and is being processed.
           </p>
           <div className="space-y-2">
@@ -226,8 +227,8 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
   }
 
   return (
-    <div className={cn('min-h-screen bg-gray-50', className)}>
-      <div className="container mx-auto px-4 py-8">
+<div className={cn('min-h-screen bg-background', className)}>
+      <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
@@ -239,11 +240,11 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
             </Link>
             
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center">
+<h1 className="text-2xl font-bold text-card-foreground flex items-center">
                 <CreditCardIcon className="size-8 mr-3" />
                 Checkout
               </h1>
-              <p className="text-gray-600 mt-1">Complete your order</p>
+<p className="text-muted-foreground mt-1">Complete your order</p>
             </div>
           </div>
 
@@ -264,18 +265,18 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                 <div className={cn(
                   'flex items-center justify-center size-10 rounded-full border-2 transition-colors',
                   currentStep === key 
-                    ? 'border-blue-600 bg-blue-600 text-white'
+                    ? 'border-primary bg-primary text-primary-foreground'
                     : index < ['shipping', 'payment', 'review'].indexOf(currentStep)
-                    ? 'border-green-600 bg-green-600 text-white'
-                    : 'border-gray-300 bg-white text-gray-400'
+                    ? 'border-success bg-success text-success-foreground'
+                    : 'border-border bg-card text-muted-foreground'
                 )}>
                   <Icon className="size-5" />
                 </div>
                 <span className={cn(
                   'ml-3 font-medium',
                   currentStep === key || index < ['shipping', 'payment', 'review'].indexOf(currentStep)
-                    ? 'text-gray-900'
-                    : 'text-gray-400'
+                    ? 'text-card-foreground'
+                    : 'text-muted-foreground'
                 )}>
                   {label}
                 </span>
@@ -283,8 +284,8 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                   <div className={cn(
                     'w-16 h-0.5 mx-4',
                     index < ['shipping', 'payment', 'review'].indexOf(currentStep)
-                      ? 'bg-green-600'
-                      : 'bg-gray-300'
+                      ? 'bg-success'
+                      : 'bg-border'
                   )} />
                 )}
               </div>
@@ -299,8 +300,8 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
             {currentStep === 'shipping' && (
               <Card className="p-6">
                 <div className="flex items-center mb-6">
-                  <MapPinIcon className="size-6 text-blue-600 mr-3" />
-                  <h2 className="text-xl font-semibold text-gray-900">Shipping Information</h2>
+<MapPinIcon className="size-6 text-primary mr-3" />
+<h2 className="text-xl font-semibold text-card-foreground">Shipping Information</h2>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -393,10 +394,10 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                       <RadioGroupItem value="standard" id="standard" />
                       <Label htmlFor="standard" className="flex items-center justify-between w-full cursor-pointer">
                         <div className="flex items-center">
-                          <TruckIcon className="size-5 mr-3 text-blue-600" />
+<TruckIcon className="size-5 mr-3 text-primary" />
                           <div>
                             <p className="font-medium">Standard Delivery</p>
-                            <p className="text-sm text-gray-600">2-3 business days</p>
+<p className="text-sm text-muted-foreground">2-3 business days</p>
                           </div>
                         </div>
                         <span className="font-semibold">₦500</span>
@@ -407,10 +408,10 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                       <RadioGroupItem value="express" id="express" />
                       <Label htmlFor="express" className="flex items-center justify-between w-full cursor-pointer">
                         <div className="flex items-center">
-                          <TruckIcon className="size-5 mr-3 text-orange-600" />
+<TruckIcon className="size-5 mr-3 text-highlight" />
                           <div>
                             <p className="font-medium">Express Delivery</p>
-                            <p className="text-sm text-gray-600">Same day within Benin City</p>
+<p className="text-sm text-muted-foreground">Same day within Benin City</p>
                           </div>
                         </div>
                         <span className="font-semibold">₦1,500</span>
@@ -421,10 +422,10 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                       <RadioGroupItem value="pickup" id="pickup" />
                       <Label htmlFor="pickup" className="flex items-center justify-between w-full cursor-pointer">
                         <div className="flex items-center">
-                          <MapPinIcon className="size-5 mr-3 text-green-600" />
+<MapPinIcon className="size-5 mr-3 text-success" />
                           <div>
                             <p className="font-medium">Store Pickup</p>
-                            <p className="text-sm text-gray-600">Ready in 1-2 hours</p>
+<p className="text-sm text-muted-foreground">Ready in 1-2 hours</p>
                           </div>
                         </div>
                         <span className="font-semibold">Free</span>
@@ -441,10 +442,10 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                     </Label>
                     <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
                       <div className="flex items-start space-x-3">
-                        <FileTextIcon className="size-5 text-yellow-600 mt-0.5" />
+<FileTextIcon className="size-5 text-highlight mt-0.5" />
                         <div>
-                          <p className="font-medium text-yellow-900">Prescription Required</p>
-                          <p className="text-sm text-yellow-700 mt-1">
+<p className="font-medium text-highlight">Prescription Required</p>
+<p className="text-sm text-highlight mt-1">
                             Please upload valid prescriptions for: {prescriptionItems.map(item => item.name).join(', ')}
                           </p>
                         </div>
@@ -463,12 +464,12 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                       <div className="space-y-2">
                         {prescriptionFiles.map((file, index) => (
                           <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                            <span className="text-sm text-gray-700">{file.name}</span>
+<span className="text-sm text-card-foreground">{file.name}</span>
                             <Button
                               size="sm"
                               variant="ghost"
                               onClick={() => removePrescriptionFile(index)}
-                              className="text-red-600 hover:text-red-700"
+className="text-destructive hover:text-destructive/90"
                             >
                               Remove
                             </Button>
@@ -489,8 +490,8 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
             {currentStep === 'payment' && (
               <Card className="p-6">
                 <div className="flex items-center mb-6">
-                  <CreditCardIcon className="size-6 text-blue-600 mr-3" />
-                  <h2 className="text-xl font-semibold text-gray-900">Payment Method</h2>
+<CreditCardIcon className="size-6 text-primary mr-3" />
+<h2 className="text-xl font-semibold text-card-foreground">Payment Method</h2>
                 </div>
 
                 <RadioGroup value={paymentMethod.type} onValueChange={(value) => setPaymentMethod(prev => ({ ...prev, type: value as 'card' | 'transfer' | 'cash' }))}>
@@ -498,7 +499,7 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                     <div className="flex items-center space-x-2 p-3 border rounded-lg">
                       <RadioGroupItem value="card" id="card" />
                       <Label htmlFor="card" className="flex items-center cursor-pointer">
-                        <CreditCardIcon className="size-5 mr-3 text-blue-600" />
+<CreditCardIcon className="size-5 mr-3 text-primary" />
                         <span>Credit/Debit Card</span>
                       </Label>
                     </div>
@@ -506,7 +507,7 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                     <div className="flex items-center space-x-2 p-3 border rounded-lg">
                       <RadioGroupItem value="transfer" id="transfer" />
                       <Label htmlFor="transfer" className="flex items-center cursor-pointer">
-                        <ShieldCheckIcon className="size-5 mr-3 text-green-600" />
+<ShieldCheckIcon className="size-5 mr-3 text-success" />
                         <span>Bank Transfer</span>
                       </Label>
                     </div>
@@ -514,7 +515,7 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                     <div className="flex items-center space-x-2 p-3 border rounded-lg">
                       <RadioGroupItem value="cash" id="cash" />
                       <Label htmlFor="cash" className="flex items-center cursor-pointer">
-                        <TruckIcon className="size-5 mr-3 text-orange-600" />
+<TruckIcon className="size-5 mr-3 text-highlight" />
                         <span>Cash on Delivery</span>
                       </Label>
                     </div>
@@ -558,18 +559,18 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                 )}
 
                 {paymentMethod.type === 'transfer' && (
-                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h3 className="font-semibold text-blue-900 mb-2">Bank Transfer Details</h3>
-                    <p className="text-sm text-blue-700 mb-3">
-                      Complete your payment using the details below and upload proof of payment.
-                    </p>
-                    <div className="text-sm space-y-1">
-                      <p><strong>Bank:</strong> First Bank Nigeria</p>
-                      <p><strong>Account Name:</strong> ModuloScript Pharmacy</p>
-                      <p><strong>Account Number:</strong> 1234567890</p>
-                      <p><strong>Amount:</strong> ₦{cartSummary.grandTotal.toLocaleString()}</p>
-                    </div>
-                  </div>
+                  <Alert variant="primary" className="mt-6">
+                    <AlertTitle>Bank transfer details</AlertTitle>
+                    <AlertDescription>
+                      <div className="text-sm space-y-2">
+                        <p>Complete your payment using the details below and upload proof of payment.</p>
+                        <p><strong>Bank:</strong> First Bank Nigeria</p>
+                        <p><strong>Account Name:</strong> ModuloScript Pharmacy</p>
+                        <p><strong>Account Number:</strong> 1234567890</p>
+                        <p><strong>Amount:</strong> ₦{cartSummary.grandTotal.toLocaleString()}</p>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
                 )}
 
                 <div className="flex space-x-4 mt-6">
@@ -587,14 +588,14 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
             {currentStep === 'review' && (
               <Card className="p-6">
                 <div className="flex items-center mb-6">
-                  <FileTextIcon className="size-6 text-blue-600 mr-3" />
-                  <h2 className="text-xl font-semibold text-gray-900">Order Review</h2>
+<FileTextIcon className="size-6 text-primary mr-3" />
+<h2 className="text-xl font-semibold text-card-foreground">Order Review</h2>
                 </div>
 
                 {/* Order Summary */}
                 <div className="space-y-6 mb-6">
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-3">Shipping Address</h3>
+<h3 className="font-semibold text-card-foreground mb-3">Shipping Address</h3>
                     <div className="p-4 bg-gray-50 rounded-lg text-sm">
                       <p>{shippingAddress.firstName} {shippingAddress.lastName}</p>
                       <p>{shippingAddress.address}</p>
@@ -605,7 +606,7 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                   </div>
 
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-3">Payment Method</h3>
+<h3 className="font-semibold text-card-foreground mb-3">Payment Method</h3>
                     <div className="p-4 bg-gray-50 rounded-lg text-sm">
                       <p className="capitalize">{paymentMethod.type.replace('_', ' ')}</p>
                       {paymentMethod.type === 'card' && paymentMethod.cardNumber && (
@@ -615,10 +616,10 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                   </div>
 
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-3">Delivery Option</h3>
+<h3 className="font-semibold text-card-foreground mb-3">Delivery Option</h3>
                     <div className="p-4 bg-gray-50 rounded-lg text-sm">
                       <p className="capitalize">{selectedDelivery.replace('_', ' ')} Delivery</p>
-                      <p className="text-gray-600 mt-1">
+<p className="text-muted-foreground mt-1">
                         Estimated: {CheckoutService.estimateDeliveryDate(selectedDelivery, shippingAddress.city).toLocaleDateString()}
                       </p>
                     </div>
@@ -635,11 +636,11 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                     />
                     <Label htmlFor="terms" className="text-sm">
                       I agree to the{' '}
-                      <Link href="/terms" className="text-blue-600 hover:underline">
+<Link href="/terms" className="text-primary hover:underline">
                         Terms and Conditions
                       </Link>
                       {' '}and{' '}
-                      <Link href="/privacy" className="text-blue-600 hover:underline">
+<Link href="/privacy" className="text-primary hover:underline">
                         Privacy Policy
                       </Link>
                     </Label>
@@ -673,7 +674,7 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
           <div className="lg:col-span-1">
             <div className="sticky top-8">
               <Card className="p-6">
-                <h3 className="font-semibold text-gray-900 mb-4">Order Summary</h3>
+<h3 className="font-semibold text-card-foreground mb-4">Order Summary</h3>
                 
                 <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
                   {cartSummary.items.map((item) => (
@@ -693,7 +694,7 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                   </div>
                   
                   {cartSummary.discount > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
+<div className="flex justify-between text-sm text-success">
                       <span>Discount</span>
                       <span>-₦{cartSummary.discount.toLocaleString()}</span>
                     </div>
@@ -716,6 +717,26 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                 </div>
               </Card>
             </div>
+          </div>
+        </div>
+        {/* Mobile sticky checkout bar */}
+        <div className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-card/90 backdrop-blur supports-[backdrop-filter]:bg-card/75 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Total</p>
+              <p className="text-base font-semibold text-card-foreground">₦{cartSummary.grandTotal.toLocaleString()}</p>
+            </div>
+            <Button
+              variant="primary"
+              size="lg"
+              className="flex-1"
+              onClick={currentStep === 'shipping' ? handleShippingNext : currentStep === 'payment' ? handlePaymentNext : handlePlaceOrder}
+              disabled={currentStep === 'review' && (!agreedToTerms || isProcessing)}
+            >
+              {currentStep === 'shipping' && 'Continue to Payment'}
+              {currentStep === 'payment' && 'Review Order'}
+              {currentStep === 'review' && (isProcessing ? 'Processing…' : 'Place Order')}
+            </Button>
           </div>
         </div>
       </div>

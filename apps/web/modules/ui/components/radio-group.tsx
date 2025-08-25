@@ -46,7 +46,8 @@ export function RadioGroupItem({
     <input
       type="radio"
       className={cn(
-        'aspect-square h-4 w-4 rounded-full border border-gray-300 text-blue-600 shadow focus:ring-2 focus:ring-blue-500',
+        // Use design tokens instead of hardcoded colors
+        'aspect-square h-4 w-4 rounded-full border border-input text-primary shadow focus:ring-2 focus:ring-ring',
         className
       )}
       value={value}

@@ -45,7 +45,7 @@ export function ConfirmationDialog({
         <AlertDialogHeader>
           <div className="flex items-center gap-3">
             {variant === 'destructive' && (
-              <AlertTriangle className="size-5 text-red-600" />
+<AlertTriangle className="size-5 text-destructive" />
             )}
             <AlertDialogTitle>{title}</AlertDialogTitle>
           </div>

@@ -4,15 +4,16 @@ import { useAtom, useAtomValue } from 'jotai';
 import { Button } from '@ui/components/button';
 import { Card } from '@ui/components/card';
 import { Badge } from '@ui/components/badge';
-import { Select } from '@ui/components/select';
 import { Input } from '@ui/components/input';
+import { RadioGroup, RadioGroupItem } from '@ui/components/radio-group';
+import { SelectableCard } from '@ui/components/selectable-card';
+import { Alert, AlertDescription, AlertTitle } from '@ui/components/alert';
 import { cn } from '@ui/lib';
 import { 
   TruckIcon, 
   PackageIcon, 
   ClockIcon,
   TagIcon,
-  AlertCircleIcon,
   ShieldCheckIcon,
   CheckCircleIcon
 } from 'lucide-react';
@@ -107,9 +108,9 @@ export function CartSummary({
   if (cartSummary.isEmpty) {
     return (
       <Card className={cn('p-6 text-center', className)}>
-        <PackageIcon className="size-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Your cart is empty</h3>
-        <p className="text-gray-600 mb-4">
+<PackageIcon className="size-12 text-muted-foreground mx-auto mb-4" />
+<h3 className="text-lg font-semibold text-card-foreground mb-2">Your cart is empty</h3>
+<p className="text-muted-foreground mb-4">
           Add some pharmaceutical products to get started
         </p>
         <Button variant="outline" onClick={() => window.location.href = '/app/products'}>
@@ -124,49 +125,45 @@ export function CartSummary({
       {/* Delivery Options */}
       {showDeliveryOptions && (
         <Card className="p-4">
-          <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+          <h3 className="font-semibold text-card-foreground mb-3 flex items-center">
             <TruckIcon className="size-5 mr-2" />
             Delivery Options
           </h3>
           
-          <div className="space-y-3">
+          <RadioGroup
+            value={cartSummary.selectedDelivery.id}
+            onValueChange={handleDeliveryChange}
+            name="delivery-options"
+            className="space-y-3"
+          >
             {DELIVERY_OPTIONS.map((option) => {
               const isSelected = cartSummary.selectedDelivery.id === option.id;
               const estimatedDate = CartUtils.calculateDeliveryDate(option.id);
               
               return (
-                <div
+                <SelectableCard
                   key={option.id}
-                  className={cn(
-                    'p-3 border rounded-lg cursor-pointer transition-colors',
-                    isSelected 
-                      ? 'border-primary bg-primary/5' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  )}
+                  selected={isSelected}
+                  className="p-3 cursor-pointer"
                   onClick={() => handleDeliveryChange(option.id)}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="radio"
-                        checked={isSelected}
-                        onChange={() => handleDeliveryChange(option.id)}
-                        className="text-primary"
-                      />
+                    <div className="flex items-center gap-3">
+                      <RadioGroupItem value={option.id} aria-label={option.name} />
                       <div>
-                        <div className="flex items-center space-x-2">
-                          <span className="font-medium text-gray-900">{option.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-card-foreground">{option.name}</span>
                           {option.price === 0 && (
-                            <Badge variant="secondary" className="text-xs">Free</Badge>
+                            <Badge status="success" className="text-xs">Free</Badge>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600">{option.description}</p>
-                        <div className="flex items-center space-x-4 mt-1">
-                          <div className="flex items-center text-xs text-gray-500">
+                        <p className="text-sm text-muted-foreground">{option.description}</p>
+                        <div className="flex items-center gap-4 mt-1">
+                          <div className="flex items-center text-xs text-muted-foreground">
                             <ClockIcon className="size-3 mr-1" />
                             {option.estimatedDays === 0 ? 'Same day' : `${option.estimatedDays} days`}
                           </div>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-muted-foreground">
                             Est: {estimatedDate.toLocaleDateString()}
                           </span>
                         </div>
@@ -174,29 +171,23 @@ export function CartSummary({
                     </div>
                     
                     <div className="text-right">
-                      <span className="font-semibold text-gray-900">
+                      <span className="font-semibold text-card-foreground">
                         {option.price === 0 ? 'Free' : CartUtils.formatPrice(option.price)}
                       </span>
                     </div>
                   </div>
-                </div>
+                </SelectableCard>
               );
             })}
-          </div>
+          </RadioGroup>
 
           {cartSummary.selectedDelivery.id !== 'pickup' && (
-            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-start space-x-2">
-                <TruckIcon className="size-4 text-blue-600 mt-0.5" />
-                <div className="text-sm">
-                  <p className="text-blue-800 font-medium">Delivery Information</p>
-                  <p className="text-blue-700">
-                    Currently delivering within Benin City and surrounding areas. 
-                    Orders are processed Monday-Saturday, 8AM-6PM.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <Alert variant="primary" className="mt-3">
+              <AlertTitle>Delivery information</AlertTitle>
+              <AlertDescription>
+                Currently delivering within Benin City and surrounding areas. Orders are processed Monday–Saturday, 8AM–6PM.
+              </AlertDescription>
+            </Alert>
           )}
         </Card>
       )}
@@ -204,7 +195,7 @@ export function CartSummary({
       {/* Coupon Code */}
       {showCouponCode && !couponApplied && (
         <Card className="p-4">
-          <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+<h3 className="font-semibold text-card-foreground mb-3 flex items-center">
             <TagIcon className="size-5 mr-2" />
             Promo Code
           </h3>
@@ -226,7 +217,7 @@ export function CartSummary({
             </Button>
           </div>
 
-          <div className="mt-2 text-xs text-gray-600">
+<div className="mt-2 text-xs text-muted-foreground">
             Try: WELCOME10, FIRST20, or HEALTH5
           </div>
         </Card>
@@ -237,21 +228,21 @@ export function CartSummary({
         <Card className="p-4 bg-green-50 border-green-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <CheckCircleIcon className="size-5 text-green-600" />
+<CheckCircleIcon className="size-5 text-success" />
               <div>
-                <p className="font-medium text-green-800">Coupon Applied</p>
-                <p className="text-sm text-green-700">Code: {couponCode}</p>
+<p className="font-medium text-success">Coupon Applied</p>
+<p className="text-sm text-success">Code: {couponCode}</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="font-semibold text-green-800">
+<p className="font-semibold text-success">
                 -{CartUtils.formatPrice(couponDiscount)}
               </p>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleRemoveCoupon}
-                className="text-green-700 hover:text-green-800"
+className="text-success hover:text-success/90"
               >
                 Remove
               </Button>
@@ -262,18 +253,18 @@ export function CartSummary({
 
       {/* Order Summary */}
       <Card className="p-4">
-        <h3 className="font-semibold text-gray-900 mb-4">Order Summary</h3>
+<h3 className="font-semibold text-card-foreground mb-4">Order Summary</h3>
         
         <div className="space-y-3">
           {/* Subtotal */}
-          <div className="flex justify-between text-gray-700">
+<div className="flex justify-between text-muted-foreground">
             <span>Subtotal ({cartSummary.totalQuantity} items)</span>
             <span>{CartUtils.formatPrice(cartSummary.subtotal)}</span>
           </div>
 
           {/* Bulk Discount */}
           {cartSummary.bulkDiscount > 0 && (
-            <div className="flex justify-between text-green-600">
+<div className="flex justify-between text-success">
               <span className="flex items-center">
                 <TagIcon className="size-4 mr-1" />
                 Bulk Discount
@@ -283,8 +274,8 @@ export function CartSummary({
           )}
 
           {/* Coupon Discount */}
-          {couponDiscount > 0 && (
-            <div className="flex justify-between text-green-600">
+{couponDiscount > 0 && (
+            <div className="flex justify-between text-success">
               <span className="flex items-center">
                 <TagIcon className="size-4 mr-1" />
                 Coupon ({couponCode})
@@ -294,7 +285,7 @@ export function CartSummary({
           )}
 
           {/* Delivery Fee */}
-          <div className="flex justify-between text-gray-700">
+<div className="flex justify-between text-muted-foreground">
             <span className="flex items-center">
               <TruckIcon className="size-4 mr-1" />
               {cartSummary.selectedDelivery.name}
@@ -306,14 +297,14 @@ export function CartSummary({
 
           {/* Total Savings */}
           {totalSavings > 0 && (
-            <div className="flex justify-between text-green-600 font-medium border-t pt-3">
+<div className="flex justify-between text-success font-medium border-t pt-3">
               <span>Total Savings</span>
               <span>{CartUtils.formatPrice(totalSavings)}</span>
             </div>
           )}
 
           {/* Final Total */}
-          <div className="flex justify-between text-lg font-bold text-gray-900 border-t pt-3">
+<div className="flex justify-between text-lg font-bold text-card-foreground border-t pt-3">
             <span>Total</span>
             <span>{CartUtils.formatPrice(finalTotal)}</span>
           </div>
@@ -321,17 +312,12 @@ export function CartSummary({
 
         {/* Special Requirements Notice */}
         {cartSummary.requiresPrescription && (
-          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <div className="flex items-start space-x-2">
-              <ShieldCheckIcon className="size-4 text-yellow-600 mt-0.5" />
-              <div className="text-sm">
-                <p className="text-yellow-800 font-medium">Prescription Required</p>
-                <p className="text-yellow-700">
-                  Some items require prescription upload during checkout
-                </p>
-              </div>
-            </div>
-          </div>
+          <Alert variant="warning" className="mt-4">
+            <AlertTitle>Prescription required</AlertTitle>
+            <AlertDescription>
+              Some items in your cart require a valid prescription upload during checkout.
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Checkout Button */}
@@ -340,13 +326,14 @@ export function CartSummary({
           onClick={onCheckout}
           disabled={isCheckoutDisabled}
           size="lg"
+          variant="primary"
         >
           {checkoutButtonText}
         </Button>
 
         {/* Security Notice */}
         <div className="mt-4 text-center">
-          <div className="flex items-center justify-center space-x-2 text-xs text-gray-600">
+<div className="flex items-center justify-center space-x-2 text-xs text-muted-foreground">
             <ShieldCheckIcon className="size-3" />
             <span>Secure checkout powered by Nigerian payment gateways</span>
           </div>

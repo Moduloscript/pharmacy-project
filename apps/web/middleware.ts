@@ -36,6 +36,24 @@ export default async function middleware(req: NextRequest) {
 			);
 		}
 
+		// Role-based access control
+		const isAdminUser = session.user?.role === "admin";
+
+		// Admins: only allow /app/admin routes; everything else redirects to /app/admin
+		if (isAdminUser) {
+			if (!(pathname === "/app/admin" || pathname.startsWith("/app/admin/"))) {
+				return NextResponse.redirect(new URL("/app/admin", origin));
+			}
+			// Allow admin area; skip onboarding/billing checks below
+			return response;
+		}
+
+		// Non-admins: block access to /app/admin routes
+		if (pathname === "/app/admin" || pathname.startsWith("/app/admin/")) {
+			return NextResponse.redirect(new URL("/app", origin));
+		}
+
+		// Onboarding enforcement for regular users only
 		if (
 			appConfig.users.enableOnboarding &&
 			!session.user.onboardingComplete &&

@@ -5,13 +5,11 @@ import { useAtomValue, useAtom } from 'jotai';
 import { Button } from '@ui/components/button';
 import { Card } from '@ui/components/card';
 import { Badge } from '@ui/components/badge';
-import { cn } from '@ui/lib';
+import { Alert, AlertDescription, AlertTitle } from '@ui/components/alert';
+import { cn, pluralize } from '@ui/lib';
 import { 
   ShoppingCartIcon, 
   ArrowLeftIcon, 
-  PackageIcon,
-  AlertTriangleIcon,
-  ShieldCheckIcon,
   TrashIcon
 } from 'lucide-react';
 import { 
@@ -76,8 +74,8 @@ export function ShoppingCart({
   const groupedItems = CartUtils.groupByCategory(cartSummary.items);
 
   return (
-    <div className={cn('min-h-screen bg-gray-50', className)}>
-      <div className="container mx-auto px-4 py-8">
+    <div className={cn('min-h-screen bg-background', className)}>
+      <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
@@ -91,25 +89,25 @@ export function ShoppingCart({
             )}
             
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center">
+              <h1 className="text-2xl font-bold text-card-foreground flex items-center">
                 <ShoppingCartIcon className="size-8 mr-3" />
                 {title}
                 {!cartSummary.isEmpty && (
-                  <Badge variant="secondary" className="ml-3">
-                    {cartSummary.totalQuantity} items
+                  <Badge status="info" className="ml-3">
+                    {cartSummary.totalQuantity} {pluralize(cartSummary.totalQuantity, 'item')}
                   </Badge>
                 )}
               </h1>
-              <p className="text-gray-600 mt-1">{description}</p>
+              <p className="text-muted-foreground mt-1">{description}</p>
             </div>
           </div>
 
           {!cartSummary.isEmpty && (
             <Button
-              variant="outline"
+              variant="link"
               size="sm"
               onClick={handleClearCart}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="text-destructive hover:text-destructive/90"
             >
               <TrashIcon className="size-4 mr-2" />
               Clear Cart
@@ -127,75 +125,57 @@ export function ShoppingCart({
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-6">
               {/* Cart Stats */}
-              <Card className="p-4 bg-blue-50 border-blue-200">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                  <div>
-                    <p className="text-2xl font-bold text-blue-900">{cartStats.uniqueProducts}</p>
-                    <p className="text-sm text-blue-700">Unique Products</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-blue-900">{cartStats.totalQuantity}</p>
-                    <p className="text-sm text-blue-700">Total Items</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-blue-900">{cartStats.prescriptionItems}</p>
-                    <p className="text-sm text-blue-700">Prescription Items</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-blue-900">{cartStats.wholesaleItems}</p>
-                    <p className="text-sm text-blue-700">Wholesale Items</p>
-                  </div>
+              <Card className="p-4 bg-muted">
+                <div className="flex flex-wrap gap-2">
+                  <Badge status="info" className="text-xs">
+                    {cartStats.uniqueProducts} unique products
+                  </Badge>
+                  <Badge status="info" className="text-xs">
+                    {cartStats.totalQuantity} items
+                  </Badge>
+                  <Badge status={cartStats.prescriptionItems > 0 ? 'warning' : 'info'} className="text-xs">
+                    {cartStats.prescriptionItems} prescription items
+                  </Badge>
+                  <Badge status={cartStats.wholesaleItems > 0 ? 'success' : 'info'} className="text-xs">
+                    {cartStats.wholesaleItems} wholesale items
+                  </Badge>
                 </div>
               </Card>
 
               {/* Validation Errors */}
               {!cartValidation.isValid && (
-                <Card className="p-4 bg-red-50 border-red-200">
-                  <div className="flex items-start space-x-3">
-                    <AlertTriangleIcon className="size-5 text-red-600 mt-0.5" />
-                    <div>
-                      <h3 className="font-semibold text-red-900 mb-2">Cart Issues</h3>
-                      <ul className="space-y-1">
-                        {cartValidation.errors.map((error, index) => (
-                          <li key={index} className="text-sm text-red-700">
-                            • {error}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </Card>
+                <Alert id="cart-issues" variant="error">
+                  <AlertTitle>Cart issues</AlertTitle>
+                  <AlertDescription>
+                    <ul className="space-y-1">
+                      {cartValidation.errors.map((error, index) => (
+                        <li key={index}>• {error}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
               )}
 
               {/* Special Notices */}
               {cartStats.hasPrescriptionItems && (
-                <Card className="p-4 bg-yellow-50 border-yellow-200">
-                  <div className="flex items-start space-x-3">
-                    <ShieldCheckIcon className="size-5 text-yellow-600 mt-0.5" />
-                    <div>
-                      <h3 className="font-semibold text-yellow-900 mb-2">Prescription Items</h3>
-                      <p className="text-sm text-yellow-700">
-                        Your cart contains {cartStats.prescriptionItems} prescription item(s). 
-                        You'll need to upload valid prescriptions during checkout.
-                      </p>
-                    </div>
-                  </div>
-                </Card>
+                <Alert variant="warning">
+                  <AlertTitle>Prescription items</AlertTitle>
+                  <AlertDescription>
+                    Your cart contains {cartStats.prescriptionItems} prescription item(s). You'll need to upload valid prescriptions during checkout.
+                  </AlertDescription>
+                </Alert>
               )}
 
               {cartStats.hasWholesaleItems && (
-                <Card className="p-4 bg-green-50 border-green-200">
-                  <div className="flex items-start space-x-3">
-                    <PackageIcon className="size-5 text-green-600 mt-0.5" />
-                    <div>
-                      <h3 className="font-semibold text-green-900 mb-2">Wholesale Benefits</h3>
-                      <p className="text-sm text-green-700">
-                        You're getting wholesale pricing on {cartStats.wholesaleItems} item(s).
-                        {cartSummary.bulkDiscount > 0 && ` You're saving an additional ${CartUtils.formatPrice(cartSummary.bulkDiscount)} with bulk discounts!`}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
+                <Alert variant="success">
+                  <AlertTitle>Wholesale benefits</AlertTitle>
+                  <AlertDescription>
+                    You're getting wholesale pricing on {cartStats.wholesaleItems} item(s).
+                    {cartSummary.bulkDiscount > 0 && (
+                      <> You're saving an additional {CartUtils.formatPrice(cartSummary.bulkDiscount)} with bulk discounts!</>
+                    )}
+                  </AlertDescription>
+                </Alert>
               )}
 
               {/* Cart Items by Category */}
@@ -203,8 +183,8 @@ export function ShoppingCart({
                 {Object.entries(groupedItems).map(([category, items]) => (
                   <div key={category}>
                     <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-lg font-semibold text-gray-900">{category}</h2>
-                      <Badge variant="outline">{items.length} items</Badge>
+                      <h2 className="text-lg font-semibold text-card-foreground">{category}</h2>
+                      <Badge className="text-xs">{items.length} {pluralize(items.length, 'item')}</Badge>
                     </div>
                     
                     <div className="space-y-4">
@@ -233,32 +213,39 @@ export function ShoppingCart({
           </div>
         )}
 
-        {/* Additional Information */}
+        {/* Additional reassurance moved near CTA in CartSummary; page-level tiles removed for a cleaner hierarchy */}
+        {/* Mobile sticky checkout bar */}
         {!cartSummary.isEmpty && (
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="p-4 text-center">
-              <ShieldCheckIcon className="size-8 text-green-600 mx-auto mb-3" />
-              <h3 className="font-semibold text-gray-900 mb-2">Secure Checkout</h3>
-              <p className="text-sm text-gray-600">
-                Your payment information is encrypted and secure
-              </p>
-            </Card>
-
-            <Card className="p-4 text-center">
-              <PackageIcon className="size-8 text-blue-600 mx-auto mb-3" />
-              <h3 className="font-semibold text-gray-900 mb-2">Fast Delivery</h3>
-              <p className="text-sm text-gray-600">
-                Same-day delivery available within Benin City
-              </p>
-            </Card>
-
-            <Card className="p-4 text-center">
-              <AlertTriangleIcon className="size-8 text-purple-600 mx-auto mb-3" />
-              <h3 className="font-semibold text-gray-900 mb-2">Quality Assured</h3>
-              <p className="text-sm text-gray-600">
-                All products are NAFDAC-approved and quality-tested
-              </p>
-            </Card>
+          <div className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-card/90 backdrop-blur supports-[backdrop-filter]:bg-card/75 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-base font-semibold text-card-foreground">{CartUtils.formatPrice(cartSummary.total)}</p>
+              </div>
+              <Button
+                variant="primary"
+                size="lg"
+                className="flex-1"
+                onClick={handleCheckout}
+                disabled={!cartValidation.isValid}
+                aria-describedby={!cartValidation.isValid ? 'cart-issues' : undefined}
+              >
+                Checkout
+              </Button>
+              {!cartValidation.isValid && (
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => {
+                    const el = document.getElementById('cart-issues');
+                    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                >
+                  View issues
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </div>

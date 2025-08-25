@@ -56,12 +56,13 @@ const productsQuerySchema = z.object({
   min_price: z.string().transform(val => parseFloat(val)).pipe(z.number().min(0)).optional(),
   max_price: z.string().transform(val => parseFloat(val)).pipe(z.number().min(0)).optional(),
   prescription_only: z.string().transform(val => val === 'true').optional(),
-  in_stock_only: z.string().transform(val => val === 'true').optional()
+  in_stock_only: z.string().transform(val => val === 'true').optional(),
+  sort: z.string().optional(), // e.g., updated_desc, name_asc, price_asc, price_desc, stock_desc
 });
 
 // Get all products with filtering and pagination
 productsRouter.get('/', zValidator('query', productsQuerySchema), async (c) => {
-  const { page, limit, search, category, min_price, max_price, prescription_only, in_stock_only } = c.req.valid('query');
+  const { page, limit, search, category, min_price, max_price, prescription_only, in_stock_only, sort } = c.req.valid('query');
   
   try {
     const skip = (page - 1) * limit;
@@ -79,7 +80,8 @@ productsRouter.get('/', zValidator('query', productsQuerySchema), async (c) => {
     }
     
     if (category) {
-      where.category = { equals: category, mode: 'insensitive' };
+      // Prisma cannot apply case-insensitive mode to enum fields; use exact match
+      where.category = { equals: category };
     }
     
     if (min_price !== undefined) {
@@ -98,13 +100,34 @@ productsRouter.get('/', zValidator('query', productsQuerySchema), async (c) => {
       where.stockQuantity = { gt: 0 };
     }
 
+    // Determine sorting
+    let orderBy: any = { createdAt: 'desc' };
+    switch (sort) {
+      case 'updated_desc':
+        orderBy = { updatedAt: 'desc' };
+        break;
+      case 'name_asc':
+        orderBy = { name: 'asc' };
+        break;
+      case 'price_asc':
+        orderBy = { retailPrice: 'asc' };
+        break;
+      case 'price_desc':
+        orderBy = { retailPrice: 'desc' };
+        break;
+      case 'stock_desc':
+        orderBy = { stockQuantity: 'desc' };
+        break;
+      // default remains createdAt desc
+    }
+
     // Get products with pagination
     const [products, total] = await Promise.all([
       db.product.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         select: {
           id: true,
           name: true,
