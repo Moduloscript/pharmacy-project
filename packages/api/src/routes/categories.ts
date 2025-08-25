@@ -139,7 +139,6 @@ categoriesRouter.get('/:categoryName/products', zValidator('query', z.object({
         where: {
           category: {
             equals: categoryName,
-            mode: 'insensitive'
           }
         }
       })

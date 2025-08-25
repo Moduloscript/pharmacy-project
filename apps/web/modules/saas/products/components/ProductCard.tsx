@@ -37,42 +37,46 @@ export function ProductCard({
   onAddToCart,
   className 
 }: ProductCardProps) {
-  // Validate product object and provide defaults
-  // Handle both camelCase and snake_case field names
+  // Normalize fields (support snake_case and camelCase)
   const stockQuantity = product?.stockQuantity ?? product?.stock_quantity ?? 0;
   const stockStatus = getStockStatus(stockQuantity);
-  const prescriptionBadge = getPrescriptionBadge(
-    product?.isPrescriptionRequired ?? product?.is_prescription_required ?? false
-  );
-  
-  // Ensure prices are valid numbers, default to 0 if undefined/null
-  // Handle both camelCase and snake_case field names
+  const isRx = product?.isPrescriptionRequired ?? product?.is_prescription_required ?? false;
+  const brandName = product?.brandName ?? product?.brand_name ?? '';
+  const genericName = product?.genericName ?? product?.generic_name ?? '';
+  const nafdac = product?.nafdacNumber ?? product?.nafdac_reg_number ?? '';
+  const minOrderQty = product?.minOrderQuantity ?? product?.min_order_qty ?? 1;
+
   const wholesalePrice = product?.wholesalePrice ?? product?.wholesale_price ?? 0;
   const retailPrice = product?.retailPrice ?? product?.retail_price ?? 0;
   const price = showWholesalePrice ? wholesalePrice : retailPrice;
   const priceLabel = showWholesalePrice ? 'Wholesale' : 'Retail';
-  
-  // Handle image URL from both possible field names
+
   const imageUrl = product?.imageUrl ?? product?.image_url;
+
+  const formatCategory = (cat: string | undefined) => {
+    if (!cat) return '';
+    return cat
+      .toString()
+      .split('_')
+      .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
+      .join(' ');
+  };
 
   return (
     <Card className={cn(
-      'group overflow-hidden rounded-lg transition-all duration-200',
-      'bg-white dark:bg-gray-800',
-      'border border-gray-200 dark:border-gray-700',
-      'hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600',
-      'hover:-translate-y-0.5',
+      'group overflow-hidden transition-all duration-200',
+      'border border-border hover:shadow-sm hover:-translate-y-0.5',
       className
     )}>
       <div className="relative">
-        {/* Compact Product Image */}
-        <div className="aspect-square overflow-hidden bg-gray-100 dark:bg-gray-700">
+        {/* Product Image */}
+        <div className="aspect-square overflow-hidden bg-muted">
           {imageUrl ? (
             <Image
               src={imageUrl}
               alt={product.name}
-              width={280}
-              height={280}
+              width={320}
+              height={320}
               className="size-full object-cover transition-transform group-hover:scale-105"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
@@ -84,131 +88,117 @@ export function ProductCard({
             />
           ) : null}
           <div 
-            className="flex size-full items-center justify-center bg-gray-100 dark:bg-gray-700" 
+            className="flex size-full items-center justify-center bg-muted" 
             style={{ display: imageUrl ? 'none' : 'flex' }}
           >
-            <Package className="size-12 text-gray-400 dark:text-gray-500 opacity-60" />
+            <Package className="size-12 text-foreground/30" />
           </div>
         </div>
 
-        {/* Compact Status Badge */}
+        {/* Stock Status */}
         <div className="absolute top-2 left-2">
-          <Badge 
-            className={cn(
-              'text-xs px-2 py-0.5',
-              stockQuantity > 10 
-                ? 'bg-green-100 text-green-800 dark:bg-green-900/80 dark:text-green-300'
-                : stockQuantity > 0
-                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/80 dark:text-amber-300'
-                : 'bg-red-100 text-red-800 dark:bg-red-900/80 dark:text-red-300'
-            )}
-          >
-            {stockQuantity > 10 ? 'In Stock' : stockQuantity > 0 ? 'Low Stock' : 'Out of Stock'}
+          <Badge status={stockStatus.status === 'in-stock' ? 'success' : stockStatus.status === 'low-stock' ? 'warning' : 'error'} className="text-xs px-2 py-0.5">
+            {stockStatus.label}
           </Badge>
         </div>
 
-        {/* Prescription Badge */}
-        {product.is_prescription_required && (
+        {/* Rx Badge */}
+        {isRx && (
           <div className="absolute top-2 right-2">
-            <Badge className="text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/80 dark:text-purple-300 px-2 py-0.5">
-              Rx
-            </Badge>
+            <Badge status="error" className="text-xs px-2 py-0.5">Rx</Badge>
           </div>
         )}
       </div>
 
       <div className="p-4 space-y-3">
-        {/* Product Name and Generic with Better Typography */}
+        {/* Title and meta */}
         <div>
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 mb-1">
+          <h3 className="font-semibold text-foreground line-clamp-2 mb-1">
             <Link 
               href={`/app/products/${product.id}`}
-              className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              className="hover:text-primary transition-colors"
             >
               {product.name}
             </Link>
           </h3>
-          {product.generic_name && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">
-              <span className="text-gray-500 dark:text-gray-500">Generic:</span> {product.generic_name}
+          {genericName && (
+            <p className="text-sm text-foreground/70 line-clamp-1">
+              <span className="text-foreground/60">Generic:</span> {genericName}
             </p>
           )}
-          {product.brand_name && (
-            <p className="text-sm text-blue-600 dark:text-blue-400 font-medium line-clamp-1">
-              {product.brand_name}
+          {brandName && (
+            <p className="text-sm text-primary font-medium line-clamp-1">
+              {brandName}
             </p>
           )}
         </div>
 
-        {/* Category with Enhanced Styling */}
+        {/* Category */}
         <div>
-          <Badge 
-            variant="outline" 
-            className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-700"
-          >
-            {product.category}
+          <Badge status="info" className="text-xs">
+            {formatCategory(product.category)}
           </Badge>
         </div>
 
-        {/* NAFDAC Registration with Trust Badge */}
-        {product.nafdac_reg_number && (
+        {/* NAFDAC */}
+        {nafdac && (
           <div className="flex items-center gap-1">
-            <Shield className="size-3 text-green-600 dark:text-green-400" />
-            <p className="text-xs text-gray-600 dark:text-gray-400">
-              NAFDAC: <span className="font-medium text-green-700 dark:text-green-400">{product.nafdac_reg_number}</span>
+            <Shield className="size-3 text-success" />
+            <p className="text-xs text-foreground/70">
+              NAFDAC: <span className="font-medium text-success">{nafdac}</span>
             </p>
           </div>
         )}
 
-        {/* Enhanced Pricing Display */}
-        <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-gray-700/50 dark:to-gray-700/30 rounded-lg p-3">
+        {/* Pricing */}
+        <div className="rounded-lg p-3 bg-muted/30">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xl font-bold bg-gradient-to-r from-blue-600 to-green-600 dark:from-blue-400 dark:to-green-400 bg-clip-text text-transparent">
+              <p className="text-xl font-semibold text-foreground">
                 {formatPrice(price)}
               </p>
-              <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+              <p className="text-xs text-foreground/70 font-medium">
                 {priceLabel} Price
               </p>
             </div>
             {showWholesalePrice && wholesalePrice < retailPrice && (
               <div className="text-right">
-                <p className="text-sm line-through text-gray-500 dark:text-gray-500">
+                <p className="text-sm line-through text-foreground/60">
                   {formatPrice(retailPrice)}
                 </p>
-                <p className="text-xs font-medium text-green-600 dark:text-green-400">
-                  Save ₦{(retailPrice - wholesalePrice).toLocaleString()}
+                <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  Save ₦{(retailPrice - wholesalePrice).toLocaleString('en-NG')}
                 </p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Minimum Order Quantity with Icon */}
-        {product.min_order_qty > 1 && (
+        {/* MOQ */}
+        {minOrderQty > 1 && (
           <div className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400">
             <AlertCircle className="size-3" />
             <p className="font-medium">
-              Min. Order: {product.min_order_qty} units
+              Min. Order: {minOrderQty} {minOrderQty === 1 ? 'unit' : 'units'}
             </p>
           </div>
         )}
 
-        {/* Description with Better Readability */}
+        {/* Description */}
         {product.description && (
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
+            <p className="text-sm text-foreground/70 line-clamp-2 leading-relaxed">
               {product.description}
             </p>
           </div>
         )}
 
-        {/* Enhanced Action Buttons */}
+        {/* Actions */}
         <div className="flex gap-2 pt-2">
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/30 dark:hover:border-blue-600 transition-all"
+            className="flex-1"
             asChild
           >
             <Link href={`/app/products/${product.id}`}>
@@ -221,35 +211,14 @@ export function ProductCard({
               variant="primary"
               size="sm"
               className={cn(
-                "flex-1 font-medium shadow-sm transition-all",
-                stockQuantity > 0
-                  ? "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 dark:from-green-500 dark:to-emerald-500 dark:hover:from-green-400 dark:hover:to-emerald-400 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                "flex-1 font-medium",
+                stockQuantity > 0 ? "" : "opacity-50 cursor-not-allowed"
               )}
               disabled={stockQuantity === 0}
               onClick={() => onAddToCart(product)}
             >
               {stockQuantity === 0 ? 'Out of Stock' : 'Add to Cart'}
             </Button>
-          )}
-        </div>
-        
-        {/* Trust Indicators */}
-        <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-            <span className="flex items-center gap-1">
-              <Star className="size-3 text-yellow-500" fill="currentColor" />
-              4.5
-            </span>
-            <span className="flex items-center gap-1">
-              <Heart className="size-3 text-red-500" />
-              234
-            </span>
-          </div>
-          {product.is_featured && (
-            <Badge className="text-xs bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 dark:from-purple-900/30 dark:to-pink-900/30 dark:text-purple-300 border-0">
-              Featured
-            </Badge>
           )}
         </div>
       </div>
@@ -259,26 +228,22 @@ export function ProductCard({
 
 // Compact version for search results
 export function ProductCardCompact({ product, onAddToCart }: ProductCardProps) {
-  const stockStatus = getStockStatus(product.stock_quantity);
+  const qty = product.stockQuantity ?? product.stock_quantity ?? 0;
+  const stock = getStockStatus(qty);
+  const imageUrl = product.imageUrl ?? product.image_url;
 
   return (
     <div className="flex items-center gap-4 p-4 border rounded-lg hover:shadow-md transition-shadow">
       {/* Product Image */}
-      <div className="size-16 flex-shrink-0 overflow-hidden rounded bg-gray-100">
-        {product.image_url ? (
+      <div className="size-16 flex-shrink-0 overflow-hidden rounded bg-muted">
+        {imageUrl ? (
           <Image
-            src={product.image_url}
+            src={imageUrl}
             alt={product.name}
             width={64}
             height={64}
             className="size-full object-cover"
             onError={(e) => {
-              console.error('Failed to load compact product image:', {
-                src: product.image_url,
-                productId: product.id,
-                productName: product.name
-              });
-              // Hide broken image and show placeholder
               e.currentTarget.style.display = 'none';
               const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
               if (placeholder) {
@@ -288,16 +253,16 @@ export function ProductCardCompact({ product, onAddToCart }: ProductCardProps) {
           />
         ) : null}
         <div 
-          className="flex size-full items-center justify-center bg-gray-200" 
-          style={{ display: product.image_url ? 'none' : 'flex' }}
+          className="flex size-full items-center justify-center bg-muted" 
+          style={{ display: imageUrl ? 'none' : 'flex' }}
         >
-          <div className="size-6 rounded-full bg-gray-300" />
+          <div className="size-6 rounded-full bg-foreground/10" />
         </div>
       </div>
 
       {/* Product Info */}
       <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-gray-900 truncate">
+        <h4 className="font-medium text-foreground truncate">
           <Link 
             href={`/app/products/${product.id}`}
             className="hover:text-primary transition-colors"
@@ -305,18 +270,15 @@ export function ProductCardCompact({ product, onAddToCart }: ProductCardProps) {
             {product.name}
           </Link>
         </h4>
-        <p className="text-sm text-gray-600 truncate">
+        <p className="text-sm text-foreground/70 truncate">
           {product.category}
         </p>
         <div className="flex items-center gap-2 mt-1">
-          <span className="font-semibold text-gray-900">
-            {formatPrice(product.retail_price)}
+          <span className="font-semibold text-foreground">
+            {formatPrice(product.retailPrice ?? product.retail_price)}
           </span>
-          <Badge 
-            variant="secondary" 
-            className={cn('text-xs', stockStatus.className)}
-          >
-            {stockStatus.status === 'in-stock' ? 'In Stock' : stockStatus.label}
+          <Badge status={stock.status === 'in-stock' ? 'success' : stock.status === 'low-stock' ? 'warning' : 'error'} className='text-xs'>
+            {stock.status === 'in-stock' ? 'In Stock' : stock.label}
           </Badge>
         </div>
       </div>
@@ -326,7 +288,7 @@ export function ProductCardCompact({ product, onAddToCart }: ProductCardProps) {
         {onAddToCart ? (
           <Button
             size="sm"
-            disabled={product.stock_quantity === 0}
+            disabled={qty === 0}
             onClick={() => onAddToCart(product)}
           >
             Add to Cart

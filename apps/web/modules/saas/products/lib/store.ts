@@ -14,6 +14,9 @@ export const searchQueryAtom = atom<string>('');
 // View Mode State (persisted)
 export const viewModeAtom = atomWithStorage<'grid' | 'list'>('product-view-mode', 'grid');
 
+// Density State (persisted)
+export const densityAtom = atomWithStorage<'comfortable' | 'compact'>('product-density', 'comfortable');
+
 // Recently Viewed Products (persisted)
 export const recentlyViewedAtom = atomWithStorage<Product[]>('recently-viewed-products', []);
 

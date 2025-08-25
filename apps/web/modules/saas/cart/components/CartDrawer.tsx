@@ -100,22 +100,22 @@ export function CartDrawer({ isOpen, onClose, className }: CartDrawerProps) {
       
       {/* Drawer */}
       <div className={cn(
-        "fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-900 shadow-2xl transform transition-transform duration-300 ease-in-out",
+"fixed right-0 top-0 h-full w-full max-w-md bg-card shadow-2xl transform transition-transform duration-300 ease-in-out",
         className
       )}
         style={{ zIndex: 9999 }}
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+<div className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center gap-3">
-              <ShoppingCart className="size-6 text-blue-600 dark:text-blue-400" />
+<ShoppingCart className="size-6 text-primary" />
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+<h2 className="text-lg font-semibold text-card-foreground">
                   Shopping Cart
                 </h2>
                 {!cartSummary.isEmpty && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+<p className="text-sm text-muted-foreground">
                     {cartSummary.totalQuantity} items
                   </p>
                 )}
@@ -130,19 +130,20 @@ export function CartDrawer({ isOpen, onClose, className }: CartDrawerProps) {
           {cartSummary.isEmpty ? (
             <div className="flex-1 flex items-center justify-center p-8">
               <div className="text-center">
-                <Package className="size-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+<Package className="size-16 text-muted-foreground mx-auto mb-4" />
+<h3 className="text-lg font-semibold text-card-foreground mb-2">
                   Your cart is empty
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
+<p className="text-muted-foreground mb-4">
                   Add some products to get started
                 </p>
-                <Button 
+<Button 
+                  variant="primary"
                   onClick={() => {
                     onClose();
                     window.location.href = '/app/products';
                   }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+className=""
                 >
                   Browse Products
                 </Button>
@@ -156,7 +157,7 @@ export function CartDrawer({ isOpen, onClose, className }: CartDrawerProps) {
                   <Card key={item.id} className="p-4">
                     <div className="flex items-start gap-3">
                       {/* Product Image */}
-                      <div className="w-16 h-16 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden flex-shrink-0">
+<div className="w-16 h-16 rounded-lg bg-muted overflow-hidden flex-shrink-0">
                         {item.product.images?.[0] ? (
                           <img
                             src={typeof item.product.images[0] === 'string' 
@@ -168,18 +169,18 @@ export function CartDrawer({ isOpen, onClose, className }: CartDrawerProps) {
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <Package className="size-6 text-gray-400 dark:text-gray-600" />
+<Package className="size-6 text-muted-foreground" />
                           </div>
                         )}
                       </div>
                       
                       {/* Product Details */}
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 dark:text-gray-100 truncate">
+<h4 className="font-medium text-card-foreground truncate">
                           {item.product.name}
                         </h4>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+<span className="text-sm font-semibold text-primary">
                             ₦{item.unitPrice.toLocaleString()}
                           </span>
                           {item.isWholesalePrice && (
@@ -228,12 +229,12 @@ export function CartDrawer({ isOpen, onClose, className }: CartDrawerProps) {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveItem(item.id, item.product.name)}
-                          className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+className="h-7 w-7 p-0 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
                         >
                           <Trash2 className="size-3" />
                         </Button>
                         <div className="text-right">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+<p className="text-sm font-semibold text-card-foreground">
                             ₦{(item.unitPrice * item.quantity).toLocaleString()}
                           </p>
                         </div>
@@ -247,7 +248,7 @@ export function CartDrawer({ isOpen, onClose, className }: CartDrawerProps) {
                   variant="outline"
                   size="sm"
                   onClick={handleClearCart}
-                  className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-800"
+className="w-full text-destructive hover:text-destructive/90 hover:bg-destructive/10 border-destructive/30"
                 >
                   <Trash2 className="size-4 mr-2" />
                   Clear Cart
@@ -255,11 +256,11 @@ export function CartDrawer({ isOpen, onClose, className }: CartDrawerProps) {
               </div>
 
               {/* Footer with Summary */}
-              <div className="border-t border-gray-200 dark:border-gray-700 p-4 space-y-4">
+<div className="border-t border-border p-4 space-y-4">
                 {/* Summary */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">
+<span className="text-muted-foreground">
                       Subtotal ({cartSummary.totalQuantity} items)
                     </span>
                     <span className="font-medium">
@@ -268,14 +269,14 @@ export function CartDrawer({ isOpen, onClose, className }: CartDrawerProps) {
                   </div>
                   
                   {cartSummary.bulkDiscount > 0 && (
-                    <div className="flex items-center justify-between text-sm text-green-600 dark:text-green-400">
+<div className="flex items-center justify-between text-sm text-success">
                       <span>Bulk Discount</span>
                       <span>-₦{cartSummary.bulkDiscount.toLocaleString()}</span>
                     </div>
                   )}
                   
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">
+<span className="text-muted-foreground">
                       {cartSummary.selectedDelivery.name}
                     </span>
                     <span className="font-medium">
@@ -294,9 +295,9 @@ export function CartDrawer({ isOpen, onClose, className }: CartDrawerProps) {
 
                 {/* Special Notices */}
                 {cartSummary.requiresPrescription && (
-                  <div className="flex items-start gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
-                    <AlertTriangle className="size-4 text-yellow-600 dark:text-yellow-400 mt-0.5" />
-                    <p className="text-xs text-yellow-700 dark:text-yellow-300">
+<div className="flex items-start gap-2 p-2 border rounded-lg">
+<AlertTriangle className="size-4 text-highlight mt-0.5" />
+<p className="text-xs text-highlight">
                       Some items require prescription
                     </p>
                   </div>
@@ -304,9 +305,10 @@ export function CartDrawer({ isOpen, onClose, className }: CartDrawerProps) {
 
                 {/* Action Buttons */}
                 <div className="space-y-2">
-                  <Button 
+<Button 
                     onClick={handleCheckout}
-                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium"
+                    className="w-full"
+                    variant="primary"
                   >
                     <ArrowRight className="size-4 mr-2" />
                     Proceed to Checkout

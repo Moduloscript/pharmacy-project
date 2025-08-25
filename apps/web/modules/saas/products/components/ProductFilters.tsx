@@ -338,8 +338,9 @@ export function MobileFiltersDialog({ open, onClose }: { open: boolean; onClose:
           
           {/* Filter Panel */}
           <div className="fixed inset-0 z-40 flex">
-            <div className="relative ml-auto flex size-full max-w-xs transform flex-col overflow-y-auto bg-white py-4 pb-6 shadow-xl transition duration-300 ease-in-out">
-              <div className="flex items-center justify-between px-4">
+            <div className="relative ml-auto flex size-full max-w-xs transform flex-col bg-white shadow-xl transition duration-300 ease-in-out">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
                 <h2 className="text-lg font-medium text-gray-900">Filters</h2>
                 <button
                   type="button"
@@ -355,11 +356,11 @@ export function MobileFiltersDialog({ open, onClose }: { open: boolean; onClose:
               </div>
 
               {/* Filters */}
-              <form className="mt-4">
+              <form className="flex-1 overflow-y-auto px-0 mt-0">
                 {filterSections.map((section) => (
-                  <Disclosure key={section.name} as="div" className="border-t border-gray-200 pt-4 pb-4">
+                  <Disclosure key={section.name} as="div" className="border-t border-gray-200 pt-4 pb-4 px-0">
                     <fieldset>
-                      <legend className="w-full px-2">
+                      <legend className="w-full px-4">
                         <DisclosureButton className="group flex w-full items-center justify-between p-2 text-gray-400 hover:text-gray-500">
                           <span className="text-sm font-medium text-gray-900">{section.name}</span>
                           <span className="ml-6 flex h-7 items-center">
@@ -370,7 +371,7 @@ export function MobileFiltersDialog({ open, onClose }: { open: boolean; onClose:
                           </span>
                         </DisclosureButton>
                       </legend>
-                      <DisclosurePanel className="px-4 pt-4 pb-2">
+                      <DisclosurePanel className="px-4 pt-2 pb-2">
                         <div className="space-y-6">
                           {section.options.map((option, optionIdx) => (
                             <div key={option.value} className="flex gap-3">
@@ -467,6 +468,18 @@ export function MobileFiltersDialog({ open, onClose }: { open: boolean; onClose:
                   </Disclosure>
                 ))}
               </form>
+
+              {/* Footer */}
+              <div className="mt-auto border-t border-gray-200 p-4 bg-gray-50">
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => clearFilters()}>
+                    Reset
+                  </Button>
+                  <Button size="sm" className="ml-auto" onClick={onClose}>
+                    Done
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </>

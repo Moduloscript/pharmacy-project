@@ -62,6 +62,8 @@ export interface ProductFilters {
   max_price?: number;
   prescription_only?: boolean;
   in_stock_only?: boolean;
+  // Sort parameter (e.g., "updated_desc", "name_asc", "price_asc", "price_desc", "stock_desc")
+  sort?: string;
 }
 
 export interface CreateProductData {

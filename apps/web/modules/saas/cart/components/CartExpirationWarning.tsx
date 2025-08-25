@@ -155,11 +155,11 @@ export function CartExpirationWarning({
   if (hasExpired) {
     return (
       <Alert className={`border-red-200 bg-red-50 dark:bg-red-950/20 ${className}`}>
-        <AlertTriangle className="h-4 w-4 text-red-600" />
+<AlertTriangle className="h-4 w-4 text-destructive" />
         <AlertDescription className="flex items-center justify-between">
           <div>
-            <strong className="text-red-800 dark:text-red-200">Cart Expired</strong>
-            <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+<strong className="text-destructive">Cart Expired</strong>
+<p className="text-sm text-destructive mt-1">
               Your cart has expired due to inactivity. Items have been cleared for security.
             </p>
           </div>
@@ -167,7 +167,7 @@ export function CartExpirationWarning({
             onClick={handleExtendCart} 
             size="sm" 
             variant="outline"
-            className="ml-4 border-red-300 text-red-700 hover:bg-red-100"
+className="ml-4 border-destructive/40 text-destructive hover:bg-destructive/10"
           >
             <RefreshCw className="h-3 w-3 mr-1" />
             Start New Session
@@ -181,11 +181,11 @@ export function CartExpirationWarning({
   if (isShowingWarning && timeRemaining > 0) {
     return (
       <Alert className={`border-amber-200 bg-amber-50 dark:bg-amber-950/20 ${className}`}>
-        <Clock className="h-4 w-4 text-amber-600" />
+<Clock className="h-4 w-4 text-highlight" />
         <AlertDescription className="flex items-center justify-between">
           <div>
-            <strong className="text-amber-800 dark:text-amber-200">Cart Expiring Soon</strong>
-            <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+<strong className="text-highlight">Cart Expiring Soon</strong>
+<p className="text-sm text-highlight mt-1">
               Your cart will expire in {showCountdown && formatTimeRemaining(timeRemaining)}. 
               Continue shopping to extend your session.
             </p>
