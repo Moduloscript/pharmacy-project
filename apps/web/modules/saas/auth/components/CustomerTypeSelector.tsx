@@ -95,15 +95,8 @@ export function CustomerTypeSelector({
   className 
 }: CustomerTypeSelectorProps) {
   return (
-    <div className={cn('space-y-4', className)}>
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900">Choose Your Customer Type</h3>
-        <p className="text-sm text-gray-600 mt-1">
-          Select the option that best describes your business or needs for proper pricing and verification.
-        </p>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className={cn('space-y-6', className)}>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 md:gap-8">
         {customerTypeOptions.map((option) => {
           const Icon = option.icon;
           const isSelected = value === option.value;
@@ -112,60 +105,59 @@ export function CustomerTypeSelector({
             <Card
               key={option.value}
               className={cn(
-                'relative cursor-pointer border-2 p-4 transition-all duration-200 hover:shadow-lg',
+                'relative cursor-pointer border-2 p-6 md:p-8 transition-shadow duration-300 hover:shadow-lg min-h-[360px] h-full flex flex-col',
                 isSelected 
-                  ? 'border-primary bg-primary/5 shadow-md' 
-                  : 'border-gray-200 hover:border-gray-300'
+                  ? 'border-primary bg-primary/10 shadow-lg ring-2 ring-primary/20' 
+                  : 'border-muted-foreground/20 hover:border-primary/50 hover:bg-muted/20'
               )}
               onClick={() => onChange(option.value)}
             >
               {/* Selected indicator */}
               {isSelected && (
-                <div className="absolute -top-2 -right-2 bg-primary text-white rounded-full p-1">
-                  <CheckCircleIcon className="size-4" />
+                <div className="absolute -top-3 -right-3 bg-primary text-white rounded-full p-1.5 shadow-lg">
+                  <CheckCircleIcon className="size-5" />
                 </div>
               )}
               
               {/* Recommended badge */}
               {option.recommended && (
                 <Badge 
-                  variant="secondary" 
-                  className="absolute top-2 right-2 text-xs bg-green-100 text-green-800"
+                  className="absolute top-3 right-3 text-xs bg-green-500 text-white border-0 shadow-sm"
                 >
                   Recommended
                 </Badge>
               )}
               
               {/* Header */}
-              <div className="flex items-start space-x-3 mb-3">
+              <div className="flex flex-col items-center text-center mb-6">
                 <div className={cn(
-                  'p-2 rounded-lg',
-                  isSelected ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'
+                  'p-4 rounded-full mb-4 transition-all duration-200',
+                  isSelected ? 'bg-primary text-white shadow-lg' : 'bg-muted text-muted-foreground'
                 )}>
-                  <Icon className="size-6" />
+                  <Icon className="size-8" />
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900">{option.label}</h4>
-                  <p className="text-sm text-gray-600 mt-1">{option.description}</p>
+                <div>
+                  <h4 className="font-semibold text-foreground text-lg mb-1">{option.label}</h4>
+                  <p className="text-sm text-muted-foreground">{option.description}</p>
                 </div>
               </div>
               
               {/* Features */}
-              <ul className="space-y-1 mb-4">
+              <ul className="space-y-2 mb-6 flex-1">
                 {option.features.map((feature, index) => (
-                  <li key={index} className="flex items-center text-sm text-gray-700">
-                    <CheckCircleIcon className="size-3 text-green-500 mr-2 flex-shrink-0" />
-                    {feature}
+                  <li key={index} className="flex items-start text-sm text-muted-foreground">
+                    <CheckCircleIcon className="size-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">{feature}</span>
                   </li>
                 ))}
               </ul>
               
               {/* Price note */}
-              <div className="pt-3 border-t border-gray-200">
-                <p className="text-xs text-gray-600 font-medium">{option.priceNote}</p>
+              <div className="mt-auto pt-4 border-t border-border/50">
+                <p className="text-sm text-foreground font-medium mb-1">{option.priceNote}</p>
                 {option.verificationRequired && (
-                  <p className="text-xs text-amber-600 mt-1">
-                    <ShieldIcon className="inline size-3 mr-1" />
+                  <p className="text-xs text-amber-600 flex items-center">
+                    <ShieldIcon className="size-3 mr-1" />
                     Business verification required
                   </p>
                 )}
