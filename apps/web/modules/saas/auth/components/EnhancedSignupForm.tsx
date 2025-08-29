@@ -83,6 +83,8 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
   const [selectedCustomerType, setSelectedCustomerType] = useState<CustomerType>('RETAIL');
   const [personalAddressData, setPersonalAddressData] = useState<PersonalAddressFormData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Tracks whether sign-up has been initiated on the server (email sent/verification started)
+  const [signupInitiated, setSignupInitiated] = useState(false);
 
   // Form states
   const [showPassword, setShowPassword] = useState(false);
@@ -168,6 +170,9 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
         throw error;
       }
 
+      // Mark that the sign-up flow has been initiated (verification email should be sent by server)
+      setSignupInitiated(true);
+
       // TODO: Create customer profile with additional data
       // This would involve calling an API to create the Customer record
       // with the customer type, address, and business information
@@ -206,8 +211,8 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
 
   const progress = getStepProgress();
 
-  // Success state
-  if (basicForm.formState.isSubmitSuccessful && !invitationOnlyMode) {
+  // Success state (only when sign-up has actually been initiated on the server)
+  if (signupInitiated && !invitationOnlyMode) {
     return (
       <div className="text-center">
         <Alert variant="success" className="text-left">
@@ -224,13 +229,13 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
   }
 
   return (
-    <div>
+    <div className="mx-auto px-4 py-8 space-y-8">
       {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="font-bold text-2xl md:text-3xl">
+      <div className="text-center space-y-4">
+        <h1 className="font-bold text-3xl md:text-4xl text-foreground">
           Create Your BenPharm Account
         </h1>
-        <p className="mt-2 text-foreground/60">
+        <p className="text-lg text-muted-foreground max-w-md mx-auto">
           Join Nigeria's leading pharmaceutical distribution platform
         </p>
       </div>
@@ -240,18 +245,18 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
       )}
 
       {/* Progress Indicator */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-gray-600">
+      <div className="bg-card rounded-lg p-6 border shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-sm font-medium text-muted-foreground">
             Step {progress.current} of {progress.total}
           </span>
-          <span className="text-sm text-gray-600">
+          <span className="text-sm font-medium text-primary">
             {Math.round(progress.percentage)}% Complete
           </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="w-full bg-muted rounded-full h-3">
           <div 
-            className="bg-primary h-2 rounded-full transition-all duration-300"
+            className="bg-primary h-3 rounded-full transition-all duration-500 ease-out"
             style={{ width: `${progress.percentage}%` }}
           />
         </div>
@@ -259,21 +264,21 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
 
       {/* Step 1: Basic Information */}
       {currentStep === 1 && (
-        <Card className="p-6">
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <UserIcon className="size-6 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold">Personal Information</h2>
-              <p className="text-sm text-gray-600">
-                Let's start with your basic details
+        <div className="max-w-2xl mx-auto">
+          <Card className="border shadow-sm">
+            <div className="p-8">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
+                <UserIcon className="size-8 text-primary" />
+              </div>
+              <h2 className="text-2xl font-semibold text-foreground mb-2">Personal Information</h2>
+              <p className="text-muted-foreground">
+                Let's start with your basic details to create your account
               </p>
             </div>
-          </div>
 
           <Form {...basicForm}>
-            <form onSubmit={basicForm.handleSubmit(handleBasicFormSubmit)} className="space-y-4">
+            <form onSubmit={basicForm.handleSubmit(handleBasicFormSubmit)} className="space-y-6">
               {basicForm.formState.isSubmitted &&
                 basicForm.formState.errors.root && (
                   <Alert variant="error">
@@ -378,9 +383,9 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
                 )}
               />
 
-              <Button type="submit" className="w-full">
-                Continue
-                <ArrowRightIcon className="ml-2 size-4" />
+              <Button type="submit" className="w-full h-12 text-base font-medium">
+                Continue to Account Type
+                <ArrowRightIcon className="ml-2 size-5" />
               </Button>
             </form>
           </Form>
@@ -388,14 +393,13 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
           {/* Social login options */}
           {config.auth.enableSignup && config.auth.enableSocialLogin && (
             <>
-              <div className="relative my-6 h-4">
-                <hr className="relative top-2" />
-                <p className="absolute top-0 left-1/2 -translate-x-1/2 mx-auto inline-block h-4 bg-card px-2 text-center font-medium text-foreground/60 text-sm leading-tight">
+              <div className="relative my-8 h-px bg-border">
+                <p className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-4 text-sm font-medium text-muted-foreground">
                   {t('auth.login.continueWith')}
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 items-stretch gap-2 sm:grid-cols-2">
+              <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2">
                 {Object.keys(oAuthProviders).map((providerId) => (
                   <SocialSigninButton
                     key={providerId}
@@ -405,53 +409,69 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
               </div>
             </>
           )}
+          </div>
         </Card>
+        </div>
       )}
 
       {/* Step 2: Customer Type Selection */}
       {currentStep === 2 && (
-        <Card className="p-6">
-          <CustomerTypeSelector
-            value={selectedCustomerType}
-            onChange={setSelectedCustomerType}
-          />
+        <div className="w-full mx-auto md:max-w-5xl lg:max-w-6xl">
+          <Card className="border shadow-sm">
+            <div className="p-8">
+              <div className="text-center space-y-3 md:space-y-4 max-w-3xl mx-auto mb-8">
+                <h2 className="text-2xl md:text-3xl font-semibold text-foreground">
+                  Choose Your Account Type
+                </h2>
+                <p className="text-muted-foreground text-lg md:text-xl leading-relaxed">
+                  Select the option that best describes your business or needs for proper pricing and verification.
+                </p>
+              </div>
+              
+              <CustomerTypeSelector
+                value={selectedCustomerType}
+                onChange={setSelectedCustomerType}
+              />
 
-          <div className="flex justify-between mt-8">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentStep(1)}
-            >
-              <ArrowLeftIcon className="mr-2 size-4" />
-              Back
-            </Button>
-            <Button
-              onClick={handleCustomerTypeNext}
-              disabled={!selectedCustomerType}
-            >
-              Continue
-              <ArrowRightIcon className="ml-2 size-4" />
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4 sm:justify-between mt-12">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentStep(1)}
+                className="order-2 sm:order-1 h-12"
+              >
+                <ArrowLeftIcon className="mr-2 size-4" />
+                Back
+              </Button>
+              <Button
+                onClick={handleCustomerTypeNext}
+                disabled={!selectedCustomerType}
+                className="order-1 sm:order-2 h-12 text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {selectedCustomerType ? 'Continue' : 'Select Account Type'}
+                <ArrowRightIcon className="ml-2 size-4" />
+              </Button>
+            </div>
           </div>
         </Card>
+        </div>
       )}
 
       {/* Step 3a: Personal Address (for retail customers) */}
       {currentStep === 3 && selectedCustomerType === 'RETAIL' && (
-        <Card className="p-6">
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <UserIcon className="size-6 text-blue-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold">Delivery Address</h2>
-              <p className="text-sm text-gray-600">
-                Where should we deliver your orders?
+        <Card className="border shadow-sm">
+          <div className="p-8">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-50 rounded-full mb-4">
+                <UserIcon className="size-8 text-blue-600" />
+              </div>
+              <h2 className="text-2xl font-semibold text-foreground mb-2">Delivery Address</h2>
+              <p className="text-muted-foreground">
+                Where should we deliver your pharmaceutical orders?
               </p>
             </div>
-          </div>
 
           <Form {...addressForm}>
-            <form onSubmit={addressForm.handleSubmit(handlePersonalAddressSubmit)} className="space-y-4">
+            <form onSubmit={addressForm.handleSubmit(handlePersonalAddressSubmit)} className="space-y-6">
               <FormField
                 control={addressForm.control}
                 name="address"
@@ -523,10 +543,11 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
                 />
               </div>
 
-              <div className="flex justify-between mt-8">
+              <div className="flex flex-col sm:flex-row gap-4 sm:justify-between mt-12">
                 <Button
                   variant="outline"
                   onClick={() => setCurrentStep(2)}
+                  className="order-2 sm:order-1 h-12"
                 >
                   <ArrowLeftIcon className="mr-2 size-4" />
                   Back
@@ -534,26 +555,29 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
                 <Button
                   type="submit"
                   loading={isSubmitting}
+                  className="order-1 sm:order-2 h-12 text-base font-medium"
                 >
-                  <CheckIcon className="mr-2 size-4" />
+                  <CheckIcon className="mr-2 size-5" />
                   Complete Registration
                 </Button>
               </div>
             </form>
           </Form>
+          </div>
         </Card>
       )}
 
       {/* Step 3b: Business Information (for business customers) */}
       {currentStep === 3 && selectedCustomerType !== 'RETAIL' && (
-        <div>
-          <div className="flex justify-start mb-4">
+        <div className="space-y-6">
+          <div className="flex justify-start">
             <Button
               variant="outline"
               onClick={() => setCurrentStep(2)}
+              className="h-12"
             >
               <ArrowLeftIcon className="mr-2 size-4" />
-              Back
+              Back to Account Type
             </Button>
           </div>
           <BusinessSignupForm
@@ -566,18 +590,19 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
 
       {/* Login link */}
       {currentStep === 1 && (
-        <div className="mt-6 text-center text-sm">
-          <span className="text-foreground/60">
-            Already have an account?{' '}
-          </span>
+        <div className="text-center py-6 border-t bg-muted/30">
+          <p className="text-muted-foreground mb-2">
+            Already have an account?
+          </p>
           <Link
             href={withQuery(
               '/auth/login',
               Object.fromEntries(searchParams.entries()),
             )}
+            className="inline-flex items-center text-primary hover:text-primary/80 font-medium transition-colors"
           >
-            Sign in here
-            <ArrowRightIcon className="ml-1 inline size-4 align-middle" />
+            Sign in to your account
+            <ArrowRightIcon className="ml-2 size-4" />
           </Link>
         </div>
       )}
