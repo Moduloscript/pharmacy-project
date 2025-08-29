@@ -139,8 +139,8 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
     if (selectedCustomerType === 'RETAIL') {
       setCurrentStep(3);
     } else {
-      // For business customers, proceed to final submission
-      handleFinalSubmission();
+      // For business customers, proceed to the business information step
+      setCurrentStep(3);
     }
   };
 

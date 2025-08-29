@@ -4,6 +4,7 @@ import { OnboardingForm } from "@saas/onboarding/components/OnboardingForm";
 import { AuthWrapper } from "@saas/shared/components/AuthWrapper";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
+import { userNeedsCustomerProfile } from "@repo/auth/lib/user";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -23,7 +24,9 @@ export default async function OnboardingPage() {
 		return redirect("/auth/login");
 	}
 
-	if (!config.users.enableOnboarding || session.user.onboardingComplete) {
+	// If onboarding is disabled, or user completed onboarding AND already has a customer profile, go to app
+	const needsProfile = await userNeedsCustomerProfile(session.user.id);
+	if (!config.users.enableOnboarding || (session.user.onboardingComplete && !needsProfile)) {
 		return redirect("/app");
 	}
 

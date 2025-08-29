@@ -27,7 +27,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function OnboardingStep1({ onCompleted }: { onCompleted: () => void }) {
+export function OnboardingStep1({ onNext }: { onNext: () => void }) {
 	const t = useTranslations();
 	const { user } = useSession();
 	const form = useForm<FormValues>({
@@ -51,7 +51,7 @@ export function OnboardingStep1({ onCompleted }: { onCompleted: () => void }) {
 				name,
 			});
 
-			onCompleted();
+			onNext();
 		} catch (e) {
 			form.setError("root", {
 				type: "server",
