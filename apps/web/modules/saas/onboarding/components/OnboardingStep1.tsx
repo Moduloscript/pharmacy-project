@@ -16,10 +16,10 @@ import {
 import { Input } from "@ui/components/input";
 import { ArrowRightIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect } from "react";
 import type { SubmitHandler } from "react-hook-form";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useMutation } from "@tanstack/react-query";
 
 const formSchema = z.object({
 	name: z.string(),
@@ -37,21 +37,20 @@ export function OnboardingStep1({ onNext }: { onNext: () => void }) {
 		},
 	});
 
-	useEffect(() => {
-		if (user) {
-			form.setValue("name", user.name ?? "");
-		}
-	}, [user]);
+	const updateNameMutation = useMutation({
+		mutationFn: async (name: string) => {
+			await authClient.updateUser({ name });
+		},
+		onSuccess: () => {
+			onNext();
+		},
+	});
 
 	const onSubmit: SubmitHandler<FormValues> = async ({ name }) => {
 		form.clearErrors("root");
 
 		try {
-			await authClient.updateUser({
-				name,
-			});
-
-			onNext();
+			await updateNameMutation.mutateAsync(name);
 		} catch (e) {
 			form.setError("root", {
 				type: "server",
@@ -104,7 +103,7 @@ export function OnboardingStep1({ onNext }: { onNext: () => void }) {
 						</FormControl>
 					</FormItem>
 
-					<Button type="submit" loading={form.formState.isSubmitting}>
+					<Button type="submit" loading={updateNameMutation.isPending}>
 						{t("onboarding.continue")}
 						<ArrowRightIcon className="ml-2 size-4" />
 					</Button>

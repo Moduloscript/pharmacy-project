@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -84,8 +83,6 @@ export function BusinessSignupForm({
   isSubmitting = false,
   className 
 }: BusinessSignupFormProps) {
-  const [selectedState, setSelectedState] = useState<string>('');
-  
   const form = useForm<BusinessSignupFormData>({
     resolver: zodResolver(businessSignupSchema),
     defaultValues: {
@@ -103,14 +100,14 @@ export function BusinessSignupForm({
   });
 
   const handleStateChange = (state: string) => {
-    setSelectedState(state);
     form.setValue('state', state);
     form.setValue('lga', ''); // Reset LGA when state changes
   };
 
   const getLGAOptions = () => {
-    if (!selectedState) return [];
-    return NIGERIAN_STATES_AND_LGAS[selectedState as keyof typeof NIGERIAN_STATES_AND_LGAS] || [];
+    const currentState = form.watch('state');
+    if (!currentState) return [];
+    return NIGERIAN_STATES_AND_LGAS[currentState as keyof typeof NIGERIAN_STATES_AND_LGAS] || [];
   };
 
   const getRequiredDocuments = () => {
@@ -337,7 +334,7 @@ export function BusinessSignupForm({
                         <Select 
                           value={field.value}
                           onValueChange={field.onChange}
-                          disabled={!selectedState}
+                          disabled={!form.watch('state')}
                         >
                           <option value="">Select LGA</option>
                           {getLGAOptions().map((lga) => (

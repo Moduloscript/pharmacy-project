@@ -7,8 +7,7 @@ import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { withQuery } from "ufo";
 import { OnboardingStep1 } from "./OnboardingStep1";
-import { useState } from "react";
-import { CustomerTypeSelector, type CustomerType } from "@saas/auth/components/CustomerTypeSelector";
+import { CustomerTypeSelector } from "@saas/auth/components/CustomerTypeSelector";
 import { BusinessSignupForm } from "@saas/auth/components/BusinessSignupForm";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -18,6 +17,9 @@ import { Input } from "@ui/components/input";
 import { Button } from "@ui/components/button";
 import { Alert, AlertDescription } from "@ui/components/alert";
 import { AlertTriangleIcon } from "lucide-react";
+import { useAtom } from 'jotai';
+import { onboardingCustomerTypeAtom } from "../state";
+import { useMutation } from "@tanstack/react-query";
 
 // Retail (individual) address/phone schema
 const retailSchema = z.object({
@@ -49,9 +51,7 @@ export function OnboardingForm() {
     ? Number.parseInt(stepSearchParam, 10)
     : 1;
 
-  const [customerType, setCustomerType] = useState<CustomerType | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [customerType, setCustomerType] = useAtom(onboardingCustomerTypeAtom);
 
   const retailForm = useForm<RetailFormData>({
     resolver: zodResolver(retailSchema),
@@ -66,16 +66,18 @@ export function OnboardingForm() {
     );
   };
 
-  const finishOnboarding = async () => {
-    await authClient.updateUser({ onboardingComplete: true });
-    await clearCache();
-    router.replace(redirectTo ?? "/app");
-  };
+  const updateOnboardingMutation = useMutation({
+    mutationFn: async () => {
+      await authClient.updateUser({ onboardingComplete: true });
+    },
+    onSuccess: async () => {
+      await clearCache();
+      router.replace(redirectTo ?? "/app");
+    }
+  });
 
-  async function createCustomerProfile(payload: any) {
-    setErrorMessage(null);
-    try {
-      setIsSubmitting(true);
+  const createCustomerProfileMutation = useMutation({
+    mutationFn: async (payload: any) => {
       const res = await fetch("/api/customers/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -85,13 +87,12 @@ export function OnboardingForm() {
         const err = await res.json().catch(() => ({}));
         throw new Error(err?.error || "Failed to create customer profile");
       }
-      await finishOnboarding();
-    } catch (e) {
-      setErrorMessage(e instanceof Error ? e.message : "Failed to create customer profile");
-    } finally {
-      setIsSubmitting(false);
+      return res.json();
+    },
+    onSuccess: async () => {
+      await updateOnboardingMutation.mutateAsync();
     }
-  }
+  });
 
   // Steps definition
   const steps = [1, 2, 3]; // 1: name/avatar, 2: type, 3: details & submit
@@ -118,16 +119,16 @@ export function OnboardingForm() {
       const state = retailForm.watch('state');
       return (
         <div className="space-y-6">
-          {errorMessage && (
+          {(createCustomerProfileMutation.isError || updateOnboardingMutation.isError) && (
             <Alert variant="error">
               <AlertTriangleIcon className="size-4" />
-              <AlertDescription>{errorMessage}</AlertDescription>
+              <AlertDescription>{(createCustomerProfileMutation.error as Error)?.message || (updateOnboardingMutation.error as Error)?.message}</AlertDescription>
             </Alert>
           )}
           <Form {...retailForm}>
             <form
               onSubmit={retailForm.handleSubmit(async (data) => {
-                await createCustomerProfile({
+                await createCustomerProfileMutation.mutateAsync({
                   customerType: 'RETAIL',
                   phone: data.phone,
                   address: data.address,
@@ -212,7 +213,7 @@ export function OnboardingForm() {
               </div>
 
               <div className="flex justify-end">
-                <Button type="submit" loading={isSubmitting}>Complete Registration</Button>
+                <Button type="submit" loading={createCustomerProfileMutation.isPending || updateOnboardingMutation.isPending}>Complete Registration</Button>
               </div>
             </form>
           </Form>
@@ -223,17 +224,17 @@ export function OnboardingForm() {
     // Business customer
     return (
       <div className="space-y-6">
-        {errorMessage && (
+        {(createCustomerProfileMutation.isError || updateOnboardingMutation.isError) && (
           <Alert variant="error">
             <AlertTriangleIcon className="size-4" />
-            <AlertDescription>{errorMessage}</AlertDescription>
+            <AlertDescription>{(createCustomerProfileMutation.error as Error)?.message || (updateOnboardingMutation.error as Error)?.message}</AlertDescription>
           </Alert>
         )}
         <BusinessSignupForm
           customerType={customerType}
-          isSubmitting={isSubmitting}
+          isSubmitting={createCustomerProfileMutation.isPending || updateOnboardingMutation.isPending}
           onSubmit={async (biz) => {
-            await createCustomerProfile({
+            await createCustomerProfileMutation.mutateAsync({
               customerType,
               // required phone for profile: derive from businessPhone
               phone: biz.businessPhone,
