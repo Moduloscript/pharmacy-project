@@ -5,7 +5,6 @@ import { clearCache } from "@shared/lib/cache";
 import { Progress } from "@ui/components/progress";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { withQuery } from "ufo";
 import { OnboardingStep1 } from "./OnboardingStep1";
 import { CustomerTypeSelector } from "@saas/auth/components/CustomerTypeSelector";
 import { BusinessSignupForm } from "@saas/auth/components/BusinessSignupForm";
@@ -18,7 +17,7 @@ import { Button } from "@ui/components/button";
 import { Alert, AlertDescription } from "@ui/components/alert";
 import { AlertTriangleIcon } from "lucide-react";
 import { useAtom } from 'jotai';
-import { onboardingCustomerTypeAtom } from "../state";
+import { onboardingCustomerTypeAtom, onboardingStepAtom } from "../state";
 import { useMutation } from "@tanstack/react-query";
 
 // Retail (individual) address/phone schema
@@ -31,25 +30,17 @@ const retailSchema = z.object({
 
 type RetailFormData = z.infer<typeof retailSchema>;
 
-// Nigerian states and LGAs (subset used elsewhere for consistency)
-const NIGERIAN_STATES_AND_LGAS: Record<string, string[]> = {
-  'Edo': ['Akoko-Edo', 'Egor', 'Esan Central', 'Esan North-East', 'Esan South-East', 'Esan West', 'Etsako Central', 'Etsako East', 'Etsako West', 'Igueben', 'Ikpoba Okha', 'Oredo', 'Orhionmwon', 'Ovia North-East', 'Ovia South-West', 'Owan East', 'Owan West', 'Uhunmwonde'],
-  'Lagos': ['Agege', 'Ajeromi-Ifelodun', 'Alimosho', 'Amuwo-Odofin', 'Apapa', 'Badagry', 'Epe', 'Eti Osa', 'Ibeju-Lekki', 'Ifako-Ijaiye', 'Ikeja', 'Ikorodu', 'Kosofe', 'Lagos Island', 'Lagos Mainland', 'Mushin', 'Ojo', 'Oshodi-Isolo', 'Shomolu', 'Surulere'],
-  'Abuja': ['Abaji', 'Bwari', 'Gwagwalada', 'Kuje', 'Kwali', 'Municipal Area Council'],
-  'Kano': ['Ajingi', 'Albasu', 'Bagwai', 'Bebeji', 'Bichi', 'Bunkure', 'Dala', 'Dambatta', 'Dawakin Kudu', 'Dawakin Tofa', 'Doguwa', 'Fagge', 'Gabasawa', 'Garko', 'Garun Mallam', 'Gaya', 'Gezawa', 'Gwale', 'Gwarzo', 'Kabo', 'Kano Municipal', 'Karaye', 'Kibiya', 'Kiru', 'Kumbotso', 'Kunchi', 'Kura', 'Madobi', 'Makoda', 'Minjibir', 'Nasarawa', 'Rano', 'Rimin Gado', 'Rogo', 'Shanono', 'Sumaila', 'Takai', 'Tarauni', 'Tofa', 'Tsanyawa', 'Tudun Wada', 'Ungogo', 'Warawa', 'Wudil'],
-  'Rivers': ['Abua/Odual', 'Ahoada East', 'Ahoada West', 'Akuku-Toru', 'Andoni', 'Asari-Toru', 'Bonny', 'Degema', 'Eleme', 'Emohua', 'Etche', 'Gokana', 'Ikwerre', 'Khana', 'Obio/Akpor', 'Ogba/Egbema/Ndoni', 'Ogu/Bolo', 'Okrika', 'Omuma', 'Opobo/Nkoro', 'Oyigbo', 'Port Harcourt', 'Tai']
-};
+import { NIGERIAN_STATES_AND_LGAS } from "@shared/lib/nigeria";
+
+// Nigerian states and LGAs are imported from shared lib
 
 export function OnboardingForm() {
   const t = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const stepSearchParam = searchParams.get("step");
   const redirectTo = searchParams.get("redirectTo");
-  const onboardingStep = stepSearchParam
-    ? Number.parseInt(stepSearchParam, 10)
-    : 1;
+  const [onboardingStep, setOnboardingStep] = useAtom(onboardingStepAtom);
 
   const [customerType, setCustomerType] = useAtom(onboardingCustomerTypeAtom);
 
@@ -59,11 +50,7 @@ export function OnboardingForm() {
   });
 
   const setStep = (step: number) => {
-    router.replace(
-      withQuery(window.location.search ?? "", {
-        step,
-      }),
-    );
+    setOnboardingStep(step);
   };
 
   const updateOnboardingMutation = useMutation({
