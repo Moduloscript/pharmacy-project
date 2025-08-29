@@ -54,19 +54,40 @@ export default async function middleware(req: NextRequest) {
 		}
 
 		// Onboarding enforcement for regular users only
-		if (
-			appConfig.users.enableOnboarding &&
-			!session.user.onboardingComplete &&
-			pathname !== "/app/onboarding"
-		) {
-			return NextResponse.redirect(
-				new URL(
-					withQuery("/app/onboarding", {
-						redirectTo: pathname,
-					}),
-					origin,
-				),
-			);
+		if (appConfig.users.enableOnboarding) {
+			const isOnOnboardingPage = pathname === "/app/onboarding";
+			// If onboarding not completed, force onboarding
+			if (!session.user.onboardingComplete && !isOnOnboardingPage) {
+				return NextResponse.redirect(
+					new URL(
+						withQuery("/app/onboarding", {
+							redirectTo: pathname,
+						}),
+						origin,
+					),
+				);
+			}
+			// If onboardingComplete is true, also ensure a customer profile exists
+			if (!isOnOnboardingPage) {
+				try {
+					const profileRes = await fetch(new URL("/api/customers/profile", origin), {
+						headers: { cookie: req.headers.get("cookie") ?? "" },
+					});
+					if (profileRes.ok) {
+						const data = (await profileRes.json()) as { needsProfile?: boolean };
+						if (data?.needsProfile) {
+							return NextResponse.redirect(
+								new URL(
+									withQuery("/app/onboarding", {
+										redirectTo: pathname,
+									}),
+									origin,
+								),
+							);
+						}
+					}
+				} catch {}
+			}
 		}
 
 		if (
