@@ -31,7 +31,7 @@ export default async function OnboardingPage() {
 	}
 
 	return (
-		<AuthWrapper>
+		<AuthWrapper contentClass="max-w-6xl">
 			<OnboardingForm />
 		</AuthWrapper>
 	);
