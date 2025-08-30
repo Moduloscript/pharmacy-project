@@ -1,6 +1,7 @@
 import {
 	GetObjectCommand,
 	PutObjectCommand,
+	DeleteObjectCommand,
 	S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl as getS3SignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -8,6 +9,7 @@ import { logger } from "@repo/logs";
 import type {
 	GetSignedUploadUrlHandler,
 	GetSignedUrlHander,
+	DeleteObjectHandler,
 } from "../../types";
 
 let s3Client: S3Client | null = null;
@@ -47,9 +49,21 @@ const getS3Client = () => {
 	return s3Client;
 };
 
+export const deleteObject: DeleteObjectHandler = async (path, { bucket }) => {
+	const s3Client = getS3Client();
+	try {
+		await s3Client.send(
+			new DeleteObjectCommand({ Bucket: bucket, Key: path }),
+		);
+	} catch (e) {
+		logger.error(e);
+		throw new Error("Could not delete object");
+	}
+};
+
 export const getSignedUploadUrl: GetSignedUploadUrlHandler = async (
 	path,
-	{ bucket },
+	{ bucket, contentType },
 ) => {
 	const s3Client = getS3Client();
 	try {
@@ -58,7 +72,7 @@ export const getSignedUploadUrl: GetSignedUploadUrlHandler = async (
 			new PutObjectCommand({
 				Bucket: bucket,
 				Key: path,
-				ContentType: "image/jpeg",
+				...(contentType ? { ContentType: contentType } : {}),
 			}),
 			{
 				expiresIn: 60,

@@ -112,9 +112,13 @@ export const OrderTrackingScalarFieldEnumSchema = z.enum(['id','orderId','status
 
 export const PaymentScalarFieldEnumSchema = z.enum(['id','customerId','orderId','amount','currency','method','status','gatewayReference','transactionId','gatewayResponse','gatewayFee','appFee','paymentUrl','webhookData','failureReason','retryCount','createdAt','updatedAt','completedAt']);
 
+export const PaymentRetryConfigScalarFieldEnumSchema = z.enum(['id','payment_method','max_retries','retry_delays','enabled','created_at','updated_at']);
+
 export const InventoryMovementScalarFieldEnumSchema = z.enum(['id','productId','type','quantity','reason','reference','previousStock','newStock','batchNumber','expiryDate','userId','notes','createdAt']);
 
 export const NotificationScalarFieldEnumSchema = z.enum(['id','customerId','orderId','type','channel','recipient','subject','message','status','gatewayResponse','retryCount','maxRetries','createdAt','sentAt','deliveredAt']);
+
+export const DocumentScalarFieldEnumSchema = z.enum(['id','userId','organizationId','name','key','mimeType','size','bucket','createdAt']);
 
 export const NigerianLocationScalarFieldEnumSchema = z.enum(['id','state','lga','zone','created_at']);
 
@@ -540,6 +544,25 @@ export const PaymentSchema = z.object({
 export type Payment = z.infer<typeof PaymentSchema>
 
 /////////////////////////////////////////
+// PAYMENT RETRY CONFIG SCHEMA
+/////////////////////////////////////////
+
+/**
+ * Mirrors existing table `payment_retry_config` in the remote DB to avoid destructive drops
+ */
+export const PaymentRetryConfigSchema = z.object({
+  id: z.number().int(),
+  payment_method: z.string(),
+  max_retries: z.number().int(),
+  retry_delays: z.number().int().array(),
+  enabled: z.boolean().nullable(),
+  created_at: z.coerce.date().nullable(),
+  updated_at: z.coerce.date().nullable(),
+})
+
+export type PaymentRetryConfig = z.infer<typeof PaymentRetryConfigSchema>
+
+/////////////////////////////////////////
 // INVENTORY MOVEMENT SCHEMA
 /////////////////////////////////////////
 
@@ -584,6 +607,24 @@ export const NotificationSchema = z.object({
 })
 
 export type Notification = z.infer<typeof NotificationSchema>
+
+/////////////////////////////////////////
+// DOCUMENT SCHEMA
+/////////////////////////////////////////
+
+export const DocumentSchema = z.object({
+  id: z.string().cuid(),
+  userId: z.string().nullable(),
+  organizationId: z.string().nullable(),
+  name: z.string(),
+  key: z.string(),
+  mimeType: z.string().nullable(),
+  size: z.number().int(),
+  bucket: z.string(),
+  createdAt: z.coerce.date(),
+})
+
+export type Document = z.infer<typeof DocumentSchema>
 
 /////////////////////////////////////////
 // NIGERIAN LOCATION SCHEMA
