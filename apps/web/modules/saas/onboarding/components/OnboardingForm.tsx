@@ -20,17 +20,27 @@ import { useAtom } from 'jotai';
 import { onboardingCustomerTypeAtom, onboardingStepAtom } from "../state";
 import { useMutation } from "@tanstack/react-query";
 
-// Retail (individual) address/phone schema
-const retailSchema = z.object({
-  phone: z.string().regex(/^(\+234|0)[789]\d{9}$/, 'Please enter a valid Nigerian phone number'),
-  address: z.string().min(10, 'Please enter a complete address'),
-  state: z.string().min(1, 'Please select your state'),
-  lga: z.string().min(1, 'Please select your Local Government Area'),
-});
+// Retail (individual) address/phone schema with strict validation and sanitization
+const trim = (v: unknown) => (typeof v === 'string' ? v.trim() : v);
+const retailSchema = z
+  .object({
+    phone: z.preprocess(trim, z.string().regex(/^(\+234|0)[789]\d{9}$/, 'Please enter a valid Nigerian phone number')),
+    address: z.preprocess(trim, z.string().min(10, 'Please enter a complete address').max(300, 'Address is too long')),
+    state: z.preprocess(trim, z.string().min(1, 'Please select your state')),
+    lga: z.preprocess(trim, z.string().min(1, 'Please select your Local Government Area')),
+  })
+  .refine((d) => isValidState(String(d.state)), {
+    path: ['state'],
+    message: 'Invalid state selected',
+  })
+  .refine((d) => isValidLGAForState(String(d.state), String(d.lga)), {
+    path: ['lga'],
+    message: 'Invalid LGA for the selected state',
+  });
 
 type RetailFormData = z.infer<typeof retailSchema>;
 
-import { NIGERIAN_STATES_AND_LGAS } from "@shared/lib/nigeria";
+import { NIGERIAN_STATES_AND_LGAS, isValidState, isValidLGAForState } from "@shared/lib/nigeria";
 
 // Nigerian states and LGAs are imported from shared lib
 
@@ -132,7 +142,7 @@ export function OnboardingForm() {
                   <FormItem>
                     <FormLabel>Phone *</FormLabel>
                     <FormControl>
-                      <Input placeholder="+234 808 123 4567" {...field} />
+<Input placeholder="+234 808 123 4567" maxLength={20} inputMode="tel" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -146,7 +156,7 @@ export function OnboardingForm() {
                   <FormItem>
                     <FormLabel>Address *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Street, area, landmark" {...field} />
+<Input placeholder="Street, area, landmark" maxLength={300} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -221,6 +231,12 @@ export function OnboardingForm() {
           customerType={customerType}
           isSubmitting={createCustomerProfileMutation.isPending || updateOnboardingMutation.isPending}
           onSubmit={async (biz) => {
+            const docs: string[] = [];
+            if (biz.businessRegistration) docs.push(biz.businessRegistration);
+            if (biz.utilityBill) docs.push(biz.utilityBill);
+            if (biz.taxCertificate) docs.push(biz.taxCertificate);
+            if (biz.pharmacyLicense) docs.push(biz.pharmacyLicense);
+
             await createCustomerProfileMutation.mutateAsync({
               customerType,
               // required phone for profile: derive from businessPhone
@@ -235,7 +251,7 @@ export function OnboardingForm() {
               // map license number to pharmacyLicense field when applicable
               pharmacyLicense: biz.licenseNumber ?? (biz as any).pharmacyLicense,
               taxId: biz.taxId,
-              // TODO: handle uploads when implemented; for now skip verificationDocuments
+              verificationDocuments: docs,
             });
           }}
         />

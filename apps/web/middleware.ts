@@ -36,6 +36,11 @@ export default async function middleware(req: NextRequest) {
 			);
 		}
 
+		// Enforce email verification for all users before accessing /app (configurable)
+		if (appConfig.users.requireEmailVerification && !session.user?.emailVerified) {
+			return NextResponse.redirect(new URL("/auth/verify-email", origin));
+		}
+
 		// Role-based access control
 		const isAdminUser = session.user?.role === "admin";
 
@@ -88,6 +93,35 @@ export default async function middleware(req: NextRequest) {
 					}
 				} catch {}
 			}
+		}
+
+		// Business verification enforcement (non-admins) - configurable via flags
+		if (
+			appConfig.users.requireBusinessApproval &&
+			pathname !== "/app/pending-verification" &&
+			!(pathname === "/app/admin" || pathname.startsWith("/app/admin/"))
+		) {
+			try {
+				const profileRes = await fetch(new URL("/api/customers/profile", origin), {
+					headers: { cookie: req.headers.get("cookie") ?? "" },
+				});
+				if (profileRes.ok) {
+					const data = (await profileRes.json()) as {
+						needsProfile?: boolean;
+						customerType?: string | null;
+						verificationStatus?: string | null;
+					};
+					// If a profile exists and customer is a business type, require VERIFIED status
+					if (
+						!data?.needsProfile &&
+						data?.customerType &&
+						data.customerType !== "RETAIL" &&
+						data.verificationStatus !== "VERIFIED"
+					) {
+						return NextResponse.redirect(new URL("/app/pending-verification", origin));
+					}
+				}
+			} catch {}
 		}
 
 		if (
@@ -157,9 +191,21 @@ export default async function middleware(req: NextRequest) {
 		}
 
 		const session = await getSession(req);
+		const isVerifyEmailPath = pathname === "/auth/verify-email";
+		const isResetPasswordPath = pathname === "/auth/reset-password";
 
-		if (session && pathname !== "/auth/reset-password") {
-			return NextResponse.redirect(new URL("/app", origin));
+		if (session) {
+			// If the user is logged in but hasn't verified email, only allow the verify-email page (configurable)
+			if (appConfig.users.requireEmailVerification && !session.user?.emailVerified) {
+				if (!isVerifyEmailPath) {
+					return NextResponse.redirect(new URL("/auth/verify-email", origin));
+				}
+				return NextResponse.next();
+			}
+			// If verified (or verification not required), keep current behavior except for reset-password
+			if (!isResetPasswordPath) {
+				return NextResponse.redirect(new URL("/app", origin));
+			}
 		}
 
 		return NextResponse.next();

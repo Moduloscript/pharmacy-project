@@ -51,6 +51,7 @@ export function UserAvatarUpload({
 			const { signedUrl } = await getSignedUploadUrlMutation.mutateAsync({
 				path,
 				bucket: config.storage.bucketNames.avatars,
+				contentType: "image/png",
 			});
 
 			const response = await fetch(signedUrl, {
