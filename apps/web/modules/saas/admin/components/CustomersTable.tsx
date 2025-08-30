@@ -93,7 +93,34 @@ const fetchCustomers = async (): Promise<Customer[]> => {
   if (!response.ok) {
     throw new Error('Failed to fetch customers');
   }
-  return response.json();
+  const data = await response.json();
+  
+  // Handle the API response format that includes pagination
+  const customers = data.customers || data;
+  
+  // Map the backend data format to frontend format
+  return customers.map((customer: any) => ({
+    id: customer.id,
+    name: customer.userName || customer.name,
+    email: customer.userEmail || customer.email,
+    phone: customer.phone || customer.businessPhone,
+    type: customer.type,
+    businessName: customer.businessName,
+    businessAddress: customer.businessAddress,
+    state: customer.state,
+    lga: customer.lga,
+    licenseNumber: customer.pharmacyLicense,
+    taxId: customer.taxId,
+    verificationStatus: customer.businessVerificationStatus || customer.verificationStatus || 'PENDING',
+    emailVerified: customer.emailVerified || false, // This needs to come from the user table
+    phoneVerified: customer.phoneVerified || false,
+    isActive: customer.isActive !== false,
+    totalOrders: customer.totalOrders || 0,
+    totalSpent: customer.totalSpent || 0,
+    lastOrderDate: customer.lastOrderDate,
+    createdAt: customer.createdAt || customer.userCreatedAt,
+    updatedAt: customer.updatedAt,
+  }));
 };
 
 const updateCustomerStatus = async ({ 
