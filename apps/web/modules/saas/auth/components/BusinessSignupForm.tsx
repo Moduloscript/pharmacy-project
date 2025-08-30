@@ -2,11 +2,13 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import { useMemo } from 'react';
 import { z } from 'zod';
 import { Button } from '@ui/components/button';
 import { Input } from '@ui/components/input';
 import { Textarea } from '@ui/components/textarea';
-import { Select } from '@ui/components/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui/components/select';
+import { YearEstablishedPicker } from '@ui/components/date-picker';
 import {
   Form,
   FormControl,
@@ -27,41 +29,68 @@ import {
   InfoIcon,
   CheckCircleIcon
 } from 'lucide-react';
+import { DocumentUpload } from "@/modules/saas/shared/components/DocumentUpload";
 import { type CustomerType } from './CustomerTypeSelector';
 
-import { NIGERIAN_STATES_AND_LGAS } from "@shared/lib/nigeria";
+import { NIGERIAN_STATES_AND_LGAS, isValidState, isValidLGAForState } from "@shared/lib/nigeria";
 
-const businessSignupSchema = z.object({
-  // Basic business information
-  businessName: z.string().min(2, 'Business name must be at least 2 characters'),
-  businessPhone: z.string().regex(/^(\+234|0)[789]\d{9}$/, 'Please enter a valid Nigerian phone number'),
-  businessEmail: z.string().email('Please enter a valid email address'),
-  
-  // Address information
-  businessAddress: z.string().min(10, 'Please enter a complete business address'),
-  state: z.string().min(1, 'Please select your state'),
-  lga: z.string().min(1, 'Please select your Local Government Area'),
-  
-  // Business verification documents
-  licenseNumber: z.string().optional(),
-  taxId: z.string().optional(),
-  
-  // Additional information
-  establishedYear: z.coerce.number().min(1900).max(new Date().getFullYear()).optional(),
-  description: z.string().max(500).optional(),
-  
-  // File uploads (URLs will be stored as strings)
-  businessRegistration: z.string().optional(),
-  pharmacyLicense: z.string().optional(),
-  taxCertificate: z.string().optional(),
-  utilityBill: z.string().optional(),
-}).refine((data) => {
-  // Pharmacy license is required for PHARMACY customer type
-  // This validation will be handled by the parent component
-  return true;
-});
+const trim = (v: unknown) => (typeof v === 'string' ? v.trim() : v);
+const buildBusinessSignupSchema = (customerType: CustomerType) => z
+  .object({
+    // Basic business information
+    businessName: z.preprocess(trim, z.string().min(2, 'Business name must be at least 2 characters').max(100, 'Business name is too long')),
+    businessPhone: z.preprocess(trim, z.string().regex(/^(\+234|0)[789]\d{9}$/, 'Please enter a valid Nigerian phone number')),
+    businessEmail: z.preprocess(trim, z.string().email('Please enter a valid email address')),
+    
+    // Address information
+    businessAddress: z.preprocess(trim, z.string().min(10, 'Please enter a complete business address').max(300, 'Business address is too long')),
+    state: z.preprocess(trim, z.string().min(1, 'Please select your state')),
+    lga: z.preprocess(trim, z.string().min(1, 'Please select your Local Government Area')),
+    
+    // Business verification documents
+    licenseNumber: z.preprocess(trim, z.string().optional()),
+    taxId: z.preprocess(trim, z.string().optional()),
+    
+    // Additional information
+    establishedYear: z.coerce.number().min(1900).max(new Date().getFullYear()).optional(),
+    description: z.preprocess(trim, z.string().max(500).optional()),
+    
+    // File uploads (URLs will be stored as strings)
+    businessRegistration: z.string().optional(),
+    pharmacyLicense: z.string().optional(),
+    taxCertificate: z.string().optional(),
+    utilityBill: z.string().optional(),
+  })
+  .refine((d) => isValidState(String(d.state)), {
+    path: ['state'],
+    message: 'Invalid state selected',
+  })
+  .refine((d) => isValidLGAForState(String(d.state), String(d.lga)), {
+    path: ['lga'],
+    message: 'Invalid LGA for the selected state',
+  })
+  .superRefine((d, ctx) => {
+    if (customerType === 'PHARMACY' && !d.licenseNumber?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['licenseNumber'], message: 'Pharmacy license number is required for Pharmacies' });
+    }
+  });
 
-type BusinessSignupFormData = z.infer<typeof businessSignupSchema>;
+type BusinessSignupFormData = {
+  businessName: string;
+  businessPhone: string;
+  businessEmail: string;
+  businessAddress: string;
+  state: string;
+  lga: string;
+  licenseNumber?: string;
+  taxId?: string;
+  establishedYear?: number;
+  description?: string;
+  businessRegistration?: string;
+  pharmacyLicense?: string;
+  taxCertificate?: string;
+  utilityBill?: string;
+};
 
 interface BusinessSignupFormProps {
   customerType: CustomerType;
@@ -76,8 +105,9 @@ export function BusinessSignupForm({
   isSubmitting = false,
   className 
 }: BusinessSignupFormProps) {
+  const schema = useMemo(() => buildBusinessSignupSchema(customerType), [customerType]);
   const form = useForm<BusinessSignupFormData>({
-    resolver: zodResolver(businessSignupSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       businessName: '',
       businessPhone: '',
@@ -174,7 +204,7 @@ export function BusinessSignupForm({
                   <FormItem className="md:col-span-2">
                     <FormLabel>Business Name *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your business name" {...field} />
+<Input placeholder="Enter your business name" maxLength={100} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -190,9 +220,11 @@ export function BusinessSignupForm({
                     <FormControl>
                       <div className="relative">
                         <PhoneIcon className="absolute left-3 top-3 size-4 text-gray-400" />
-                        <Input 
+<Input 
                           placeholder="+234 808 123 4567" 
                           className="pl-10"
+                          maxLength={20}
+                          inputMode="tel"
                           {...field} 
                         />
                       </div>
@@ -212,9 +244,10 @@ export function BusinessSignupForm({
                   <FormItem>
                     <FormLabel>Business Email *</FormLabel>
                     <FormControl>
-                      <Input 
+<Input 
                         type="email" 
                         placeholder="business@example.com" 
+                        maxLength={254}
                         {...field} 
                       />
                     </FormControl>
@@ -230,14 +263,15 @@ export function BusinessSignupForm({
                   <FormItem>
                     <FormLabel>Year Established</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="2020" 
-                        min="1900"
-                        max={new Date().getFullYear()}
-                        {...field} 
+                      <YearEstablishedPicker
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select year your business was established"
                       />
                     </FormControl>
+                    <FormDescription>
+                      Year when your business was officially established
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -281,9 +315,10 @@ export function BusinessSignupForm({
                   <FormItem>
                     <FormLabel>Street Address *</FormLabel>
                     <FormControl>
-                      <Textarea 
+<Textarea 
                         placeholder="Enter your complete business address including street name, area, and landmarks"
                         className="min-h-[80px]"
+                        maxLength={300}
                         {...field} 
                       />
                     </FormControl>
@@ -304,12 +339,16 @@ export function BusinessSignupForm({
                           value={field.value}
                           onValueChange={handleStateChange}
                         >
-                          <option value="">Select State</option>
-                          {Object.keys(NIGERIAN_STATES_AND_LGAS).map((state) => (
-                            <option key={state} value={state}>
-                              {state}
-                            </option>
-                          ))}
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select State" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.keys(NIGERIAN_STATES_AND_LGAS).map((state) => (
+                              <SelectItem key={state} value={state}>
+                                {state}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
                         </Select>
                       </FormControl>
                       <FormMessage />
@@ -329,12 +368,16 @@ export function BusinessSignupForm({
                           onValueChange={field.onChange}
                           disabled={!form.watch('state')}
                         >
-                          <option value="">Select LGA</option>
-                          {getLGAOptions().map((lga) => (
-                            <option key={lga} value={lga}>
-                              {lga}
-                            </option>
-                          ))}
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select LGA" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getLGAOptions().map((lga) => (
+                              <SelectItem key={lga} value={lga}>
+                                {lga}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
                         </Select>
                       </FormControl>
                       <FormMessage />
@@ -363,7 +406,7 @@ export function BusinessSignupForm({
                         <Badge variant="secondary" className="ml-2">Required</Badge>
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="PCN License Number" {...field} />
+<Input placeholder="PCN License Number" maxLength={64} {...field} />
                       </FormControl>
                       <FormDescription>
                         Your Pharmacists Council of Nigeria (PCN) license number
@@ -381,7 +424,7 @@ export function BusinessSignupForm({
                   <FormItem>
                     <FormLabel>Tax Identification Number (TIN)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your TIN" {...field} />
+<Input placeholder="Enter your TIN" maxLength={64} {...field} />
                     </FormControl>
                     <FormDescription>
                       Your Federal Inland Revenue Service (FIRS) TIN
@@ -423,20 +466,29 @@ export function BusinessSignupForm({
                       </div>
                       <p className="text-sm text-gray-600 mt-1">{doc.description}</p>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="ml-4"
-                      onClick={() => {
-                        // File upload logic would go here
-                        // For now, we'll just show a placeholder
-                        alert(`File upload for ${doc.label} would be implemented here`);
-                      }}
-                    >
-                      <UploadIcon className="size-4 mr-2" />
-                      Upload
-                    </Button>
+                    <div className="ml-4 w-64">
+                      <DocumentUpload
+                        multiple={false}
+                        accept={{
+                          'application/pdf': ['.pdf'],
+                          'image/jpeg': ['.jpg', '.jpeg'],
+                          'image/png': ['.png']
+                        }}
+                        prefix={`verification/${customerType.toLowerCase()}`}
+                        onUploaded={({ key }) => {
+                          // Persist the storage key into the form field
+                          // We store the storage key (not a signed URL) to keep a stable reference
+                          // Backend can resolve/download via documents API when needed
+                          // @ts-expect-error dynamic key assignment
+                          form.setValue(doc.key, key, { shouldValidate: true, shouldDirty: true });
+                        }}
+                      />
+                      {/* Show current value if present */}
+                      {/* @ts-expect-error dynamic key access */}
+                      {form.watch(doc.key) && (
+                        <p className="mt-2 text-xs text-gray-600 break-all">Saved: {/* @ts-expect-error */}{form.watch(doc.key)}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

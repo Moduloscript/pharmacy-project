@@ -1,5 +1,6 @@
 import { config } from "@repo/config";
 import { NavBar } from "@saas/shared/components/NavBar";
+import { VerificationBanners } from "@saas/shared/components/VerificationBanners";
 import { cn } from "@ui/lib";
 import type { PropsWithChildren } from "react";
 
@@ -19,6 +20,8 @@ export function AppWrapper({ children }: PropsWithChildren) {
 						: "",
 				])}
 			>
+				{/* Global verification banners (email + pending approval) */}
+				<VerificationBanners />
 				<main
 					className={cn("w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-[1920px]", [
 						config.ui.saas.useSidebarLayout ? "" : "",

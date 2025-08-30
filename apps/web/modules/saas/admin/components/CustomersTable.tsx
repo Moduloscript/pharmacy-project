@@ -124,12 +124,12 @@ const verifyCustomer = async ({
   customerId: string; 
   verificationStatus: string; 
 }): Promise<Customer> => {
-  const response = await fetch(`/api/admin/customers/${customerId}/verify`, {
+  const response = await fetch(`/api/admin/customers/${customerId}/verification`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ verificationStatus }),
+    body: JSON.stringify({ status: verificationStatus }),
   });
 
   if (!response.ok) {

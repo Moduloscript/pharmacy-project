@@ -1,118 +1,25 @@
-// Nigerian states and their Local Government Areas (subset used across the app)
-export const NIGERIAN_STATES_AND_LGAS: Record<string, string[]> = {
-  Edo: [
-    'Akoko-Edo',
-    'Egor',
-    'Esan Central',
-    'Esan North-East',
-    'Esan South-East',
-    'Esan West',
-    'Etsako Central',
-    'Etsako East',
-    'Etsako West',
-    'Igueben',
-    'Ikpoba Okha',
-    'Oredo',
-    'Orhionmwon',
-    'Ovia North-East',
-    'Ovia South-West',
-    'Owan East',
-    'Owan West',
-    'Uhunmwonde',
-  ],
-  Lagos: [
-    'Agege',
-    'Ajeromi-Ifelodun',
-    'Alimosho',
-    'Amuwo-Odofin',
-    'Apapa',
-    'Badagry',
-    'Epe',
-    'Eti Osa',
-    'Ibeju-Lekki',
-    'Ifako-Ijaiye',
-    'Ikeja',
-    'Ikorodu',
-    'Kosofe',
-    'Lagos Island',
-    'Lagos Mainland',
-    'Mushin',
-    'Ojo',
-    'Oshodi-Isolo',
-    'Shomolu',
-    'Surulere',
-  ],
-  Abuja: ['Abaji', 'Bwari', 'Gwagwalada', 'Kuje', 'Kwali', 'Municipal Area Council'],
-  Kano: [
-    'Ajingi',
-    'Albasu',
-    'Bagwai',
-    'Bebeji',
-    'Bichi',
-    'Bunkure',
-    'Dala',
-    'Dambatta',
-    'Dawakin Kudu',
-    'Dawakin Tofa',
-    'Doguwa',
-    'Fagge',
-    'Gabasawa',
-    'Garko',
-    'Garun Mallam',
-    'Gaya',
-    'Gezawa',
-    'Gwale',
-    'Gwarzo',
-    'Kabo',
-    'Kano Municipal',
-    'Karaye',
-    'Kibiya',
-    'Kiru',
-    'Kumbotso',
-    'Kunchi',
-    'Kura',
-    'Madobi',
-    'Makoda',
-    'Minjibir',
-    'Nasarawa',
-    'Rano',
-    'Rimin Gado',
-    'Rogo',
-    'Shanono',
-    'Sumaila',
-    'Takai',
-    'Tarauni',
-    'Tofa',
-    'Tsanyawa',
-    'Tudun Wada',
-    'Ungogo',
-    'Warawa',
-    'Wudil',
-  ],
-  Rivers: [
-    'Abua/Odual',
-    'Ahoada East',
-    'Ahoada West',
-    'Akuku-Toru',
-    'Andoni',
-    'Asari-Toru',
-    'Bonny',
-    'Degema',
-    'Eleme',
-    'Emohua',
-    'Etche',
-    'Gokana',
-    'Ikwerre',
-    'Khana',
-    'Obio/Akpor',
-    'Ogba/Egbema/Ndoni',
-    'Ogu/Bolo',
-    'Okrika',
-    'Omuma',
-    'Opobo/Nkoro',
-    'Oyigbo',
-    'Port Harcourt',
-    'Tai',
-  ],
-};
+// Nigerian states and Local Government Areas
+// Source of truth: apps/web/lib/nigerian-locations.ts
+// This module re-exports a normalized mapping so the rest of the app has a single dataset.
+import { stateLGAMapping } from '@/lib/nigerian-locations';
 
+// Normalize keys so FCT appears as "Abuja" across the app
+const normalized: Record<string, string[]> = {};
+for (const [state, lgas] of Object.entries(stateLGAMapping)) {
+  const key = state === 'FCT (Abuja)' || state === 'FCT' ? 'Abuja' : state;
+  normalized[key] = lgas;
+}
+
+export const NIGERIAN_STATES_AND_LGAS: Record<string, string[]> = normalized;
+
+// Derived helpers
+export const NIGERIAN_STATES: string[] = Object.keys(NIGERIAN_STATES_AND_LGAS);
+
+export function isValidState(state: string): boolean {
+  return !!state && NIGERIAN_STATES.includes(state);
+}
+
+export function isValidLGAForState(state: string, lga: string): boolean {
+  if (!isValidState(state) || !lga) return false;
+  return (NIGERIAN_STATES_AND_LGAS[state] || []).includes(lga);
+}

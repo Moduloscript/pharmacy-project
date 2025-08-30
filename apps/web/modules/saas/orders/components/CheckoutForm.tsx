@@ -1,7 +1,7 @@
 'use client'
 
 import { atom, useAtom, useAtomValue } from 'jotai'
-import { useSetAtom } from 'jotai/react'}
+import { useSetAtom } from 'jotai/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'

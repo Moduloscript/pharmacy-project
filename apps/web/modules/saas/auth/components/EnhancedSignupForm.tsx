@@ -97,7 +97,7 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
   const invitationOnlyMode = !config.auth.enableSignup && invitationId;
   const redirectPath = invitationId
     ? `/app/organization-invitation/${invitationId}`
-    : (redirectTo ?? config.auth.redirectAfterSignIn);
+    : (redirectTo ?? '/app/onboarding');
 
   // Step 1: Basic signup form
   const basicForm = useForm<BasicSignupFormData>({
