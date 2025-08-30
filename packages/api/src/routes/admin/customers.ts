@@ -3,6 +3,8 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { db } from '@repo/database';
 import { authMiddleware } from '../../middleware/auth';
+import { getSignedUrl } from '@repo/storage';
+import { config } from '@repo/config';
 
 const customersRouter = new Hono();
 
@@ -80,6 +82,7 @@ customersRouter.get('/', zValidator('query', customersQuerySchema), async (c) =>
             id: true,
             name: true,
             email: true,
+            emailVerified: true,
             createdAt: true,
           }
         }
@@ -97,6 +100,7 @@ customersRouter.get('/', zValidator('query', customersQuerySchema), async (c) =>
       userId: customer.userId,
       userName: customer.user.name,
       userEmail: customer.user.email,
+      emailVerified: customer.user.emailVerified,
       type: customer.type,
       phone: customer.phone,
       // Personal information
@@ -246,6 +250,44 @@ customersRouter.put('/:id/verification', zValidator('json', updateVerificationSc
  * GET /admin/customers/stats
  * Get customer statistics for dashboard
  */
+// GET /admin/customers/:id/documents - Get signed preview URLs for verification documents
+customersRouter.get('/:id/documents', async (c) => {
+  try {
+    const user = c.get('user');
+    if (!user || user.role !== 'admin') {
+      return c.json({ error: 'Insufficient permissions' }, 403);
+    }
+
+    const customerId = c.req.param('id');
+    const customer = await db.customer.findUnique({ where: { id: customerId } });
+    if (!customer) {
+      return c.json({ error: 'Customer not found' }, 404);
+    }
+
+    const keys: string[] = Array.isArray((customer as any).verificationDocuments)
+      ? ((customer as any).verificationDocuments as string[])
+      : [];
+
+    const bucket = config.storage.bucketNames.documents;
+
+    const documents = await Promise.all(
+      keys.map(async (key) => {
+        try {
+          const signedUrl = await getSignedUrl(key, { bucket, expiresIn: 60 * 60 });
+          return { key, signedUrl };
+        } catch {
+          return { key, signedUrl: null };
+        }
+      }),
+    );
+
+    return c.json({ documents });
+  } catch (error) {
+    console.error('Error fetching customer documents:', error);
+    return c.json({ error: 'Failed to fetch documents' }, 500);
+  }
+});
+
 customersRouter.get('/stats', async (c) => {
   try {
     // Get total customers

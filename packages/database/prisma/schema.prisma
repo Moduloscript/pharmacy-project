@@ -45,6 +45,7 @@ model User {
   memberships        Member[]
   passkeys           Passkey[]
   sessions           Session[]
+  documents         Document[]
 
   @@map("user")
 }
@@ -127,6 +128,7 @@ model Organization {
   purchases          Purchase[]
   invitations        Invitation[]
   members            Member[]
+  documents          Document[]
 
   @@map("organization")
 }
@@ -388,12 +390,44 @@ model Payment {
   completedAt      DateTime?
   customer         Customer      @relation(fields: [customerId], references: [id])
   order            Order?        @relation(fields: [orderId], references: [id])
+  retryLogs        PaymentRetryLog[]
 
   @@index([customerId])
   @@index([gatewayReference])
   @@index([orderId])
   @@index([status])
   @@map("payment")
+}
+
+/// Mirrors existing table `payment_retry_config` in the remote DB to avoid destructive drops
+model PaymentRetryConfig {
+  id              Int       @id @default(autoincrement())
+  payment_method  String
+  max_retries     Int       @default(3)
+  retry_delays    Int[]
+  enabled         Boolean?  @default(true)
+  created_at      DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@map("payment_retry_config")
+}
+
+/// Mirrors existing table `payment_retry_log` in the remote DB to avoid destructive drops
+model PaymentRetryLog {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  payment_id          String
+  retry_attempt       Int
+  retry_scheduled_at  DateTime  @db.Timestamptz(6)
+  retry_executed_at   DateTime? @db.Timestamptz(6)
+  retry_result        String?
+  error_message       String?
+  gateway_response    Json?
+  created_at          DateTime? @default(now()) @db.Timestamptz(6)
+
+  payment             Payment   @relation(fields: [payment_id], references: [id])
+
+  @@index([payment_id])
+  @@map("payment_retry_log")
 }
 
 model InventoryMovement {
@@ -438,6 +472,24 @@ model Notification {
   @@index([status])
   @@index([type])
   @@map("notification")
+}
+
+model Document {
+  id             String   @id @default(cuid())
+  userId         String?
+  organizationId String?
+  name           String
+  key            String
+  mimeType       String?
+  size           Int
+  bucket         String
+  createdAt      DateTime @default(now())
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([organizationId])
+  @@map("document")
 }
 
 model NigerianLocation {

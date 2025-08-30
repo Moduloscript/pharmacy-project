@@ -30,7 +30,7 @@ const createCustomerProfileSchema = z.object({
   taxId: z.string().optional(),
   establishedYear: z.number().min(1900).max(new Date().getFullYear()).optional(),
   description: z.string().optional(),
-  verificationDocuments: z.array(z.string().url()).optional(),
+  verificationDocuments: z.array(z.string()).optional(),
 });
 
 const updateVerificationSchema = z.object({
@@ -109,9 +109,26 @@ customersRouter.get('/profile', authMiddleware, async (c) => {
     }
 
     const needsProfile = await userNeedsCustomerProfile(user.id);
+
+    // Include customerType and verificationStatus if profile exists
+    let customerType: string | null = null;
+    let verificationStatus: string | null = null;
+    try {
+      const { db } = await import('@repo/database');
+      const customer = await db.customer.findUnique({
+        where: { userId: user.id },
+        select: { customerType: true, verificationStatus: true },
+      });
+      customerType = customer?.customerType ?? null;
+      verificationStatus = customer?.verificationStatus ?? null;
+    } catch (e) {
+      // If database import or query fails, fall back to minimal response; do not crash the request.
+    }
     
     return c.json({ 
       needsProfile,
+      customerType,
+      verificationStatus,
       message: needsProfile ? 'Customer profile required' : 'Customer profile exists'
     });
 

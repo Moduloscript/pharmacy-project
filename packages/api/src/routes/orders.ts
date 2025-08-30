@@ -28,6 +28,31 @@ const authMiddleware = createMiddleware(async (c, next) => {
 // Apply auth middleware to all routes
 app.use('*', authMiddleware)
 
+// Defense-in-depth: require verified email and (if business) approved status
+app.use('*', async (c, next) => {
+  const user = c.get('user') as { id: string; emailVerified?: boolean };
+  if (!user) return c.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, 401);
+
+  const { config } = await import('@repo/config');
+
+  if (config.users.requireEmailVerification && !user.emailVerified) {
+    return c.json({ success: false, error: { code: 'EMAIL_UNVERIFIED', message: 'Please verify your email.' } }, 401);
+  }
+
+  if (config.users.requireBusinessApproval) {
+    const { db } = await import('@repo/database');
+    const cust = await db.customer.findUnique({
+      where: { userId: user.id },
+      select: { customerType: true, verificationStatus: true },
+    });
+    if (cust && cust.customerType !== 'RETAIL' && cust.verificationStatus !== 'VERIFIED') {
+      return c.json({ success: false, error: { code: 'BUSINESS_VERIFICATION_REQUIRED', message: 'Your business account is pending approval.' } }, 403);
+    }
+  }
+
+  await next();
+})
+
 // Order creation schema
 const createOrderSchema = z.object({
   items: z.array(z.object({

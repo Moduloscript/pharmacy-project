@@ -24,6 +24,7 @@ import { customersRouter } from "./routes/customers";
 // Previously commented out due to missing dependency
 import { cartRouter } from "./routes/cart";
 import { ordersRouter } from "./routes/orders";
+import { documentsRouter } from "./routes/documents";
 
 export const app = new Hono().basePath("/api");
 
@@ -50,6 +51,7 @@ const appRouter = app
 	.route("/products", productsRouter)
 	.route("/categories", categoriesRouter)
 	.route("/customers", customersRouter)
+	.route("/", documentsRouter)
 	// Uncommented now that dependencies are fixed
 	.route("/cart", cartRouter)
 	.route("/orders", ordersRouter);

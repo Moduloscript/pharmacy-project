@@ -15,6 +15,7 @@ export const uploadsRouter = new Hono().basePath("/uploads").post(
 		z.object({
 			bucket: z.string().min(1),
 			path: z.string().min(1),
+			contentType: z.string().min(1).optional(),
 		}),
 	),
 	describeRoute({
@@ -36,18 +37,24 @@ export const uploadsRouter = new Hono().basePath("/uploads").post(
 		},
 	}),
 	async (c) => {
-		const { bucket, path } = c.req.valid("query");
+		const { bucket, path, contentType } = c.req.valid("query");
 		// ATTENTION: be careful with how you give access to write to the storage
 		// always check if the user has the right to write to the desired bucket before giving them a signed url
 
 	if (bucket === config.storage.bucketNames.avatars) {
-		const signedUrl = await getSignedUploadUrl(path, { bucket });
+		const signedUrl = await getSignedUploadUrl(path, { bucket, contentType });
 		return c.json({ signedUrl });
 	}
 
 	// Allow product images bucket
 	if (bucket === config.storage.bucketNames.productImages) {
-		const signedUrl = await getSignedUploadUrl(path, { bucket });
+		const signedUrl = await getSignedUploadUrl(path, { bucket, contentType });
+		return c.json({ signedUrl });
+	}
+
+	// Allow documents bucket
+	if (bucket === config.storage.bucketNames.documents) {
+		const signedUrl = await getSignedUploadUrl(path, { bucket, contentType });
 		return c.json({ signedUrl });
 	}
 

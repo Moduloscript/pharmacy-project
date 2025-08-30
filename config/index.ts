@@ -50,6 +50,10 @@ export const config = {
 		enableBilling: true,
 		// Whether you want the user to go through an onboarding form after signup (can be defined in the OnboardingForm.tsx)
 		enableOnboarding: true,
+		// Feature flags for access control
+		requireEmailVerification: true,
+		requireBusinessApproval: true,
+		allowRetailWithoutApproval: true,
 	},
 	// Authentication
 	auth: {
@@ -100,6 +104,7 @@ export const config = {
 		bucketNames: {
 			avatars: process.env.NEXT_PUBLIC_AVATARS_BUCKET_NAME ?? "avatars",
 			productImages: process.env.NEXT_PUBLIC_PRODUCT_IMAGES_BUCKET_NAME ?? "product-images",
+			documents: process.env.NEXT_PUBLIC_DOCUMENTS_BUCKET_NAME ?? "documents",
 		},
 	},
 	contactForm: {
