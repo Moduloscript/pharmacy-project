@@ -1,5 +1,6 @@
 'use client';
 
+import './OrdersTable.css';
 import { useMemo } from 'react';
 import { useAtom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
@@ -9,6 +10,7 @@ import { Card } from '@ui/components/card';
 import { Badge } from '@ui/components/badge';
 import { Input } from '@ui/components/input';
 import { Label } from '@ui/components/label';
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@ui/components/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui/components/select';
 import {
   Table,
@@ -28,9 +30,11 @@ import {
   XCircleIcon,
   ShoppingCartIcon,
   PhoneIcon,
-  MessageSquareIcon
+  MessageSquareIcon,
+  SlidersHorizontalIcon
 } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 // Types
 interface Order {
@@ -81,6 +85,28 @@ const orderFiltersAtom = atomWithStorage<OrderFilters>('admin-orders-filters', {
   showFilters: false,
 });
 
+interface ColumnVisibility {
+  orderNumber: boolean;
+  customer: boolean;
+  items: boolean;
+  total: boolean;
+  payment: boolean;
+  status: boolean;
+  date: boolean;
+}
+
+const orderColumnsAtom = atomWithStorage<ColumnVisibility>('admin-orders-columns', {
+  orderNumber: true,
+  customer: true,
+  items: true,
+  total: true,
+  payment: true,
+  status: true,
+  date: true,
+});
+
+const compactAtom = atomWithStorage<boolean>('admin-orders-compact', false);
+
 // API functions
 const fetchOrders = async (): Promise<Order[]> => {
   const response = await fetch('/api/admin/orders');
@@ -125,7 +151,9 @@ const useUpdateOrderStatus = () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
     },
     onError: (error) => {
-      alert(`Failed to update order status: ${error.message}`);
+      toast.error('Failed to update order status', {
+        description: error.message,
+      });
     },
   });
 };
@@ -136,6 +164,8 @@ interface OrdersTableProps {
 
 export function OrdersTable({ className }: OrdersTableProps) {
   const [filters, setFilters] = useAtom(orderFiltersAtom);
+  const [columns, setColumns] = useAtom(orderColumnsAtom);
+  const [compact, setCompact] = useAtom(compactAtom);
   const queryClient = useQueryClient();
   
   // React Query hooks
@@ -277,16 +307,16 @@ export function OrdersTable({ className }: OrdersTableProps) {
   return (
     <div className={cn('space-y-6', className)}>
       {/* Search and Filters */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-4 flex-1">
-            <div className="relative flex-1 max-w-md">
+      <Card className="p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 w-full sm:w-auto">
+            <div className="relative flex-1 min-w-0">
               <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400" />
               <Input
-                placeholder="Search orders, customers, addresses..."
+                placeholder="Search orders..."
                 value={filters.search}
                 onChange={(e) => updateFilter('search', e.target.value)}
-                className="pl-10"
+                className="pl-10 w-full"
               />
             </div>
             
@@ -297,9 +327,31 @@ export function OrdersTable({ className }: OrdersTableProps) {
               <FilterIcon className="size-4 mr-2" />
               Filters
             </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <SlidersHorizontalIcon className="size-4 mr-2" />
+                  Columns
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuLabel>Visible columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem checked={columns.orderNumber} onCheckedChange={(v)=> setColumns({ ...columns, orderNumber: !!v })}>Order #</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={columns.customer} onCheckedChange={(v)=> setColumns({ ...columns, customer: !!v })}>Customer</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={columns.items} onCheckedChange={(v)=> setColumns({ ...columns, items: !!v })}>Items</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={columns.total} onCheckedChange={(v)=> setColumns({ ...columns, total: !!v })}>Total</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={columns.payment} onCheckedChange={(v)=> setColumns({ ...columns, payment: !!v })}>Payment</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={columns.status} onCheckedChange={(v)=> setColumns({ ...columns, status: !!v })}>Status</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={columns.date} onCheckedChange={(v)=> setColumns({ ...columns, date: !!v })}>Date</DropdownMenuCheckboxItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem checked={compact} onCheckedChange={(v)=> setCompact(!!v)}>Compact mode</DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2">
             <Button onClick={handleRefresh} size="sm" disabled={isLoading}>
               <RefreshCwIcon className={cn("size-4 mr-2", isLoading && "animate-spin")} />
               Refresh
@@ -354,10 +406,10 @@ export function OrdersTable({ className }: OrdersTableProps) {
       </Card>
 
       {/* Orders Table */}
-      <Card>
-        <div className="p-6 border-b">
+      <Card className="overflow-hidden">
+        <div className="p-4 sm:p-6 border-b">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">
+            <h2 className="text-base sm:text-lg font-semibold">
               Orders ({filteredOrders.length} of {orders.length})
             </h2>
           </div>
@@ -389,111 +441,153 @@ export function OrdersTable({ className }: OrdersTableProps) {
             </p>
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order #</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Items</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
+              <div className="inline-block min-w-full align-middle">
+                <Table className="min-w-full">
+                  <TableHeader>
+                    <TableRow className="border-b bg-muted/50">
+                      {columns.orderNumber && (
+                        <TableHead className="w-[140px] font-semibold">Order #</TableHead>
+                      )}
+                      {columns.customer && (
+                        <TableHead className="min-w-[200px] font-semibold">Customer</TableHead>
+                      )}
+                      {columns.items && (
+                        <TableHead className="min-w-[150px] font-semibold">Items</TableHead>
+                      )}
+                      {columns.total && (
+                        <TableHead className="w-[120px] font-semibold">Total</TableHead>
+                      )}
+                      {columns.payment && (
+                        <TableHead className="w-[120px] font-semibold">Payment</TableHead>
+                      )}
+                      {columns.status && (
+                        <TableHead className="min-w-[140px] font-semibold">Status</TableHead>
+                      )}
+                      {columns.date && (
+                        <TableHead className="w-[100px] font-semibold">Date</TableHead>
+                      )}
+                      <TableHead className="w-[140px] sticky right-0 bg-muted/50 font-semibold">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
             <TableBody>
               {filteredOrders.map((order) => (
                 <TableRow key={order.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{order.orderNumber}</p>
-                      {order.deliveryFee > 0 && (
-                        <p className="text-xs text-gray-500">
-                          + {formatCurrency(order.deliveryFee)} delivery
+                  {columns.orderNumber && (
+                    <TableCell className={cn(compact ? 'py-2' : 'py-3')}>
+                      <div>
+                        <p className="font-medium truncate max-w-[120px]" title={order.orderNumber}>
+                          {order.orderNumber}
                         </p>
-                      )}
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{order.customer.name}</p>
-                      <p className="text-sm text-gray-600">{order.customer.email}</p>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Badge className={getCustomerTypeColor(order.customer.type)}>
-                          {order.customer.type}
-                        </Badge>
-                        {order.customer.phone && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-6 px-2 text-xs"
-                          >
-                            <PhoneIcon className="size-3 mr-1" />
-                            Call
-                          </Button>
+                        {order.deliveryFee > 0 && (
+                          <p className="text-xs text-gray-500">
+                            + {formatCurrency(order.deliveryFee)} delivery
+                          </p>
                         )}
                       </div>
-                    </div>
-                  </TableCell>
+                    </TableCell>
+                  )}
                   
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{order.items.length} items</p>
-                      <p className="text-sm text-gray-600">
-                        {order.items.slice(0, 2).map(item => item.product.name).join(', ')}
-                        {order.items.length > 2 && ` +${order.items.length - 2} more`}
-                      </p>
-                    </div>
-                  </TableCell>
+                  {columns.customer && (
+                    <TableCell className={cn(compact ? 'py-2' : 'py-3')}>
+                      <div className="max-w-[220px]">
+                        <p className="font-medium truncate" title={order.customer.name}>
+                          {order.customer.name}
+                        </p>
+                        {!compact && (
+                          <p className="text-sm text-gray-600 truncate" title={order.customer.email}>
+                            {order.customer.email}
+                          </p>
+                        )}
+                        <div className="flex items-center space-x-2 mt-1 flex-wrap">
+                          <Badge className={getCustomerTypeColor(order.customer.type)}>
+                            {order.customer.type}
+                          </Badge>
+                          {order.customer.phone && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 px-2 text-xs"
+                            >
+                              <PhoneIcon className="size-3 mr-1" />
+                              Call
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                  )}
                   
-                  <TableCell>
-                    <p className="font-semibold">{formatCurrency(order.totalAmount)}</p>
-                  </TableCell>
+                  {columns.items && (
+                    <TableCell className={cn(compact ? 'py-2' : 'py-3')}>
+                      <div className="max-w-[200px]">
+                        <p className="font-medium">{order.items.length} items</p>
+                        <p className={cn('text-sm text-gray-600', compact ? 'truncate' : 'clamp-2')}>
+                          {order.items.slice(0, 3).map(item => item.product.name).join(', ')}
+                          {order.items.length > 3 && ` +${order.items.length - 3} more`}
+                        </p>
+                      </div>
+                    </TableCell>
+                  )}
                   
-                  <TableCell>
-                    <Badge className={getPaymentStatusColor(order.paymentStatus)}>
-                      {order.paymentStatus}
-                    </Badge>
-                  </TableCell>
+                  {columns.total && (
+                    <TableCell className={cn(compact ? 'py-2' : 'py-3')}>
+                      <p className="font-semibold">{formatCurrency(order.totalAmount)}</p>
+                    </TableCell>
+                  )}
                   
-                  <TableCell>
-                    <div className="space-y-1">
-                      <Badge className={getStatusColor(order.orderStatus)}>
-                        {order.orderStatus}
+                  {columns.payment && (
+                    <TableCell className={cn(compact ? 'py-2' : 'py-3')}>
+                      <Badge className={getPaymentStatusColor(order.paymentStatus)}>
+                        {order.paymentStatus}
                       </Badge>
-                      {order.orderStatus !== 'DELIVERED' && order.orderStatus !== 'CANCELLED' && (
-                        <Select
-                          value={order.orderStatus}
-                          onValueChange={(value) => handleStatusUpdate(order.id, value)}
-                          disabled={updateStatusMutation.isPending}
-                        >
-                          <SelectTrigger className="w-32 h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="RECEIVED">Received</SelectItem>
-                            <SelectItem value="PROCESSING">Processing</SelectItem>
-                            <SelectItem value="READY">Ready</SelectItem>
-                            <SelectItem value="DISPATCHED">Dispatched</SelectItem>
-                            <SelectItem value="DELIVERED">Delivered</SelectItem>
-                            <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
+                    </TableCell>
+                  )}
+                  
+                  {columns.status && (
+                    <TableCell className={cn(compact ? 'py-2' : 'py-3')}>
+                      <div className="space-y-1">
+                        <Badge className={getStatusColor(order.orderStatus)}>
+                          {order.orderStatus}
+                        </Badge>
+                        {order.orderStatus !== 'DELIVERED' && order.orderStatus !== 'CANCELLED' && (
+                          <Select
+                            value={order.orderStatus}
+                            onValueChange={(value) => handleStatusUpdate(order.id, value)}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            <SelectTrigger className="w-32 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="RECEIVED">Received</SelectItem>
+                              <SelectItem value="PROCESSING">Processing</SelectItem>
+                              <SelectItem value="READY">Ready</SelectItem>
+                              <SelectItem value="DISPATCHED">Dispatched</SelectItem>
+                              <SelectItem value="DELIVERED">Delivered</SelectItem>
+                              <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
+                  
+                  {columns.date && (
+                    <TableCell className={cn(compact ? 'py-2' : 'py-3')}>
+                      <p className="text-sm">{new Date(order.createdAt).toLocaleDateString()}</p>
+                      {!compact && (
+                        <p className="text-xs text-gray-500">
+                          {new Date(order.createdAt).toLocaleTimeString()}
+                        </p>
                       )}
-                    </div>
-                  </TableCell>
+                    </TableCell>
+                  )}
                   
-                  <TableCell>
-                    <p className="text-sm">{new Date(order.createdAt).toLocaleDateString()}</p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(order.createdAt).toLocaleTimeString()}
-                    </p>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div className="flex items-center space-x-1">
+                  <TableCell className="py-3 sticky right-0 bg-background">
+                    <div className="flex items-center gap-1">
                       <Link href={`/app/admin/orders/${order.id}`}>
                         <Button variant="outline" size="sm">
                           <EyeIcon className="size-4" />
@@ -513,8 +607,118 @@ export function OrdersTable({ className }: OrdersTableProps) {
                   </TableCell>
                 </TableRow>
               ))}
-            </TableBody>
-          </Table>
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="lg:hidden p-4 space-y-4">
+              {filteredOrders.map((order) => (
+                <div key={order.id} className="bg-card rounded-lg border p-4 space-y-3">
+                  {/* Header Row */}
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold text-sm">{order.orderNumber}</p>
+                      {columns.date && (
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(order.createdAt).toLocaleDateString()} {new Date(order.createdAt).toLocaleTimeString()}
+                        </p>
+                      )}
+                    </div>
+                    <Badge className={getStatusColor(order.orderStatus)}>
+                      {order.orderStatus}
+                    </Badge>
+                  </div>
+
+                  {/* Customer Info */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{order.customer.name}</span>
+                      <Badge className={cn(getCustomerTypeColor(order.customer.type), "text-xs")}>
+                        {order.customer.type}
+                      </Badge>
+                    </div>
+                    {!compact && (
+                      <p className="text-xs text-muted-foreground break-all">{order.customer.email}</p>
+                    )}
+                  </div>
+
+                  {/* Order Details */}
+                  <div className="grid grid-cols-2 gap-3 py-2 border-y">
+                    {columns.items && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Items</p>
+                        <p className="text-sm font-medium">{order.items.length} items</p>
+                      </div>
+                    )}
+                    {columns.total && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Total</p>
+                        <p className="text-sm font-semibold">{formatCurrency(order.totalAmount)}</p>
+                      </div>
+                    )}
+                    {columns.payment && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Payment</p>
+                        <Badge className={cn(getPaymentStatusColor(order.paymentStatus), "text-xs")}>
+                          {order.paymentStatus}
+                        </Badge>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs text-muted-foreground">Delivery</p>
+                      <p className="text-sm">
+                        {order.deliveryFee > 0 ? formatCurrency(order.deliveryFee) : 'Free'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Status Update for Mobile */}
+                  {order.orderStatus !== 'DELIVERED' && order.orderStatus !== 'CANCELLED' && (
+                    <div>
+                      <Label className="text-xs">Update Status</Label>
+                      <Select
+                        value={order.orderStatus}
+                        onValueChange={(value) => handleStatusUpdate(order.id, value)}
+                        disabled={updateStatusMutation.isPending}
+                      >
+                        <SelectTrigger className="w-full h-9 mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="RECEIVED">Received</SelectItem>
+                          <SelectItem value="PROCESSING">Processing</SelectItem>
+                          <SelectItem value="READY">Ready</SelectItem>
+                          <SelectItem value="DISPATCHED">Dispatched</SelectItem>
+                          <SelectItem value="DELIVERED">Delivered</SelectItem>
+                          <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-2">
+                    <Link href={`/app/admin/orders/${order.id}`} className="flex-1">
+                      <Button variant="outline" size="sm" className="w-full">
+                        <EyeIcon className="size-4 mr-2" />
+                        View Details
+                      </Button>
+                    </Link>
+                    {order.customer.phone && (
+                      <Button variant="outline" size="sm">
+                        <PhoneIcon className="size-4" />
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm">
+                      <MessageSquareIcon className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </Card>
     </div>

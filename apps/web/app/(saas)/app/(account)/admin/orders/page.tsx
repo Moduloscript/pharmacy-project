@@ -21,7 +21,7 @@ export default async function AdminOrdersPage() {
   }
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-7xl">
       <div className="mb-10">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg transition-colors">
