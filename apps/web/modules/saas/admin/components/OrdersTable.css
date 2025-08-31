@@ -1,0 +1,143 @@
+/* OrdersTable Responsive Styles */
+
+/* Ensure table container can scroll horizontally on smaller screens */
+.orders-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
+/* Table responsive adjustments */
+@media (min-width: 1024px) {
+  .orders-table {
+    min-width: 100%;
+  }
+  
+  /* Sticky actions column on desktop */
+  .orders-table .actions-column {
+    position: sticky;
+    right: 0;
+    background: var(--background);
+    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.05);
+    z-index: 10;
+  }
+  
+  /* Ensure proper spacing */
+  .orders-table th,
+  .orders-table td {
+    padding: 0.75rem 1rem;
+    white-space: nowrap;
+  }
+  
+  /* Allow wrapping for specific columns */
+  .orders-table .customer-cell,
+  .orders-table .items-cell {
+    white-space: normal;
+    max-width: 250px;
+  }
+}
+
+/* Mobile-first card layout */
+@media (max-width: 1023px) {
+  .orders-table-desktop {
+    display: none;
+  }
+  
+  .orders-cards-mobile {
+    display: block;
+  }
+}
+
+@media (min-width: 1024px) {
+  .orders-table-desktop {
+    display: block;
+  }
+  
+  .orders-cards-mobile {
+    display: none;
+  }
+}
+
+/* Text overflow handling */
+.truncate-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Two-line clamp without Tailwind plugin */
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Improve button spacing in actions */
+.action-buttons {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+/* Card hover effects for mobile */
+.order-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode adjustments */
+.dark .orders-table .actions-column {
+  background: var(--background);
+  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Ensure no horizontal page scroll */
+html, body {
+  overflow-x: hidden;
+}
+
+/* Container max-width for ultra-wide screens */
+@media (min-width: 1920px) {
+  .orders-container {
+    max-width: 1800px;
+    margin: 0 auto;
+  }
+}
+
+/* Improve filter responsiveness */
+.filters-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .filters-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .filters-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Loading skeleton improvements */
+.skeleton-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
