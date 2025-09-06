@@ -5,8 +5,10 @@ import { db } from '@repo/database'
 import { getSession } from '@repo/auth/lib/server'
 import { createMiddleware } from 'hono/factory'
 import { nanoid } from 'nanoid'
+import { notificationService } from '@repo/mail'
 
-const app = new Hono()
+import type { AppBindings } from '../types/context'
+const app = new Hono<AppBindings>()
 
 // Authentication middleware
 const authMiddleware = createMiddleware(async (c, next) => {
@@ -663,6 +665,18 @@ app.post('/', zValidator('json', createOrderSchema), async (c) => {
         orderItems
       }
     })
+    // Enqueue order confirmation notification (non-blocking)
+    try {
+      await notificationService.sendOrderConfirmation({
+        id: order.id,
+        orderNumber: order.orderNumber,
+        customerId: customer.id,
+        total: Number(total),
+        deliveryAddress: data.deliveryAddress,
+      });
+    } catch (notifyErr) {
+      console.warn('Order created but failed to queue notification:', notifyErr);
+    }
     
     return c.json({
       success: true,

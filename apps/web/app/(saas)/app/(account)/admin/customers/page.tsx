@@ -21,7 +21,7 @@ export default async function AdminCustomersPage() {
   }
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-10">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg transition-colors">
@@ -38,34 +38,42 @@ export default async function AdminCustomersPage() {
             </div>
           </div>
         </div>
-        
-        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-xl p-6 border border-emerald-200 dark:border-emerald-800 transition-colors">
-          <p className="text-muted-foreground text-lg leading-relaxed mb-4">
-            <span className="font-semibold text-emerald-900 dark:text-emerald-100">Customer Relationship Management Center</span> - 
-            Streamline customer account management, verify business registrations, and maintain strong 
-            relationships with healthcare providers and pharmaceutical clients.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-              <svg className="w-4 h-4 text-emerald-500 dark:text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              Manage customer accounts
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-              <svg className="w-4 h-4 text-blue-500 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              Verify business registrations
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-              <svg className="w-4 h-4 text-purple-500 dark:text-purple-400" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              Track relationships
+
+        <details className="group rounded-xl border border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 transition-colors">
+          <summary className="list-none cursor-pointer px-6 py-4 flex items-center justify-between">
+            <span className="font-semibold text-emerald-900 dark:text-emerald-100">Customer Relationship Management Center</span>
+            <span className="text-sm text-muted-foreground">
+              <span className="group-open:hidden">Show details</span>
+              <span className="hidden group-open:inline">Hide details</span>
+            </span>
+          </summary>
+          <div className="px-6 pb-6">
+            <p className="text-muted-foreground leading-relaxed mb-4">
+              Streamline customer account management, verify business registrations, and maintain strong
+              relationships with healthcare providers and pharmaceutical clients.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+                <svg className="w-4 h-4 text-emerald-500 dark:text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                Manage customer accounts
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+                <svg className="w-4 h-4 text-blue-500 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                Verify business registrations
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+                <svg className="w-4 h-4 text-purple-500 dark:text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                Track relationships
+              </div>
             </div>
           </div>
-        </div>
+        </details>
       </div>
       
       <CustomersTable />

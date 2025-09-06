@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { db } from '@repo/database';
 import { authMiddleware } from '../../middleware/auth';
 
-const dashboardRouter = new Hono();
+import type { AppBindings } from '../../types/context';
+const dashboardRouter = new Hono<AppBindings>();
 
 // Apply auth middleware to all routes
 dashboardRouter.use('*', authMiddleware);

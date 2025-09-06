@@ -16,12 +16,13 @@ import { z } from "zod";
 import { authMiddleware } from "../../middleware/auth";
 import { getPurchases } from "./lib/purchases";
 import { benpharmiPaymentsRouter } from "./benpharm-checkout";
+import type { AppBindings } from "../../types/context";
 import { webhooksRouter } from "./webhooks";
 import { callbacksRouter } from "./callbacks";
 
 const plans = config.payments.plans as Config["payments"]["plans"];
 
-export const paymentsRouter = new Hono()
+export const paymentsRouter = new Hono<AppBindings>()
 	.basePath("/payments")
 	.route('/', benpharmiPaymentsRouter)
 	.route('/', webhooksRouter)

@@ -25,8 +25,12 @@ import { customersRouter } from "./routes/customers";
 import { cartRouter } from "./routes/cart";
 import { ordersRouter } from "./routes/orders";
 import { documentsRouter } from "./routes/documents";
+import { notificationsEnhancedRouter } from "./routes/notifications-enhanced";
+import { notificationsRouter } from "./routes/notifications";
 
-export const app = new Hono().basePath("/api");
+import type { AppBindings } from "./types/context";
+
+export const app = new Hono<AppBindings>().basePath("/api");
 
 app.use(loggerMiddleware);
 app.use(corsMiddleware);
@@ -54,7 +58,9 @@ const appRouter = app
 	.route("/", documentsRouter)
 	// Uncommented now that dependencies are fixed
 	.route("/cart", cartRouter)
-	.route("/orders", ordersRouter);
+	.route("/orders", ordersRouter)
+	.route("/notifications", notificationsEnhancedRouter)
+	.route("/notifications", notificationsRouter);
 
 app.get(
 	"/app-openapi",

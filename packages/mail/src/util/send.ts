@@ -54,8 +54,9 @@ export async function sendEmail<T extends TemplateId>(
 			html,
 		});
 		return true;
-	} catch (e) {
-		logger.error(e);
+	} catch (e: unknown) {
+		// Ensure we pass a string to the logger
+		logger.error(e instanceof Error ? e.message : String(e));
 		return false;
 	}
 }

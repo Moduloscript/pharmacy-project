@@ -1,24 +1,24 @@
-# Epic 8: WhatsApp & SMS Notification System
+# Epic 8: SMS Notification System (WhatsApp Deferred)
 
 ## Overview
-Implement automated customer communication via WhatsApp Business API and SMS gateway using Nigerian providers to ensure reliable delivery of order updates and notifications.
+Implement automated customer communication via SMS gateway using Termii (Nigerian provider) to ensure reliable delivery of order updates and notifications. WhatsApp Business API integration deferred to Phase 2 due to verification complexity.
 
 ## Nigerian Communication Landscape
 
-### WhatsApp Business API
+### SMS Gateway (Termii) - PRIMARY
+- **Provider**: Termii (Nigerian SMS provider)
+- **Cost**: ₦3-4 per SMS (DND channel)
+- **Coverage**: 100% mobile network coverage (MTN, Airtel, Glo, 9mobile)
+- **Benefits**: Reaches all phone types, reliable delivery, DND bypass for transactional
+- **Use Cases**: Order confirmations, payment notifications, delivery updates, OTP
+- **Priority**: P0 (Must Have - IMPLEMENTED)
+
+### WhatsApp Business API - FUTURE
 - **Platform**: Meta WhatsApp Business Platform
 - **Coverage**: High penetration in Nigeria (95%+ smartphone users)
 - **Benefits**: Rich media, templates, high engagement
-- **Use Cases**: Order confirmations, status updates, promotional messages
-- **Priority**: P0 (Must Have)
-
-### SMS Gateway (Termii)
-- **Provider**: Termii (Nigerian SMS provider)
-- **Cost**: ₦10 per SMS
-- **Coverage**: 100% mobile network coverage
-- **Benefits**: Reaches all phone types, reliable delivery
-- **Use Cases**: Backup notifications, verification codes
-- **Priority**: P0 (Must Have)
+- **Use Cases**: Enhanced notifications with images, interactive messages
+- **Priority**: P2 (Deferred to Phase 2)
 
 ### Alternative SMS Provider
 - **Provider**: Africa's Talking
@@ -29,25 +29,27 @@ Implement automated customer communication via WhatsApp Business API and SMS gat
 
 ## Functional Requirements
 
-### FR-NOT-001: WhatsApp Notifications
-- Order confirmation messages
-- Payment status updates
-- Shipping and delivery notifications
-- Low stock alerts for pharmacies
-- Promotional messages (with opt-in)
+### FR-NOT-001: SMS Notifications (PRIMARY)
+- Order confirmation messages via SMS
+- Payment status updates via SMS
+- Shipping and delivery notifications via SMS
+- Low stock alerts for pharmacy admins
+- Verification codes (OTP) for account security
+- Business verification status updates
 
-### FR-NOT-002: SMS Notifications
-- SMS fallback for failed WhatsApp messages
-- Verification codes for account security
-- Critical order updates
-- Payment confirmations
-- Emergency stock alerts
+### FR-NOT-002: WhatsApp Notifications (FUTURE - Phase 2)
+- Rich media order confirmations
+- Interactive payment receipts
+- Delivery tracking with maps
+- Promotional messages (with opt-in)
+- Customer support chat integration
 
 ### FR-NOT-003: Notification Templates
-- Pre-approved WhatsApp business templates
-- SMS message templates with Nigerian context
-- Multi-language support (English, Pidgin consideration)
+- SMS message templates optimized for 160 character limit
+- Nigerian context and local currency formatting (₦)
+- Clear, concise English messaging
 - Personalization with customer and order data
+- Sender ID branding (BenPharm)
 
 ### FR-NOT-004: Delivery Management
 - Message queue system for reliable delivery
@@ -64,21 +66,40 @@ Implement automated customer communication via WhatsApp Business API and SMS gat
 ## User Stories
 
 ### Customer Stories
-- As a customer, I want to receive WhatsApp confirmations for my orders
-- As a customer, I want SMS backup if WhatsApp fails
-- As a customer, I want to track my order status via messages
-- As a customer, I want to opt out of promotional messages
+- As a customer, I want to receive SMS confirmations for my orders
+- As a customer, I want timely SMS updates on my order status
+- As a customer, I want payment confirmation via SMS
+- As a customer, I want delivery notifications via SMS
 - As a customer, I want notifications in clear, simple English
 
 ### Business Stories
-- As a pharmacy, I want low stock alerts via WhatsApp
-- As an admin, I want to send bulk promotional messages
-- As a business owner, I want to track message delivery rates
-- As an admin, I want to manage notification templates
+- As a pharmacy, I want low stock alerts via SMS
+- As an admin, I want to track SMS delivery rates
+- As a business owner, I want to monitor SMS costs
+- As an admin, I want to manage SMS templates
+- As an admin, I want balance alerts for SMS credits
 
 ## Technical Implementation
 
-### WhatsApp Business Integration
+### SMS Integration (Termii) - ACTIVE
+```typescript
+interface TermiiProvider {
+  sendMessage(data: NotificationJobData): Promise<NotificationJobResult>
+  sendOTP(phone: string, message: string, pinLength: number): Promise<OTPResponse>
+  testConnection(): Promise<boolean>
+  getAccountInfo(): Promise<{ balance: number; currency: string }>
+}
+
+// Implemented in packages/mail/src/provider/termii.ts
+class TermiiProvider extends BaseNotificationProvider {
+  channel = 'sms'
+  // DND channel for transactional messages
+  // Nigerian phone number validation
+  // Balance monitoring
+}
+```
+
+### WhatsApp Integration (FUTURE - Phase 2)
 ```typescript
 interface WhatsAppProvider {
   sendTemplate(phone: string, template: WhatsAppTemplate): Promise<MessageResponse>
@@ -86,24 +107,8 @@ interface WhatsAppProvider {
   getMessageStatus(messageId: string): Promise<MessageStatus>
 }
 
-interface WhatsAppTemplate {
-  name: string
-  language: { code: string }
-  components: TemplateComponent[]
-}
-```
-
-### SMS Integration
-```typescript
-interface SMSProvider {
-  sendSMS(phone: string, message: string): Promise<SMSResponse>
-  checkDelivery(messageId: string): Promise<DeliveryStatus>
-  getBalance(): Promise<AccountBalance>
-}
-
-class TermiiProvider implements SMSProvider {
-  // Termii-specific implementation
-}
+// Will be implemented in packages/mail/src/provider/whatsapp.ts
+// Requires Meta Business verification and template approval
 ```
 
 ### Notification Queue System
@@ -117,42 +122,43 @@ interface NotificationQueue {
 
 ## Message Templates
 
-### Order Confirmation (WhatsApp)
+### SMS Templates (ACTIVE)
+
+#### Order Confirmation
 ```
-🏥 *BenPharm Online Order Confirmation*
-
-Hi {{customer_name}},
-
-Your order #{{order_number}} has been confirmed!
-
-📋 *Order Details:*
-• Total: ₦{{order_total}}
-• Items: {{item_count}} products
-• Delivery: {{delivery_address}}
-
-We'll notify you when your order is ready for pickup/delivery.
-
-Thank you for choosing BenPharm Online! 💊
+Order #{{order}} confirmed! Total: ₦{{amount}}. Track: {{url}} - BenPharm
 ```
 
-### Payment Confirmation (SMS)
+#### Payment Confirmation
 ```
-BenPharm: Payment of ₦{{amount}} received for order #{{order_number}}. Your medicines will be processed shortly. Thank you!
+Payment received for Order #{{order}}: ₦{{amount}} via {{method}}. Thank you! - BenPharm
 ```
 
-### Order Status Update (WhatsApp)
+#### Delivery Update
 ```
-📦 *Order Status Update*
+Order #{{order}} is {{status}}. {{eta_or_notes}} - BenPharm
+```
 
-Hi {{customer_name}},
+#### Low Stock Alert (Admin)
+```
+ALERT: {{product}} low stock ({{qty}}). Action: {{action}} - BenPharm
+```
 
-Your order #{{order_number}} is now: *{{order_status}}*
+#### Business Verification
+```
+Business verification for {{business_name}}: {{status}} - BenPharm
+```
 
-{{#if tracking_info}}
-📍 Track your delivery: {{tracking_url}}
-{{/if}}
+### WhatsApp Templates (FUTURE - Phase 2)
+```
+🏥 *BenPharm Order Confirmation*
+Order #{{order_number}} confirmed!
+Total: ₦{{total}}
+[Track Order] [View Details]
 
-Questions? Reply to this message or call 08012345678.
+📦 *Delivery Update*
+Your order is {{status}}
+[Track Package] [Contact Support]
 ```
 
 ## Nigerian-Specific Considerations
@@ -221,23 +227,24 @@ Questions? Reply to this message or call 08012345678.
 - Test delivery status tracking
 
 ## Success Criteria
-- [ ] WhatsApp Business API integration complete
-- [ ] SMS provider (Termii) integration functional
-- [ ] Message templates approved and tested
-- [ ] Notification queue system reliable
-- [ ] Customer preference management working
-- [ ] Delivery tracking and logging accurate
-- [ ] Fallback mechanisms tested and working
-- [ ] Admin dashboard for notification management
-- [ ] Cost tracking and budgeting in place
-- [ ] Compliance with platform policies verified
+- [✅] SMS provider (Termii) integration functional
+- [✅] SMS templates configured and tested
+- [✅] Nigerian phone number validation working
+- [✅] OTP functionality implemented
+- [ ] Notification queue system (BullMQ) deployed
+- [ ] SMS delivery tracking and logging accurate
+- [ ] Admin dashboard for SMS management
+- [ ] SMS cost tracking and balance monitoring
+- [ ] DND channel compliance verified
+- [ ] WhatsApp integration deferred to Phase 2
 
 ## Risk Mitigation
-- **WhatsApp Policy Changes**: Maintain SMS as reliable backup
-- **Template Rejections**: Work with pre-approved templates
-- **High SMS Costs**: Implement cost controls and monitoring
-- **Network Issues**: Build robust retry mechanisms
-- **Spam Complaints**: Implement strict opt-in policies
+- **SMS Provider Outage**: Consider backup provider (Africa's Talking)
+- **High SMS Costs**: Monitor usage, set balance alerts at ₦10,000
+- **Network Issues**: Exponential backoff retry (3 attempts)
+- **Phone Number Errors**: Comprehensive validation for Nigerian formats
+- **Balance Depletion**: Auto-recharge alerts, manual top-up process
+- **WhatsApp Complexity**: Successfully deferred to Phase 2
 
 ## Integration Points
 - **Order System**: Trigger notifications on order events

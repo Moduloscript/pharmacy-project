@@ -17,6 +17,9 @@ export type Config = {
 	users: {
 		enableBilling: boolean;
 		enableOnboarding: boolean;
+		requireEmailVerification: boolean;
+		requireBusinessApproval: boolean;
+		allowRetailWithoutApproval: boolean;
 	};
 	auth: {
 		enableSignup: boolean;
@@ -34,6 +37,8 @@ export type Config = {
 	storage: {
 		bucketNames: {
 			avatars: string;
+			productImages: string;
+			documents: string;
 		};
 	};
 	ui: {

@@ -109,28 +109,16 @@ async function handleNigerianGatewayWebhook(payload: any, signature: string, raw
   error?: string;
 }> {
   const orchestrator = getPaymentOrchestrator();
-  
-  // Try to handle with each provider
-  const providers = orchestrator.getProviders();
-  
-  for (const provider of providers) {
-    try {
-      const result = await provider.handleWebhook(payload, signature);
-      
-      if (result.success && result.processed) {
-        return result;
-      }
-    } catch (error) {
-      logger.warn(`Provider ${provider.getGatewayName()} failed to process webhook:`, error);
-      continue;
-    }
+  try {
+    const result = await orchestrator.handleWebhook(payload, signature);
+    return result;
+  } catch (err) {
+    return {
+      success: false,
+      processed: false,
+      error: err instanceof Error ? err.message : 'No provider could process this webhook',
+    };
   }
-  
-  return {
-    success: false,
-    processed: false,
-    error: 'No provider could process this webhook'
-  };
 }
 
 /**

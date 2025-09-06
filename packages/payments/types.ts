@@ -49,7 +49,7 @@ export interface WebhookResponse {
 	success: boolean;
 	processed: boolean;
 	orderId?: string;
-	paymentStatus?: 'SUCCESS' | 'FAILED' | 'PENDING';
+	paymentStatus?: 'SUCCESS' | 'FAILED' | 'PENDING' | 'ABANDONED';
 	error?: string;
 }
 

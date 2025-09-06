@@ -5,7 +5,8 @@ import { db } from '@repo/database';
 import { authMiddleware } from '../../middleware/auth';
 import { ProductImageService } from '../../services/productImageService';
 
-const productsRouter = new Hono();
+import type { AppBindings } from '../../types/context';
+const productsRouter = new Hono<AppBindings>();
 const imageService = new ProductImageService();
 
 // Helper function to refresh expired image URLs

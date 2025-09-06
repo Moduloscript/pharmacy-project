@@ -5,7 +5,8 @@ import { logger } from '@repo/logs';
 import { authMiddleware } from '../../middleware/auth';
 import { validateNigerianPhone, normalizeNigerianPhone } from '@repo/utils/nigerian-utils';
 
-const app = new Hono();
+import type { AppBindings } from '../../types/context';
+const app = new Hono<AppBindings>();
 
 // BenPharm checkout schema for Nigerian payments
 const benpharmiCheckoutSchema = z.object({

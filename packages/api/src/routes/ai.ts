@@ -7,6 +7,7 @@ import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import { authMiddleware } from "../middleware/auth";
 import { verifyOrganizationMembership } from "./organizations/lib/membership";
+import type { AppBindings } from "../types/context";
 
 const MessageSchema = z.object({
 	role: z.enum(["user", "assistant"]),
@@ -17,7 +18,7 @@ const ChatSchema = AiChatSchema.extend({
 	messages: z.array(MessageSchema),
 });
 
-export const aiRouter = new Hono()
+export const aiRouter = new Hono<AppBindings>()
 	.basePath("/ai")
 	.use(authMiddleware)
 	.get(

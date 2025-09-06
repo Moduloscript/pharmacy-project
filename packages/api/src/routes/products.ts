@@ -5,11 +5,12 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { ProductImageService } from '../services/productImageService';
+import type { AppBindings } from '../types/context';
 
 // Initialize image service
 const imageService = new ProductImageService();
 
-const productsRouter = new Hono();
+const productsRouter = new Hono<AppBindings>();
 
 // Input validation schemas
 const createProductSchema = z.object({

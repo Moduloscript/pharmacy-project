@@ -368,31 +368,34 @@ const paymentProviders = [
 
 ---
 
-#### **2.2 WhatsApp & SMS Notifications**
+#### **2.2 SMS Notifications (WhatsApp Deferred)**
 **Priority: P1** | **Estimated Time: 2 weeks** | **Budget: ₦200,000**
 
 **Files to Create/Modify:**
 ```
-📁 packages/mail/src/provider/whatsapp.ts (CREATE NEW)
-📁 packages/mail/src/provider/sms.ts (CREATE NEW)
-📁 packages/mail/emails/OrderConfirmation.tsx (MODIFY EXISTING PATTERN)
-📁 packages/mail/emails/PaymentNotification.tsx (CREATE NEW)
-📁 packages/mail/emails/OrderStatusUpdate.tsx (CREATE NEW)
+📁 packages/mail/src/provider/termii.ts (✅ IMPLEMENTED)
+📁 packages/mail/src/provider/whatsapp.ts (DEFERRED TO PHASE 2)
+📁 packages/mail/src/templates/index.ts (✅ SMS TEMPLATES READY)
+📁 packages/mail/src/templates/whatsapp-future.ts (✅ CREATED FOR PHASE 2)
+📁 packages/queue/src/notifications.ts (IN PROGRESS)
 ```
 
 **API Integration:**
 ```
-📁 packages/api/src/routes/notifications.ts (CREATE NEW)
+📁 packages/api/src/routes/notifications.ts (IN PROGRESS)
+📁 packages/api/src/routes/webhooks.ts (WHATSAPP ENDPOINTS COMMENTED)
 ```
 
 **Tasks:**
-- [ ] Integrate WhatsApp Business API
-- [ ] Set up SMS gateway (Termii or similar Nigerian provider)
-- [ ] Create notification templates
-- [ ] Implement order confirmation notifications
-- [ ] Add payment status notifications
-- [ ] Create delivery update notifications
-- [ ] Add admin alert notifications
+- [✅] Set up SMS gateway (Termii Nigerian provider)
+- [✅] Create SMS notification templates
+- [✅] Nigerian phone number validation
+- [ ] Implement BullMQ queue for notifications
+- [ ] Wire order confirmation SMS notifications
+- [ ] Add payment status SMS notifications
+- [ ] Create delivery update SMS notifications
+- [ ] Add admin alert SMS notifications
+- [ ] WhatsApp Business API (DEFERRED TO PHASE 2)
 
 **Notification Templates:**
 ```typescript
@@ -718,27 +721,27 @@ NEXT_PUBLIC_AVATARS_BUCKET_NAME="benpharm-avatars"
 ## 📝 **NEXT IMMEDIATE ACTIONS**
 
 ### **This Week (Priority P1 - Critical - Ready for Deployment):**
-1. [x] **✅ COMPLETED: Nigerian Payment System** - Flutterwave integration with fallback orchestrator
-2. [ ] **Deploy Nigerian Payment System** - Set up production payment gateway credentials
-3. [ ] **Test enhanced checkout flow** - End-to-end testing with Nigerian users
-4. [ ] **Set up payment monitoring** - Payment success rate tracking and alerts
-5. [ ] **Implement image upload for products** - Add file upload to product API
+1. [✓] **✅ COMPLETED: Nigerian Payment System** - Flutterwave integration with fallback orchestrator
+2. [✓] **✅ COMPLETED: SMS Provider Integration** - Termii provider implemented and tested
+3. [ ] **Deploy SMS Notification System** - Set up production Termii account and sender ID
+4. [ ] **Test SMS notification flows** - End-to-end testing with real Nigerian phone numbers
+5. [ ] **Implement notification queue (BullMQ)** - Background processing for SMS delivery
 
 ### **Next Week (Priority P1 - High):**
-1. [ ] **Activate Flutterwave business account** - Complete production gateway setup
-2. [ ] **Implement SMS phone verification** - Integrate Nigerian SMS provider (Termii)
-3. [ ] **Set up WhatsApp Business API** - For order notifications
-4. [ ] **Deploy enhanced checkout to production** - Replace existing checkout with Nigerian-aware version
-5. [ ] **Monitor payment performance** - Track fallback usage and success rates
+1. [ ] **Activate Termii production account** - Register BenPharm sender ID
+2. [ ] **Implement SMS phone verification (OTP)** - Use Termii OTP functionality
+3. [ ] **Deploy notification workers** - PM2/systemd setup for queue processing
+4. [ ] **Monitor SMS delivery rates** - Track success rates and balance
+5. [ ] **Setup SMS balance alerts** - Auto-recharge notifications
 
 ### **Month 1 (Completing Phase 1 Foundation):**
-1. [ ] **Flutterwave SDK integration** - Primary payment option implementation
-2. [ ] **SMS notification system** - Order confirmations and updates
-3. [ ] **WhatsApp notifications** - Business messaging for order updates
+1. [✓] **Flutterwave SDK integration** - Primary payment option implementation
+2. [✓] **SMS notification system (Termii)** - Order confirmations and updates via SMS
+3. [ ] **Complete notification queue** - BullMQ worker for reliable SMS delivery
 4. [ ] **Complete admin dashboard** - All management interfaces
 5. [ ] **Production environment setup** - Database, hosting, domain
 6. [ ] **Create product list** - Top 50 Nigerian medicines catalog
-7. [ ] **User acceptance testing** - Test all core workflows
+7. [ ] **User acceptance testing** - Test all core workflows with SMS notifications
 
 ### **Month 2 (Phase 2 Preparation):**
 1. [ ] **OPay integration** - Secondary payment option
