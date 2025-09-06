@@ -8,7 +8,8 @@ import { getSignedUrl, deleteObject } from "@repo/storage";
 import { config } from "@repo/config";
 import { HTTPException } from "hono/http-exception";
 
-export const documentsRouter = new Hono().basePath("/documents");
+import type { AppBindings } from "../types/context";
+export const documentsRouter = new Hono<AppBindings>().basePath("/documents");
 
 // Create document record after successful client-side upload
 // POST /api/documents

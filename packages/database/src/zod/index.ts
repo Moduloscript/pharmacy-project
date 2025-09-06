@@ -98,7 +98,7 @@ export const PurchaseScalarFieldEnumSchema = z.enum(['id','organizationId','user
 
 export const AiChatScalarFieldEnumSchema = z.enum(['id','organizationId','userId','title','messages','createdAt','updatedAt']);
 
-export const CustomerScalarFieldEnumSchema = z.enum(['id','userId','customerType','phone','address','city','state','lga','country','businessName','businessAddress','pharmacyLicense','taxId','businessPhone','businessEmail','verificationStatus','verificationDocuments','creditLimit','creditTermDays','createdAt','updatedAt']);
+export const CustomerScalarFieldEnumSchema = z.enum(['id','userId','customerType','phone','address','city','state','lga','country','businessName','businessAddress','pharmacyLicense','taxId','businessPhone','businessEmail','verificationStatus','verificationDocuments','rejectionReason','verifiedAt','creditLimit','creditTermDays','createdAt','updatedAt']);
 
 export const ProductScalarFieldEnumSchema = z.enum(['id','name','description','category','genericName','brandName','manufacturer','ndcNumber','nafdacNumber','strength','dosageForm','activeIngredient','retailPrice','wholesalePrice','cost','sku','barcode','stockQuantity','minStockLevel','maxStockLevel','packSize','unit','weight','dimensions','isActive','isPrescriptionRequired','isRefrigerated','isControlled','slug','images','imageUrl','tags','hasExpiry','shelfLifeMonths','minOrderQuantity','bulkPricing','createdAt','updatedAt']);
 
@@ -113,6 +113,8 @@ export const OrderTrackingScalarFieldEnumSchema = z.enum(['id','orderId','status
 export const PaymentScalarFieldEnumSchema = z.enum(['id','customerId','orderId','amount','currency','method','status','gatewayReference','transactionId','gatewayResponse','gatewayFee','appFee','paymentUrl','webhookData','failureReason','retryCount','createdAt','updatedAt','completedAt']);
 
 export const PaymentRetryConfigScalarFieldEnumSchema = z.enum(['id','payment_method','max_retries','retry_delays','enabled','created_at','updated_at']);
+
+export const PaymentRetryLogScalarFieldEnumSchema = z.enum(['id','payment_id','retry_attempt','retry_scheduled_at','retry_executed_at','retry_result','error_message','gateway_response','created_at']);
 
 export const InventoryMovementScalarFieldEnumSchema = z.enum(['id','productId','type','quantity','reason','reference','previousStock','newStock','batchNumber','expiryDate','userId','notes','createdAt']);
 
@@ -375,6 +377,8 @@ export const CustomerSchema = z.object({
   businessPhone: z.string().nullable(),
   businessEmail: z.string().nullable(),
   verificationDocuments: z.string().nullable(),
+  rejectionReason: z.string().nullable(),
+  verifiedAt: z.coerce.date().nullable(),
   creditLimit: z.instanceof(Prisma.Decimal, { message: "Field 'creditLimit' must be a Decimal. Location: ['Models', 'Customer']"}).nullable(),
   creditTermDays: z.number().int().nullable(),
   createdAt: z.coerce.date(),
@@ -561,6 +565,27 @@ export const PaymentRetryConfigSchema = z.object({
 })
 
 export type PaymentRetryConfig = z.infer<typeof PaymentRetryConfigSchema>
+
+/////////////////////////////////////////
+// PAYMENT RETRY LOG SCHEMA
+/////////////////////////////////////////
+
+/**
+ * Mirrors existing table `payment_retry_log` in the remote DB to avoid destructive drops
+ */
+export const PaymentRetryLogSchema = z.object({
+  id: z.string(),
+  payment_id: z.string(),
+  retry_attempt: z.number().int(),
+  retry_scheduled_at: z.coerce.date(),
+  retry_executed_at: z.coerce.date().nullable(),
+  retry_result: z.string().nullable(),
+  error_message: z.string().nullable(),
+  gateway_response: JsonValueSchema.nullable(),
+  created_at: z.coerce.date().nullable(),
+})
+
+export type PaymentRetryLog = z.infer<typeof PaymentRetryLogSchema>
 
 /////////////////////////////////////////
 // INVENTORY MOVEMENT SCHEMA

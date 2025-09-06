@@ -1,0 +1,39 @@
+{
+	"name": "@repo/queue",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/types/index.d.ts"
+		},
+		"./notifications": {
+			"import": "./dist/notifications.js",
+			"types": "./dist/types/notifications.d.ts"
+		},
+		"./worker": {
+			"import": "./dist/worker.js",
+			"types": "./dist/types/worker.d.ts"
+		}
+	},
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsc --watch",
+		"clean": "rm -rf dist",
+		"worker": "node dist/worker.js",
+		"smoke": "tsx src/scripts/smoke.ts",
+		"type-check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"bullmq": "^4.15.4",
+		"ioredis": "^5.3.2",
+		"@repo/database": "workspace:*"
+	},
+	"devDependencies": {
+		"@repo/tsconfig": "workspace:*",
+		"@types/node": "^22.13.5",
+		"typescript": "5.7.3",
+		"tsx": "^4.19.2"
+	}
+}

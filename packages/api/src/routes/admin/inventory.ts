@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { db } from '@repo/database';
 import { authMiddleware } from '../../middleware/auth';
 
-const inventoryRouter = new Hono();
+import type { AppBindings } from '../../types/context';
+const inventoryRouter = new Hono<AppBindings>();
 
 // Apply auth middleware to all routes
 inventoryRouter.use('*', authMiddleware);
@@ -61,22 +62,23 @@ inventoryRouter.get('/', zValidator('query', inventoryQuerySchema), async (c) =>
     const where: any = {};
     
     if (category) {
-      where.category = { equals: category, mode: 'insensitive' };
+      // ProductCategory is an enum; cast the incoming string for filtering
+      where.category = { equals: category as any };
     }
     
     // Stock status filtering
     switch (stockStatus) {
       case 'out-of-stock':
-        where.stock_quantity = { equals: 0 };
+        where.stockQuantity = { equals: 0 };
         break;
       case 'low-stock':
         where.AND = [
-          { stock_quantity: { gt: 0 } },
-          { stock_quantity: { lte: 10 } } // Low stock threshold
+          { stockQuantity: { gt: 0 } },
+          { stockQuantity: { lte: 10 } } // Low stock threshold
         ];
         break;
       case 'in-stock':
-        where.stock_quantity = { gt: 10 };
+        where.stockQuantity = { gt: 10 };
         break;
       // 'all' - no additional filter
     }
@@ -85,9 +87,9 @@ inventoryRouter.get('/', zValidator('query', inventoryQuerySchema), async (c) =>
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
-        { generic_name: { contains: search, mode: 'insensitive' } },
-        { brand_name: { contains: search, mode: 'insensitive' } },
-        { nafdac_reg_number: { contains: search, mode: 'insensitive' } },
+        { genericName: { contains: search, mode: 'insensitive' } },
+        { brandName: { contains: search, mode: 'insensitive' } },
+        { nafdacNumber: { contains: search, mode: 'insensitive' } },
       ];
     }
     
@@ -101,17 +103,17 @@ inventoryRouter.get('/', zValidator('query', inventoryQuerySchema), async (c) =>
         orderBy = { name: sortOrder };
         break;
       case 'stock':
-        orderBy = { stock_quantity: sortOrder };
+        orderBy = { stockQuantity: sortOrder };
         break;
       case 'category':
         orderBy = { category: sortOrder };
         break;
       case 'price':
-        orderBy = { retail_price: sortOrder };
+        orderBy = { retailPrice: sortOrder };
         break;
       case 'updated':
       default:
-        orderBy = { updated_at: sortOrder };
+        orderBy = { updatedAt: sortOrder };
         break;
     }
     
@@ -124,18 +126,18 @@ inventoryRouter.get('/', zValidator('query', inventoryQuerySchema), async (c) =>
       select: {
         id: true,
         name: true,
-        generic_name: true,
-        brand_name: true,
+        genericName: true,
+        brandName: true,
         category: true,
-        image_url: true,
-        wholesale_price: true,
-        retail_price: true,
-        stock_quantity: true,
-        min_order_qty: true,
-        is_prescription_required: true,
-        nafdac_reg_number: true,
-        created_at: true,
-        updated_at: true,
+        imageUrl: true,
+        wholesalePrice: true,
+        retailPrice: true,
+        stockQuantity: true,
+        minOrderQuantity: true,
+        isPrescriptionRequired: true,
+        nafdacNumber: true,
+        createdAt: true,
+        updatedAt: true,
       },
       orderBy,
       skip,
@@ -145,9 +147,9 @@ inventoryRouter.get('/', zValidator('query', inventoryQuerySchema), async (c) =>
     // Format inventory data with status indicators
     const formattedInventory = products.map(product => {
       let stockStatus: string;
-      if (product.stock_quantity === 0) {
+      if (product.stockQuantity === 0) {
         stockStatus = 'out-of-stock';
-      } else if (product.stock_quantity <= 10) {
+      } else if (product.stockQuantity <= 10) {
         stockStatus = 'low-stock';
       } else {
         stockStatus = 'in-stock';
@@ -155,12 +157,12 @@ inventoryRouter.get('/', zValidator('query', inventoryQuerySchema), async (c) =>
       
       return {
         ...product,
-        wholesale_price: Number(product.wholesale_price),
-        retail_price: Number(product.retail_price),
+        wholesalePrice: Number(product.wholesalePrice),
+        retailPrice: Number(product.retailPrice),
         stockStatus,
-        stockValue: Number(product.wholesale_price) * product.stock_quantity,
-        createdAt: product.created_at.toISOString(),
-        updatedAt: product.updated_at.toISOString(),
+        stockValue: Number(product.wholesalePrice) * product.stockQuantity,
+        createdAt: product.createdAt.toISOString(),
+        updatedAt: product.updatedAt.toISOString(),
       };
     });
     
@@ -194,20 +196,20 @@ inventoryRouter.get('/stats', async (c) => {
     
     // Stock status counts
     const outOfStockCount = await db.product.count({
-      where: { stock_quantity: 0 }
+      where: { stockQuantity: 0 }
     });
     
     const lowStockCount = await db.product.count({
       where: {
         AND: [
-          { stock_quantity: { gt: 0 } },
-          { stock_quantity: { lte: 10 } }
+          { stockQuantity: { gt: 0 } },
+          { stockQuantity: { lte: 10 } }
         ]
       }
     });
     
     const inStockCount = await db.product.count({
-      where: { stock_quantity: { gt: 10 } }
+      where: { stockQuantity: { gt: 10 } }
     });
     
     // Products by category
@@ -217,17 +219,17 @@ inventoryRouter.get('/stats', async (c) => {
         id: true
       },
       _sum: {
-        stock_quantity: true
+        stockQuantity: true
       }
     });
     
     // Total inventory value (based on wholesale price)
     const inventoryValue = await db.product.aggregate({
       _sum: {
-        wholesale_price: true
+        wholesalePrice: true
       },
       where: {
-        stock_quantity: { gt: 0 }
+        stockQuantity: { gt: 0 }
       }
     });
     
@@ -235,11 +237,11 @@ inventoryRouter.get('/stats', async (c) => {
     const lowStockProducts = await db.product.findMany({
       where: {
         OR: [
-          { stock_quantity: 0 },
+          { stockQuantity: 0 },
           {
             AND: [
-              { stock_quantity: { gt: 0 } },
-              { stock_quantity: { lte: 10 } }
+              { stockQuantity: { gt: 0 } },
+              { stockQuantity: { lte: 10 } }
             ]
           }
         ]
@@ -247,18 +249,18 @@ inventoryRouter.get('/stats', async (c) => {
       select: {
         id: true,
         name: true,
-        stock_quantity: true,
+        stockQuantity: true,
         category: true,
       },
-      orderBy: { stock_quantity: 'asc' },
+      orderBy: { stockQuantity: 'asc' },
       take: 10 // Top 10 most critical
     });
     
     // Format category stats
     const categoryStats = productsByCategory.map(cat => ({
       category: cat.category,
-      productCount: cat._count.id,
-      totalStock: cat._sum.stock_quantity || 0,
+      productCount: (cat._count as any)?.id ?? 0,
+      totalStock: (cat._sum as any)?.stockQuantity || 0,
     }));
     
     const stats = {
@@ -269,7 +271,7 @@ inventoryRouter.get('/stats', async (c) => {
         outOfStock: outOfStockCount,
       },
       categoryBreakdown: categoryStats,
-      totalInventoryValue: Number(inventoryValue._sum.wholesale_price) || 0,
+      totalInventoryValue: Number((inventoryValue._sum as any)?.wholesalePrice) || 0,
       lowStockAlerts: lowStockProducts,
       stockHealthPercentage: totalProducts > 0 ? Math.round((inStockCount / totalProducts) * 100) : 0,
     };
@@ -292,7 +294,7 @@ inventoryRouter.put('/:id/stock', zValidator('json', updateStockSchema), async (
     
     const product = await db.product.findUnique({
       where: { id: productId },
-      select: { id: true, name: true, stock_quantity: true }
+      select: { id: true, name: true, stockQuantity: true }
     });
     
     if (!product) {
@@ -303,16 +305,16 @@ inventoryRouter.put('/:id/stock', zValidator('json', updateStockSchema), async (
     const updatedProduct = await db.product.update({
       where: { id: productId },
       data: {
-        stock_quantity,
-        updated_at: new Date(),
+        stockQuantity: stock_quantity,
+        updatedAt: new Date(),
       },
       select: {
         id: true,
         name: true,
-        stock_quantity: true,
-        wholesale_price: true,
-        retail_price: true,
-        updated_at: true,
+        stockQuantity: true,
+        wholesalePrice: true,
+        retailPrice: true,
+        updatedAt: true,
       }
     });
     
@@ -333,11 +335,11 @@ inventoryRouter.put('/:id/stock', zValidator('json', updateStockSchema), async (
       message: 'Stock updated successfully',
       product: {
         ...updatedProduct,
-        wholesale_price: Number(updatedProduct.wholesale_price),
-        retail_price: Number(updatedProduct.retail_price),
-        previousStock: product.stock_quantity,
-        adjustment: stock_quantity - product.stock_quantity,
-        updatedAt: updatedProduct.updated_at.toISOString(),
+        wholesalePrice: Number(updatedProduct.wholesalePrice),
+        retailPrice: Number(updatedProduct.retailPrice),
+        previousStock: product.stockQuantity,
+        adjustment: stock_quantity - product.stockQuantity,
+        updatedAt: updatedProduct.updatedAt.toISOString(),
       }
     });
   } catch (error) {
@@ -355,10 +357,10 @@ inventoryRouter.post('/bulk-update', zValidator('json', bulkUpdateStockSchema), 
     const { updates } = c.req.valid('json');
     
     // Validate all product IDs exist
-    const productIds = updates.map(u => u.productId);
+    const productIds = updates.map((u: any) => u.productId);
     const existingProducts = await db.product.findMany({
       where: { id: { in: productIds } },
-      select: { id: true, name: true, stock_quantity: true }
+      select: { id: true, name: true, stockQuantity: true }
     });
     
     if (existingProducts.length !== productIds.length) {
@@ -366,12 +368,12 @@ inventoryRouter.post('/bulk-update', zValidator('json', bulkUpdateStockSchema), 
     }
     
     // Perform bulk updates
-    const updatePromises = updates.map(update => 
+    const updatePromises = updates.map((update: any) =>
       db.product.update({
         where: { id: update.productId },
         data: {
-          stock_quantity: update.stock_quantity,
-          updated_at: new Date(),
+          stockQuantity: update.stock_quantity,
+          updatedAt: new Date(),
         }
       })
     );
@@ -384,8 +386,8 @@ inventoryRouter.post('/bulk-update', zValidator('json', bulkUpdateStockSchema), 
       select: {
         id: true,
         name: true,
-        stock_quantity: true,
-        updated_at: true,
+        stockQuantity: true,
+        updatedAt: true,
       }
     });
     
@@ -393,7 +395,7 @@ inventoryRouter.post('/bulk-update', zValidator('json', bulkUpdateStockSchema), 
       message: `Successfully updated stock for ${updates.length} products`,
       updatedProducts: updatedProducts.map(p => ({
         ...p,
-        updatedAt: p.updated_at.toISOString(),
+        updatedAt: p.updatedAt.toISOString(),
       }))
     });
   } catch (error) {
@@ -411,11 +413,11 @@ inventoryRouter.get('/low-stock', async (c) => {
     const lowStockProducts = await db.product.findMany({
       where: {
         OR: [
-          { stock_quantity: 0 },
+          { stockQuantity: 0 },
           {
             AND: [
-              { stock_quantity: { gt: 0 } },
-              { stock_quantity: { lte: 10 } }
+              { stockQuantity: { gt: 0 } },
+              { stockQuantity: { lte: 10 } }
             ]
           }
         ]
@@ -423,23 +425,23 @@ inventoryRouter.get('/low-stock', async (c) => {
       select: {
         id: true,
         name: true,
-        generic_name: true,
+        genericName: true,
         category: true,
-        stock_quantity: true,
-        min_order_qty: true,
-        wholesale_price: true,
-        retail_price: true,
-        updated_at: true,
+        stockQuantity: true,
+        minOrderQuantity: true,
+        wholesalePrice: true,
+        retailPrice: true,
+        updatedAt: true,
       },
-      orderBy: { stock_quantity: 'asc' },
+      orderBy: { stockQuantity: 'asc' },
     });
     
     const formattedProducts = lowStockProducts.map(product => ({
       ...product,
-      wholesale_price: Number(product.wholesale_price),
-      retail_price: Number(product.retail_price),
-      stockStatus: product.stock_quantity === 0 ? 'out-of-stock' : 'low-stock',
-      updatedAt: product.updated_at.toISOString(),
+      wholesalePrice: Number(product.wholesalePrice),
+      retailPrice: Number(product.retailPrice),
+      stockStatus: product.stockQuantity === 0 ? 'out-of-stock' : 'low-stock',
+      updatedAt: product.updatedAt.toISOString(),
     }));
     
     return c.json({
@@ -464,18 +466,18 @@ inventoryRouter.get('/categories', async (c) => {
         id: true
       },
       _sum: {
-        stock_quantity: true
+        stockQuantity: true
       },
       _avg: {
-        retail_price: true
+        retailPrice: true
       }
     });
     
     const formattedCategories = categories.map(cat => ({
       name: cat.category,
-      productCount: cat._count.id,
-      totalStock: cat._sum.stock_quantity || 0,
-      averagePrice: Number(cat._avg.retail_price) || 0,
+      productCount: (cat._count as any)?.id ?? 0,
+      totalStock: (cat._sum as any)?.stockQuantity || 0,
+      averagePrice: Number((cat._avg as any)?.retailPrice) || 0,
     }));
     
     return c.json({ categories: formattedCategories });

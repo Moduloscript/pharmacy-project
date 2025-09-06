@@ -1,5 +1,6 @@
 export { PrismaClient } from "@prisma/client";
 export * from "./src/client";
+export { db } from "./src/client";
 export * from "./src/zod";
 
 declare global {

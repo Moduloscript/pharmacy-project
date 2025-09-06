@@ -4,7 +4,8 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 
-const categoriesRouter = new Hono();
+import type { AppBindings } from '../types/context';
+const categoriesRouter = new Hono<AppBindings>();
 
 // Nigerian pharmacy-specific product categories
 const PHARMACY_CATEGORIES = [
@@ -94,16 +95,16 @@ categoriesRouter.get('/:categoryName/products', zValidator('query', z.object({
     let orderBy: any = { name: 'asc' };
     switch (sort) {
       case 'price_low':
-        orderBy = { retail_price: 'asc' };
+        orderBy = { retailPrice: 'asc' };
         break;
       case 'price_high':
-        orderBy = { retail_price: 'desc' };
+        orderBy = { retailPrice: 'desc' };
         break;
       case 'stock':
-        orderBy = { stock_quantity: 'desc' };
+        orderBy = { stockQuantity: 'desc' };
         break;
       case 'newest':
-        orderBy = { created_at: 'desc' };
+        orderBy = { createdAt: 'desc' };
         break;
     }
 
@@ -111,8 +112,7 @@ categoriesRouter.get('/:categoryName/products', zValidator('query', z.object({
       db.product.findMany({
         where: {
           category: {
-            equals: categoryName,
-            mode: 'insensitive'
+            equals: categoryName as any
           }
         },
         skip,
@@ -121,24 +121,24 @@ categoriesRouter.get('/:categoryName/products', zValidator('query', z.object({
         select: {
           id: true,
           name: true,
-          generic_name: true,
-          brand_name: true,
+          genericName: true,
+          brandName: true,
           category: true,
           description: true,
-          image_url: true,
-          wholesale_price: true,
-          retail_price: true,
-          stock_quantity: true,
-          min_order_qty: true,
-          is_prescription_required: true,
-          nafdac_reg_number: true,
-          created_at: true
+          imageUrl: true,
+          wholesalePrice: true,
+          retailPrice: true,
+          stockQuantity: true,
+          minOrderQuantity: true,
+          isPrescriptionRequired: true,
+          nafdacNumber: true,
+          createdAt: true
         }
       }),
       db.product.count({
         where: {
           category: {
-            equals: categoryName,
+            equals: categoryName as any,
           }
         }
       })
@@ -175,11 +175,11 @@ categoriesRouter.get('/stats', authMiddleware, async (c) => {
         category: true
       },
       _sum: {
-        stock_quantity: true
+        stockQuantity: true
       },
       _avg: {
-        retail_price: true,
-        wholesale_price: true
+        retailPrice: true,
+        wholesalePrice: true
       },
       orderBy: {
         _count: {
@@ -190,10 +190,10 @@ categoriesRouter.get('/stats', authMiddleware, async (c) => {
 
     const categoryStats = stats.map(stat => ({
       category: stat.category,
-      total_products: stat._count.category,
-      total_stock: stat._sum.stock_quantity || 0,
-      avg_retail_price: Math.round((stat._avg.retail_price || 0) * 100) / 100,
-      avg_wholesale_price: Math.round((stat._avg.wholesale_price || 0) * 100) / 100
+      total_products: (stat._count as any)?.category ?? 0,
+      total_stock: (stat._sum as any)?.stockQuantity || 0,
+      avg_retail_price: Math.round((Number((stat._avg as any)?.retailPrice) || 0) * 100) / 100,
+      avg_wholesale_price: Math.round((Number((stat._avg as any)?.wholesalePrice) || 0) * 100) / 100
     }));
 
     return c.json({

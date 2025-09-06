@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAtom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,6 +10,9 @@ import { Badge } from '@ui/components/badge';
 import { Input } from '@ui/components/input';
 import { Label } from '@ui/components/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui/components/select';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@ui/components/dialog';
+import { Textarea } from '@ui/components/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@ui/components/tooltip';
 import {
   Table,
   TableBody,
@@ -50,7 +53,9 @@ interface Customer {
   lga?: string;
   licenseNumber?: string;
   taxId?: string;
-  verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED' | 'EXPIRED';
+  verifiedAt?: string | null;
+  rejectionReason?: string | null;
   emailVerified: boolean;
   phoneVerified: boolean;
   isActive: boolean;
@@ -104,14 +109,16 @@ const fetchCustomers = async (): Promise<Customer[]> => {
     name: customer.userName || customer.name,
     email: customer.userEmail || customer.email,
     phone: customer.phone || customer.businessPhone,
-    type: customer.type,
+    type: customer.type || 'RETAIL', // Default to RETAIL if no type is specified
     businessName: customer.businessName,
     businessAddress: customer.businessAddress,
     state: customer.state,
     lga: customer.lga,
     licenseNumber: customer.pharmacyLicense,
     taxId: customer.taxId,
-    verificationStatus: customer.businessVerificationStatus || customer.verificationStatus || 'PENDING',
+    verificationStatus: customer.verificationStatus || 'PENDING',
+    verifiedAt: customer.verifiedAt || null,
+    rejectionReason: customer.rejectionReason || null,
     emailVerified: customer.emailVerified || false, // This needs to come from the user table
     phoneVerified: customer.phoneVerified || false,
     isActive: customer.isActive !== false,
@@ -146,17 +153,19 @@ const updateCustomerStatus = async ({
 
 const verifyCustomer = async ({ 
   customerId, 
-  verificationStatus 
+  verificationStatus,
+  rejectionReason
 }: { 
   customerId: string; 
   verificationStatus: string; 
+  rejectionReason?: string | null;
 }): Promise<Customer> => {
   const response = await fetch(`/api/admin/customers/${customerId}/verification`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ status: verificationStatus }),
+    body: JSON.stringify({ status: verificationStatus, rejectionReason }),
   });
 
   if (!response.ok) {
@@ -209,6 +218,16 @@ interface CustomersTableProps {
 
 export function CustomersTable({ className }: CustomersTableProps) {
   const [filters, setFilters] = useAtom(customerFiltersAtom);
+  const [listView, setListView] = useState(false);
+
+  // Default to list view on small screens on initial mount (no SSR mismatch concerns)
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        setListView(window.innerWidth < 640);
+      }
+    } catch {}
+  }, []);
   const queryClient = useQueryClient();
   
   // React Query hooks
@@ -221,6 +240,10 @@ export function CustomersTable({ className }: CustomersTableProps) {
   
   const updateStatusMutation = useUpdateCustomerStatus();
   const verifyMutation = useVerifyCustomer();
+
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectingCustomerId, setRejectingCustomerId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState<string>('');
 
   // Calculate customer stats and filter customers
   const { filteredCustomers, customerStats } = useMemo(() => {
@@ -291,6 +314,12 @@ export function CustomersTable({ className }: CustomersTableProps) {
   };
 
   const handleVerification = (customerId: string, verificationStatus: string) => {
+    if (verificationStatus === 'REJECTED') {
+      setRejectingCustomerId(customerId);
+      setRejectionReason('');
+      setRejectDialogOpen(true);
+      return;
+    }
     verifyMutation.mutate({ customerId, verificationStatus });
   };
 
@@ -300,7 +329,8 @@ export function CustomersTable({ className }: CustomersTableProps) {
   };
 
   // Utility functions
-  const getCustomerTypeColor = (type: string) => {
+  const getCustomerTypeColor = (type: string | undefined | null) => {
+    if (!type) return 'bg-gray-100 text-gray-800';
     switch (type.toLowerCase()) {
       case 'wholesale':
         return 'bg-purple-100 text-purple-800';
@@ -315,7 +345,8 @@ export function CustomersTable({ className }: CustomersTableProps) {
     }
   };
 
-  const getVerificationStatusColor = (status: string) => {
+  const getVerificationStatusColor = (status: string | undefined | null) => {
+    if (!status) return 'bg-gray-100 text-gray-800';
     switch (status.toLowerCase()) {
       case 'verified':
         return 'bg-green-100 text-green-800';
@@ -361,10 +392,248 @@ export function CustomersTable({ className }: CustomersTableProps) {
     );
   }
 
+  // Precompute content to avoid deeply nested JSX ternaries that may confuse parsers
+  const content = (() => {
+    if (isLoading) {
+      return (
+        <div className="p-6">
+          <div className="space-y-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="animate-pulse">
+                <div className="flex items-center space-x-4">
+                  <div className="h-4 bg-gray-300 rounded w-32"></div>
+                  <div className="h-4 bg-gray-300 rounded w-24"></div>
+                  <div className="h-4 bg-gray-300 rounded w-16"></div>
+                  <div className="h-4 bg-gray-300 rounded w-20"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    if (filteredCustomers.length === 0) {
+      return (
+        <div className="p-6 text-center">
+          <UsersIcon className="size-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900">No customers found</h3>
+          <p className="text-gray-600">
+            {filters.search || filters.type !== 'all' || filters.verificationStatus !== 'all' || filters.state !== 'all'
+              ? 'Try adjusting your search criteria or filters'
+              : 'No customers have registered yet'}
+          </p>
+        </div>
+      );
+    }
+    if (listView) {
+      return (
+        <div className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 gap-4">
+            {filteredCustomers.map((customer) => (
+              <div key={customer.id} className="rounded-lg border p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium truncate max-w-[60vw] sm:max-w-none">{customer.name}</p>
+                      <Badge className={getCustomerTypeColor(customer.type)}>{customer.type}</Badge>
+                      <Badge className={getVerificationStatusColor(customer.verificationStatus)}>{customer.verificationStatus}</Badge>
+                    </div>
+                    {customer.businessName && (
+                      <div className="text-sm text-muted-foreground mt-1 truncate">{customer.businessName}</div>
+                    )}
+                    <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
+                      <span className="inline-flex items-center gap-1"><MailIcon className="size-3" />{customer.email}</span>
+                      {customer.phone && (
+                        <span className="inline-flex items-center gap-1"><PhoneIcon className="size-3" />{customer.phone}</span>
+                      )}
+                      {(customer.state || customer.lga) && (
+                        <span className="inline-flex items-center gap-1"><MapPinIcon className="size-3" />{customer.lga ? `${customer.lga}, ${customer.state ?? ''}` : (customer.state ?? 'Not specified')}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Link href={`/app/admin/customers/${customer.id}`}>
+                      <Button variant="outline" size="sm"><EyeIcon className="size-4" /></Button>
+                    </Link>
+                    <Link href={`/app/admin/customers/${customer.id}/edit`}>
+                      <Button variant="outline" size="sm"><EditIcon className="size-4" /></Button>
+                    </Link>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
+                  <span className="font-medium">{customer.totalOrders} orders</span>
+                  <span className="text-muted-foreground">{formatCurrency(customer.totalSpent)}</span>
+                  {customer.lastOrderDate && (
+                    <span className="text-muted-foreground">Last: {new Date(customer.lastOrderDate).toLocaleDateString()}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return (
+          <div className="overflow-x-auto w-full">
+            <Table className="w-full min-w-[960px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[280px]">Customer</TableHead>
+                  <TableHead className="hidden md:table-cell w-[200px]">Contact</TableHead>
+                  <TableHead className="w-[100px]">Type</TableHead>
+                  <TableHead className="hidden lg:table-cell w-[180px]">Location</TableHead>
+                  <TableHead className="hidden sm:table-cell w-[140px]">Orders</TableHead>
+                  <TableHead className="w-[120px]">Verification</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+          <TableBody>
+            {filteredCustomers.map((customer) => (
+              <TableRow key={customer.id}>
+                <TableCell>
+                  <div>
+                    <p className="font-medium">{customer.name}</p>
+                    {customer.businessName && (
+                      <p className="text-sm text-gray-600">{customer.businessName}</p>
+                    )}
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Badge variant="secondary">
+                        {getCustomerValue(customer)}
+                      </Badge>
+                      {!customer.isActive && (
+                        <Badge variant="destructive">
+                          Inactive
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </TableCell>
+
+                <TableCell className="hidden md:table-cell">
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <MailIcon className="size-3 text-gray-400" />
+                      <span className="text-sm">{customer.email}</span>
+                      {customer.emailVerified && (
+                        <CheckCircleIcon className="size-3 text-green-600" />
+                      )}
+                    </div>
+                    {customer.phone && (
+                      <div className="flex items-center space-x-2">
+                        <PhoneIcon className="size-3 text-gray-400" />
+                        <span className="text-sm">{customer.phone}</span>
+                        {customer.phoneVerified && (
+                          <CheckCircleIcon className="size-3 text-green-600" />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
+
+                <TableCell>
+                  <Badge className={getCustomerTypeColor(customer.type)}>
+                    {customer.type}
+                  </Badge>
+                </TableCell>
+
+                <TableCell className="hidden lg:table-cell">
+                  <div className="flex items-center space-x-1">
+                    <MapPinIcon className="size-3 text-gray-400" />
+                    <span className="text-sm">
+                      {customer.state && customer.lga
+                        ? `${customer.lga}, ${customer.state}`
+                        : customer.state || 'Not specified'
+                      }
+                    </span>
+                  </div>
+                </TableCell>
+
+                <TableCell className="hidden sm:table-cell">
+                  <div>
+                    <p className="font-medium">{customer.totalOrders} orders</p>
+                    <p className="text-sm text-gray-600">
+                      {formatCurrency(customer.totalSpent)}
+                    </p>
+                    {customer.lastOrderDate && (
+                      <p className="text-xs text-gray-500">
+                        Last: {new Date(customer.lastOrderDate).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                </TableCell>
+
+                <TableCell>
+                  <div className="space-y-1">
+                    <Badge className={getVerificationStatusColor(customer.verificationStatus)}>
+                      {customer.verificationStatus}
+                    </Badge>
+                    {customer.verificationStatus === 'VERIFIED' && customer.verifiedAt && (
+                      <p className="text-xs text-gray-500">on {new Date(customer.verifiedAt).toLocaleDateString()}</p>
+                    )}
+                    {customer.verificationStatus === 'REJECTED' && customer.rejectionReason && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger className="inline-flex items-center text-xs text-red-600">
+                            <AlertCircleIcon className="size-3 mr-1" /> Reason
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs whitespace-pre-wrap">{customer.rejectionReason}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    {customer.verificationStatus === 'PENDING' && (
+                      <div className="space-x-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => handleVerification(customer.id, 'VERIFIED')}
+                          disabled={verifyMutation.isPending}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => handleVerification(customer.id, 'REJECTED')}
+                          disabled={verifyMutation.isPending}
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
+
+                <TableCell>
+                  <div className="flex items-center space-x-1">
+                    <Link href={`/app/admin/customers/${customer.id}`}>
+                      <Button variant="outline" size="sm">
+                        <EyeIcon className="size-4" />
+                      </Button>
+                    </Link>
+
+                    <Link href={`/app/admin/customers/${customer.id}/edit`}>
+                      <Button variant="outline" size="sm">
+                        <EditIcon className="size-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  })();
+
   return (
-    <div className={cn('space-y-6', className)}>
+    <div className={cn('space-y-5 w-full mx-auto', className)}>
       {/* Customer Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         <Card className="p-6">
           <div className="flex items-center space-x-3">
             <UsersIcon className="size-8 text-blue-600" />
@@ -409,39 +678,55 @@ export function CustomersTable({ className }: CustomersTableProps) {
       </div>
 
       {/* Search and Filters */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-4 flex-1">
-            <div className="relative flex-1 max-w-md">
-              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400" />
-              <Input
-                placeholder="Search customers, emails, business names..."
-                value={filters.search}
-                onChange={(e) => updateFilter('search', e.target.value)}
-                className="pl-10"
-              />
+      <Card className="p-0">
+        <div className="sticky top-16 z-20 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-6 py-4 border-b">
+          <div className="flex flex-wrap items-center gap-3 justify-between">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              <div className="relative flex-1 min-w-[220px] max-w-md">
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+                <Input
+                  placeholder="Search customers, emails, business names..."
+                  value={filters.search}
+                  onChange={(e) => updateFilter('search', e.target.value)}
+                  className="pl-10 w-full"
+                />
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => updateFilter('showFilters', !filters.showFilters)}
+                aria-expanded={filters.showFilters}
+                aria-controls="admin-customers-advanced-filters"
+              >
+                <FilterIcon className="size-4 mr-2" />
+                Filters
+              </Button>
             </div>
-            
-            <Button
-              variant="outline"
-              onClick={() => updateFilter('showFilters', !filters.showFilters)}
-            >
-              <FilterIcon className="size-4 mr-2" />
-              Filters
-            </Button>
-          </div>
 
-          <div className="flex items-center space-x-2">
-            <Button onClick={handleRefresh} size="sm" disabled={isLoading}>
-              <RefreshCwIcon className={cn("size-4 mr-2", isLoading && "animate-spin")} />
-              Refresh
-            </Button>
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-1 mr-2">
+                <Button size="sm" variant={listView ? 'default' : 'outline'} aria-pressed={listView} onClick={() => setListView(true)}>
+                  List
+                </Button>
+                <Button size="sm" variant={!listView ? 'default' : 'outline'} aria-pressed={!listView} onClick={() => setListView(false)}>
+                  Table
+                </Button>
+              </div>
+              <Button onClick={handleRefresh} size="sm" disabled={isLoading}>
+                <RefreshCwIcon className={cn("size-4 mr-2", isLoading && "animate-spin")} />
+                Refresh
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Advanced Filters */}
-        {filters.showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
+        <div
+          id="admin-customers-advanced-filters"
+          className={cn(
+            'px-4 sm:px-6 transition-all duration-300 overflow-hidden',
+            filters.showFilters ? 'py-4 border-b max-h-96 md:max-h-[400px]' : 'max-h-0'
+          )}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <Label>Customer Type</Label>
               <Select value={filters.type} onValueChange={(value) => updateFilter('type', value)}>
@@ -481,8 +766,10 @@ export function CustomersTable({ className }: CustomersTableProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All States</SelectItem>
-                  {NIGERIAN_STATES.map(state => (
-                    <SelectItem key={state} value={state}>{state}</SelectItem>
+                  {NIGERIAN_STATES.map((state) => (
+                    <SelectItem key={state} value={state}>
+                      {state}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -494,11 +781,11 @@ export function CustomersTable({ className }: CustomersTableProps) {
               </Button>
             </div>
           </div>
-        )}
+        </div>
       </Card>
 
       {/* Customers Table */}
-      <Card>
+      <Card className="overflow-hidden">
         <div className="p-6 border-b">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">
@@ -510,170 +797,43 @@ export function CustomersTable({ className }: CustomersTableProps) {
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="p-6">
-            <div className="space-y-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="flex items-center space-x-4">
-                    <div className="h-4 bg-gray-300 rounded w-32"></div>
-                    <div className="h-4 bg-gray-300 rounded w-24"></div>
-                    <div className="h-4 bg-gray-300 rounded w-16"></div>
-                    <div className="h-4 bg-gray-300 rounded w-20"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : filteredCustomers.length === 0 ? (
-          <div className="p-6 text-center">
-            <UsersIcon className="size-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900">No customers found</h3>
-            <p className="text-gray-600">
-              {filters.search || filters.type !== 'all' || filters.verificationStatus !== 'all' || filters.state !== 'all'
-                ? 'Try adjusting your search criteria or filters'
-                : 'No customers have registered yet'}
-            </p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Customer</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Orders</TableHead>
-                <TableHead>Verification</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredCustomers.map((customer) => (
-                <TableRow key={customer.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{customer.name}</p>
-                      {customer.businessName && (
-                        <p className="text-sm text-gray-600">{customer.businessName}</p>
-                      )}
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Badge variant="secondary">
-                          {getCustomerValue(customer)}
-                        </Badge>
-                        {!customer.isActive && (
-                          <Badge variant="destructive">
-                            Inactive
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="flex items-center space-x-2">
-                        <MailIcon className="size-3 text-gray-400" />
-                        <span className="text-sm">{customer.email}</span>
-                        {customer.emailVerified && (
-                          <CheckCircleIcon className="size-3 text-green-600" />
-                        )}
-                      </div>
-                      {customer.phone && (
-                        <div className="flex items-center space-x-2">
-                          <PhoneIcon className="size-3 text-gray-400" />
-                          <span className="text-sm">{customer.phone}</span>
-                          {customer.phoneVerified && (
-                            <CheckCircleIcon className="size-3 text-green-600" />
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <Badge className={getCustomerTypeColor(customer.type)}>
-                      {customer.type}
-                    </Badge>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div className="flex items-center space-x-1">
-                      <MapPinIcon className="size-3 text-gray-400" />
-                      <span className="text-sm">
-                        {customer.state && customer.lga 
-                          ? `${customer.lga}, ${customer.state}`
-                          : customer.state || 'Not specified'
-                        }
-                      </span>
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{customer.totalOrders} orders</p>
-                      <p className="text-sm text-gray-600">
-                        {formatCurrency(customer.totalSpent)}
-                      </p>
-                      {customer.lastOrderDate && (
-                        <p className="text-xs text-gray-500">
-                          Last: {new Date(customer.lastOrderDate).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div className="space-y-1">
-                      <Badge className={getVerificationStatusColor(customer.verificationStatus)}>
-                        {customer.verificationStatus}
-                      </Badge>
-                      {customer.verificationStatus === 'PENDING' && (
-                        <div className="space-x-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-6 px-2 text-xs"
-                            onClick={() => handleVerification(customer.id, 'VERIFIED')}
-                            disabled={verifyMutation.isPending}
-                          >
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-6 px-2 text-xs"
-                            onClick={() => handleVerification(customer.id, 'REJECTED')}
-                            disabled={verifyMutation.isPending}
-                          >
-                            Reject
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div className="flex items-center space-x-1">
-                      <Link href={`/app/admin/customers/${customer.id}`}>
-                        <Button variant="outline" size="sm">
-                          <EyeIcon className="size-4" />
-                        </Button>
-                      </Link>
-                      
-                      <Link href={`/app/admin/customers/${customer.id}/edit`}>
-                        <Button variant="outline" size="sm">
-                          <EditIcon className="size-4" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+        {content}
       </Card>
+
+      {/* Reject Reason Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject customer verification</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label htmlFor="rejection-reason">Reason (optional)</Label>
+            <Textarea
+              id="rejection-reason"
+              placeholder="Provide a reason (the customer may see this)."
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!rejectingCustomerId) return;
+                verifyMutation.mutate({ customerId: rejectingCustomerId, verificationStatus: 'REJECTED', rejectionReason });
+                setRejectDialogOpen(false);
+                setRejectingCustomerId(null);
+                setRejectionReason('');
+              }}
+              disabled={verifyMutation.isPending}
+            >
+              Reject
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

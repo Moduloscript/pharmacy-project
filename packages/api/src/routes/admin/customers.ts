@@ -6,7 +6,8 @@ import { authMiddleware } from '../../middleware/auth';
 import { getSignedUrl } from '@repo/storage';
 import { config } from '@repo/config';
 
-const customersRouter = new Hono();
+import type { AppBindings } from '../../types/context';
+const customersRouter = new Hono<AppBindings>();
 
 // Apply auth middleware to all routes
 customersRouter.use('*', authMiddleware);
@@ -49,11 +50,11 @@ customersRouter.get('/', zValidator('query', customersQuerySchema), async (c) =>
     const where: any = {};
     
     if (type !== 'all') {
-      where.type = type.toUpperCase();
+      where.customerType = type.toUpperCase();
     }
     
     if (verificationStatus !== 'all') {
-      where.businessVerificationStatus = verificationStatus.toUpperCase();
+      where.verificationStatus = verificationStatus.toUpperCase();
     }
     
     // Add search functionality
@@ -101,7 +102,7 @@ customersRouter.get('/', zValidator('query', customersQuerySchema), async (c) =>
       userName: customer.user.name,
       userEmail: customer.user.email,
       emailVerified: customer.user.emailVerified,
-      type: customer.type,
+      type: customer.customerType,
       phone: customer.phone,
       // Personal information
       address: customer.address,
@@ -118,11 +119,11 @@ customersRouter.get('/', zValidator('query', customersQuerySchema), async (c) =>
       establishedYear: customer.establishedYear,
       description: customer.description,
       // Verification details
-      businessVerificationStatus: customer.businessVerificationStatus,
+      verificationStatus: customer.verificationStatus,
       verificationDocuments: customer.verificationDocuments,
+      rejectionReason: (customer as any).rejectionReason ?? null,
+      verifiedAt: (customer as any).verifiedAt?.toISOString() || null,
       creditLimit: customer.creditLimit ? Number(customer.creditLimit) : null,
-      rejectionReason: customer.rejectionReason,
-      verifiedAt: customer.verifiedAt?.toISOString() || null,
       // Timestamps
       createdAt: customer.createdAt.toISOString(),
       updatedAt: customer.updatedAt.toISOString(),
@@ -164,7 +165,7 @@ customersRouter.get('/:id', async (c) => {
           select: {
             id: true,
             orderNumber: true,
-            totalAmount: true,
+            total: true,
             status: true,
             createdAt: true,
           },
@@ -207,19 +208,24 @@ customersRouter.put('/:id/verification', zValidator('json', updateVerificationSc
     
     // Prepare update data
     const updateData: any = {
-      businessVerificationStatus: status,
-      updatedAt: new Date(),
+      verificationStatus: status,
     };
     
     if (status === 'VERIFIED') {
       updateData.verifiedAt = new Date();
+      updateData.rejectionReason = null;
       if (creditLimit) {
         updateData.creditLimit = creditLimit;
       }
-    }
-    
-    if (status === 'REJECTED' && rejectionReason) {
-      updateData.rejectionReason = rejectionReason;
+    } else if (status === 'REJECTED') {
+      updateData.verifiedAt = null;
+      if (rejectionReason) {
+        updateData.rejectionReason = rejectionReason;
+      }
+    } else {
+      // PENDING or EXPIRED
+      updateData.verifiedAt = null;
+      updateData.rejectionReason = null;
     }
     
     const updatedCustomer = await db.customer.update({
@@ -295,7 +301,7 @@ customersRouter.get('/stats', async (c) => {
     
     // Get customers by type
     const customersByType = await db.customer.groupBy({
-      by: ['type'],
+      by: ['customerType'],
       _count: {
         id: true
       }
@@ -303,7 +309,7 @@ customersRouter.get('/stats', async (c) => {
     
     // Get customers by verification status
     const customersByStatus = await db.customer.groupBy({
-      by: ['businessVerificationStatus'],
+      by: ['verificationStatus'],
       _count: {
         id: true
       }
@@ -324,13 +330,13 @@ customersRouter.get('/stats', async (c) => {
     
     // Format type stats
     const typeStats = customersByType.reduce((acc, item) => {
-      acc[item.type.toLowerCase()] = item._count.id;
+      acc[item.customerType.toLowerCase()] = item._count.id;
       return acc;
     }, {} as Record<string, number>);
     
     // Format status stats  
     const statusStats = customersByStatus.reduce((acc, item) => {
-      acc[item.businessVerificationStatus.toLowerCase()] = item._count.id;
+      acc[item.verificationStatus.toLowerCase()] = item._count.id;
       return acc;
     }, {} as Record<string, number>);
     

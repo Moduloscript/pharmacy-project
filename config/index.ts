@@ -90,7 +90,7 @@ export const config = {
 			// whether the saas part should be enabled (otherwise all routes will be redirect to the marketing page)
 			enabled: true,
 			// whether the sidebar layout should be used
-			useSidebarLayout: true,
+			useSidebarLayout: false,
 		},
 		// the marketing part of the application
 		marketing: {

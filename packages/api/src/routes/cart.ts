@@ -5,7 +5,8 @@ import { db } from '@repo/database'
 import { getSession } from '@repo/auth/lib/server'
 import { createMiddleware } from 'hono/factory'
 
-const app = new Hono()
+import type { AppBindings } from '../types/context'
+const app = new Hono<AppBindings>()
 
 // Authentication middleware
 const authMiddleware = createMiddleware(async (c, next) => {

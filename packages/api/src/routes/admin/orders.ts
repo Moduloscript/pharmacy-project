@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { db } from '@repo/database';
 import { authMiddleware } from '../../middleware/auth';
 
-const ordersRouter = new Hono();
+import type { AppBindings } from '../../types/context';
+const ordersRouter = new Hono<AppBindings>();
 
 // Apply auth middleware to all routes
 ordersRouter.use('*', authMiddleware);
@@ -172,6 +173,7 @@ ordersRouter.put('/:id/status', zValidator('json', updateStatusSchema), async (c
   try {
     const orderId = c.req.param('id');
     const { status } = c.req.valid('json');
+    const newStatus = status as keyof typeof validTransitions;
     
     const order = await db.order.findUnique({
       where: { id: orderId },
@@ -182,7 +184,8 @@ ordersRouter.put('/:id/status', zValidator('json', updateStatusSchema), async (c
     }
     
     // Validate status transition (optional - add business logic)
-    const validTransitions = {
+    type OrderStatus = 'RECEIVED' | 'PROCESSING' | 'READY' | 'DISPATCHED' | 'DELIVERED' | 'CANCELLED';
+    const validTransitions: Record<OrderStatus, OrderStatus[]> = {
       RECEIVED: ['PROCESSING', 'CANCELLED'],
       PROCESSING: ['READY', 'CANCELLED'],
       READY: ['DISPATCHED'],
@@ -192,14 +195,14 @@ ordersRouter.put('/:id/status', zValidator('json', updateStatusSchema), async (c
     };
     
     const currentStatus = order.status as keyof typeof validTransitions;
-    if (!validTransitions[currentStatus].includes(status) && status !== currentStatus) {
+    if (!validTransitions[currentStatus].includes(newStatus) && newStatus !== currentStatus) {
       return c.json({ error: `Cannot transition from ${currentStatus} to ${status}` }, 400);
     }
     
     const updatedOrder = await db.order.update({
       where: { id: orderId },
       data: {
-        status,
+        status: newStatus,
         updatedAt: new Date(),
       },
       include: {
@@ -228,6 +231,18 @@ ordersRouter.put('/:id/status', zValidator('json', updateStatusSchema), async (c
         }
       },
     });
+    // Enqueue delivery status update notification (non-blocking)
+    try {
+      const { notificationService } = await import('@repo/mail');
+      await notificationService.sendDeliveryUpdate({
+        id: updatedOrder.id,
+        orderNumber: updatedOrder.orderNumber,
+        customerId: updatedOrder.customer.id,
+        status: updatedOrder.status,
+      });
+    } catch (notifyErr) {
+      console.warn('Order status updated but failed to queue notification:', notifyErr);
+    }
     
     return c.json(updatedOrder);
   } catch (error) {

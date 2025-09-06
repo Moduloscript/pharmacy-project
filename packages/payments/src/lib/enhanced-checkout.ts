@@ -1,6 +1,6 @@
 import { createCheckoutLink as stripeCreateCheckoutLink } from '../../provider/stripe';
 import { getPaymentOrchestrator } from './payment-orchestrator';
-import { formatNaira, convertToNaira, isValidNigerianPhone } from './nigerian-utils';
+import { formatNaira, validateNigerianPhone } from './nigerian-utils';
 import type { CreateCheckoutLink, NigerianOrder } from '../../types';
 
 /**
@@ -53,7 +53,7 @@ async function createNigerianCheckoutFlow(options: Parameters<CreateCheckoutLink
     const nigerianOrder = await convertToNigerianOrder(options);
     
     // Initialize payment using the orchestrator
-    const result = await orchestrator.initializePayment(nigerianOrder);
+    const result = await orchestrator.processPayment(nigerianOrder);
     
     if (result.success && result.finalResult?.paymentUrl) {
       return result.finalResult.paymentUrl;

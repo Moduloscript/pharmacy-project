@@ -9,8 +9,9 @@ import {
   userNeedsCustomerProfile 
 } from '@repo/auth/lib/user';
 import { CustomerType, BusinessVerificationStatus } from '@prisma/client';
+import type { AppBindings } from '../types/context';
 
-const customersRouter = new Hono();
+const customersRouter = new Hono<AppBindings>();
 
 // Validation schemas
 const createCustomerProfileSchema = z.object({

@@ -216,6 +216,8 @@ model Customer {
   businessEmail         String?
   verificationStatus    BusinessVerificationStatus @default(PENDING)
   verificationDocuments String?
+  rejectionReason       String?
+  verifiedAt            DateTime?
   creditLimit           Decimal?                   @db.Decimal(10, 2)
   creditTermDays        Int?                       @default(30)
   createdAt             DateTime                   @default(now())
