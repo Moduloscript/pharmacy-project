@@ -2,6 +2,7 @@ import { webhookHandler as paymentsWebhookHandler, createEnhancedWebhookHandler 
 import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
 import crypto from "node:crypto";
+import { notificationWebhooksRouter } from "./notification-webhooks";
 
 const enhancedWebhookHandler = createEnhancedWebhookHandler();
 
@@ -21,6 +22,8 @@ function verifyMetaSignature(rawBody: string, signature: string | null, appSecre
 }
 
 export const webhooksRouter = new Hono()
+  // Notification webhooks (Termii SMS delivery status, etc.)
+  .route("/webhooks/notifications", notificationWebhooksRouter)
   // Payments webhook (existing)
   .post(
     "/webhooks/payments",

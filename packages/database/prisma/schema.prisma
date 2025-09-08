@@ -226,6 +226,8 @@ model Customer {
   user                  User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
   orders                Order[]
   payments              Payment[]
+  notificationPreferences NotificationPreferences?
+  notificationOptOuts   NotificationOptOut[]
 
   @@index([customerType])
   @@index([phone])
@@ -454,26 +456,64 @@ model InventoryMovement {
 }
 
 model Notification {
-  id              String    @id @default(cuid())
-  customerId      String?
-  orderId         String?
-  type            String
-  channel         String
-  recipient       String
-  subject         String?
-  message         String
-  status          String    @default("PENDING")
-  gatewayResponse String?
-  retryCount      Int       @default(0)
-  maxRetries      Int       @default(3)
-  createdAt       DateTime  @default(now())
-  sentAt          DateTime?
-  deliveredAt     DateTime?
+  id                 String    @id @default(cuid())
+  customerId         String?
+  orderId            String?
+  type               String
+  channel            String
+  recipient          String
+  subject            String?
+  message            String
+  status             String    @default("PENDING")
+  externalMessageId  String?   // Provider's message ID (e.g., Termii message_id)
+  gatewayResponse    String?
+  retryCount         Int       @default(0)
+  maxRetries         Int       @default(3)
+  idempotencyKey     String?   @unique
+  createdAt          DateTime  @default(now())
+  sentAt             DateTime?
+  deliveredAt        DateTime?
 
   @@index([channel])
   @@index([status])
   @@index([type])
+  @@index([externalMessageId])
+  @@index([recipient, type, channel])
   @@map("notification")
+}
+
+model NotificationPreferences {
+  id               String   @id @default(cuid())
+  customerId       String   @unique
+  smsEnabled       Boolean  @default(true)
+  whatsappEnabled  Boolean  @default(true)
+  emailEnabled     Boolean  @default(true)
+  orderUpdates     Boolean  @default(true)
+  paymentUpdates   Boolean  @default(true)
+  deliveryUpdates  Boolean  @default(true)
+  promotions       Boolean  @default(false)
+  lowStockAlerts   Boolean  @default(false) // For admin users
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  customer         Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("notification_preferences")
+}
+
+model NotificationOptOut {
+  id         String                   @id @default(cuid())
+  customerId String
+  channel    NotificationChannel
+  type       NotificationOptOutType?
+  reason     String?
+  createdAt  DateTime                 @default(now())
+  customer   Customer                 @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, channel, type])
+  @@index([customerId])
+  @@index([channel])
+  @@map("notification_opt_out")
 }
 
 model Document {
@@ -571,4 +611,20 @@ enum BusinessVerificationStatus {
   VERIFIED
   REJECTED
   EXPIRED
+}
+
+enum NotificationChannel {
+  SMS
+  WHATSAPP
+  EMAIL
+  PUSH
+}
+
+enum NotificationOptOutType {
+  ORDER_UPDATES
+  PAYMENT_UPDATES
+  DELIVERY_UPDATES
+  PROMOTIONS
+  LOW_STOCK_ALERTS
+  ALL
 }

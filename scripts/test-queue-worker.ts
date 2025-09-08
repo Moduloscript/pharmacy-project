@@ -1,3 +1,11 @@
+/**
+ * SECURITY NOTE: This test script uses environment variables for sensitive data.
+ * Set the following environment variables before running:
+ * - TEST_PHONE_NUMBER (your test phone number, e.g., +234XXXXXXXXX)
+ * - TERMII_API_KEY or SMS_API_KEY (your Termii API key)
+ * - TERMII_WEBHOOK_SECRET (webhook signature secret)
+ */
+
 #!/usr/bin/env node
 
 /**
@@ -103,7 +111,7 @@ async function testQueueWorker() {
       notificationId: 'test-queue-' + Date.now(),
       type: 'order_confirmation' as const,
       channel: 'sms' as const,
-      recipient: '+2348122931706',
+      recipient: process.env.TEST_PHONE_NUMBER || '+234XXXXXXXXX',
       message: 'Queue worker test message - this will be processed when worker runs',
     };
     

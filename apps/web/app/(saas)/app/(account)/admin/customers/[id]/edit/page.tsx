@@ -5,14 +5,15 @@ import { redirect } from 'next/navigation';
 import { CustomerEditView } from '@saas/admin/components/CustomerEditView';
 
 interface CustomerEditPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({
   params,
 }: CustomerEditPageProps): Promise<Metadata> {
+  const { id } = await params;
   return {
     title: `Edit Customer - BenPharm Admin`,
     description: 'Edit customer information and business details.',
@@ -22,6 +23,7 @@ export async function generateMetadata({
 export default async function CustomerEditPage({
   params,
 }: CustomerEditPageProps) {
+  const { id } = await params;
   // Ensure user is authenticated and has admin role
   const session = await getSession();
   
@@ -34,9 +36,9 @@ export default async function CustomerEditPage({
   }
 
   // Validate the customer ID format (basic check)
-  if (!params.id || params.id.length < 10) {
+  if (!id || id.length < 10) {
     notFound();
   }
 
-  return <CustomerEditView customerId={params.id} />;
+  return <CustomerEditView customerId={id} />;
 }

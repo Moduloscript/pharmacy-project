@@ -3,8 +3,22 @@ import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { db } from '@repo/database';
 import { NotificationService, notificationMonitor } from '@repo/mail';
-import { Queue } from '@repo/queue';
+import { addNotificationJob } from '@repo/queue';
+import type { NotificationJobData } from '@repo/queue';
 import type { AppBindings } from '../types/context';
+import { 
+  generateIdempotencyKey, 
+  extractIdempotencyKeyFromHeaders,
+  createIdempotentNotification,
+  checkIdempotency,
+  normalizeClientIdempotencyKey
+} from '../utils/notification-idempotency';
+import { 
+  createRateLimitMiddleware,
+  checkNotificationRateLimit,
+  RateLimitConfigs,
+  getRateLimitStats
+} from '../utils/notification-rate-limiter';
 
 /**
  * Enhanced Notification Management API Routes for BenPharm
@@ -26,6 +40,7 @@ const sendNotificationSchema = z.object({
   template: z.string().optional(),
   priority: z.enum(['low', 'normal', 'high']).default('normal'),
   scheduledAt: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
+  idempotencyKey: z.string().min(8).max(128).optional(),
 });
 
 const bulkNotificationSchema = z.object({
@@ -105,13 +120,11 @@ function maskRecipient(recipient: string): string {
 
 // Initialize services (in a real app, these would be injected)
 let notificationService: NotificationService;
-let queue: Queue;
 
 // Initialize function to be called when setting up the router
 export async function initializeNotificationServices() {
   try {
     notificationService = new NotificationService();
-    queue = new Queue();
     console.log('📦 Notification services initialized successfully');
   } catch (error) {
     console.error('❌ Failed to initialize notification services:', error);
@@ -141,6 +154,26 @@ export const notificationsEnhancedRouter = new Hono<AppBindings>()
         
         console.log(`📤 API: Sending ${validatedData.channel} notification to ${validatedData.recipient}`);
         
+        // Check rate limits
+        const rateLimitResult = checkNotificationRateLimit(c, validatedData.recipient, validatedData.type);
+        if (!rateLimitResult.allowed) {
+          // Set rate limit headers
+          c.header('X-RateLimit-Limit', '100');
+          c.header('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
+          c.header('X-RateLimit-Reset', new Date(rateLimitResult.resetTime).toISOString());
+          
+          const message = rateLimitResult.blocked 
+            ? 'Notification sending blocked due to rate limit violation'
+            : 'Rate limit exceeded for notification sending';
+            
+          return c.json({
+            success: false,
+            error: message,
+            code: rateLimitResult.blocked ? 'RATE_LIMIT_BLOCKED' : 'RATE_LIMIT_EXCEEDED',
+            retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+          }, 429);
+        }
+        
         // Check if recipient has opted out
         const isOptedOut = await checkOptOutStatus(validatedData.recipient, validatedData.channel);
         if (isOptedOut) {
@@ -151,21 +184,70 @@ export const notificationsEnhancedRouter = new Hono<AppBindings>()
           }, 400);
         }
         
-        // Create notification record
-        const notification = await db.notification.create({
-          data: {
+        // Generate or extract idempotency key
+        let idempotencyKey = validatedData.idempotencyKey || extractIdempotencyKeyFromHeaders(c.req.header());
+        if (!idempotencyKey) {
+          // Generate deterministic idempotency key based on notification content
+          idempotencyKey = generateIdempotencyKey({
             recipient: validatedData.recipient,
-            channel: validatedData.channel,
             type: validatedData.type,
-            template: validatedData.template,
-            data: validatedData.data || {},
-            status: 'PENDING',
-            priority: validatedData.priority,
-            scheduledAt: validatedData.scheduledAt,
-            attempts: 0,
-            maxAttempts: 3,
+            channel: validatedData.channel,
+            templateData: validatedData.data
+          });
+        } else if (validatedData.idempotencyKey) {
+          // Normalize client-provided idempotency key
+          try {
+            idempotencyKey = normalizeClientIdempotencyKey(validatedData.idempotencyKey);
+          } catch (error) {
+            return c.json({
+              success: false,
+              error: 'Invalid idempotency key format',
+              details: error.message
+            }, 400);
           }
+        }
+        
+        // Check for existing notification with same idempotency key
+        const idempotencyCheck = await checkIdempotency(idempotencyKey);
+        if (idempotencyCheck.isDuplicate) {
+          console.log(`🔄 Duplicate notification detected with idempotency key: ${idempotencyKey}`);
+          return c.json({
+            success: true,
+            data: {
+              notificationId: idempotencyCheck.existingNotificationId,
+              status: 'DUPLICATE',
+              message: 'Notification already exists with this idempotency key'
+            },
+            code: 'DUPLICATE_REQUEST'
+          }, 200);
+        }
+        
+        // Create notification record with idempotency protection
+        const notificationResult = await createIdempotentNotification({
+          recipient: validatedData.recipient,
+          channel: validatedData.channel,
+          type: validatedData.type,
+          subject: validatedData.template,
+          message: '', // Will be populated by template
+          status: 'PENDING',
+          idempotencyKey
         });
+        
+        const notification = notificationResult.notification;
+        
+        // If this was a duplicate (race condition), return early
+        if (notificationResult.isDuplicate) {
+          console.log(`🔄 Race condition duplicate detected for key: ${idempotencyKey}`);
+          return c.json({
+            success: true,
+            data: {
+              notificationId: notification.id,
+              status: 'DUPLICATE',
+              message: 'Notification already exists (race condition)'
+            },
+            code: 'DUPLICATE_REQUEST'
+          }, 200);
+        }
         
         // Queue the notification
         const queueOptions: any = {
@@ -180,10 +262,16 @@ export const notificationsEnhancedRouter = new Hono<AppBindings>()
           console.log(`🚀 Queued notification ${notification.id} for immediate delivery`);
         }
         
-        await queue.add('send-notification', 
-          { notificationId: notification.id },
-          queueOptions
-        );
+const jobData: NotificationJobData = {
+          notificationId: notification.id,
+          type: validatedData.type as any,
+          channel: validatedData.channel as any,
+          recipient: validatedData.recipient,
+          template: validatedData.template,
+          templateParams: validatedData.data,
+          priority: validatedData.priority as any,
+        };
+        await addNotificationJob(validatedData.type, jobData, queueOptions);
         
         return c.json({
           success: true,
@@ -209,6 +297,7 @@ export const notificationsEnhancedRouter = new Hono<AppBindings>()
   // Send bulk notifications
   .post(
     '/send/bulk',
+    createRateLimitMiddleware(RateLimitConfigs.BULK_NOTIFICATIONS),
     zValidator('json', bulkNotificationSchema),
     async (c) => {
       try {
@@ -255,10 +344,16 @@ export const notificationsEnhancedRouter = new Hono<AppBindings>()
               queueOptions.delay = notificationData.scheduledAt.getTime() - Date.now();
             }
             
-            await queue.add('send-notification', 
-              { notificationId: notification.id },
-              queueOptions
-            );
+const jobData: NotificationJobData = {
+              notificationId: notification.id,
+              type: notificationData.type as any,
+              channel: notificationData.channel as any,
+              recipient: notificationData.recipient,
+              template: notificationData.template,
+              templateParams: notificationData.data,
+              priority: notificationData.priority as any,
+            };
+            await addNotificationJob(notificationData.type, jobData, queueOptions);
             
             results.push({
               notificationId: notification.id,
@@ -309,13 +404,12 @@ export const notificationsEnhancedRouter = new Hono<AppBindings>()
           channel: true,
           type: true,
           status: true,
-          attempts: true,
-          maxAttempts: true,
+          // attempts / maxAttempts / scheduledAt may not exist in current schema; omit for compatibility
           createdAt: true,
           sentAt: true,
-          failedAt: true,
-          errorMessage: true,
-          scheduledAt: true,
+          deliveredAt: true,
+          gatewayResponse: true,
+          externalMessageId: true,
         }
       });
       
@@ -370,7 +464,9 @@ export const notificationsEnhancedRouter = new Hono<AppBindings>()
               status: true,
               createdAt: true,
               sentAt: true,
-              errorMessage: true,
+              deliveredAt: true,
+              externalMessageId: true,
+              gatewayResponse: true,
             }
           }),
           db.notification.count({ where })
@@ -597,4 +693,26 @@ export const notificationsEnhancedRouter = new Hono<AppBindings>()
         }, 500);
       }
     }
-  );
+  )
+  
+  // Admin: Get rate limit statistics
+  .get('/admin/rate-limits/stats', adminAuthMiddleware, async (c) => {
+    try {
+      const stats = getRateLimitStats();
+      
+      return c.json({
+        success: true,
+        data: {
+          rateLimitStats: stats,
+          timestamp: new Date().toISOString()
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Error getting rate limit stats:', error);
+      return c.json({
+        success: false,
+        error: 'Failed to get rate limit statistics'
+      }, 500);
+    }
+  });

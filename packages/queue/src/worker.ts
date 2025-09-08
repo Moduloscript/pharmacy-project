@@ -43,13 +43,20 @@ export function createNotificationWorker(options: QueueOptions = {}): Worker {
 				const result = await provider.send(data);
 
 				if (result.success) {
+					// Extract external message ID from provider response
+					const externalMessageId = result.providerMessageId || 
+						(result.providerResponse?.message_id) || 
+						(result.providerResponse?.messageId) ||
+						(result.providerResponse?.id);
+					
 					// Update notification as successful
 					await updateNotificationStatus(data.notificationId, 'SENT', {
+						externalMessageId,
 						gatewayResponse: JSON.stringify(result.providerResponse),
 						sentAt: new Date()
 					});
 
-					console.log(`✅ Sent ${data.channel} notification via ${provider.name}`);
+					console.log(`✅ Sent ${data.channel} notification via ${provider.name}${externalMessageId ? ` (ID: ${externalMessageId})` : ''}`);
 					return result;
 				} else {
 					// Handle failure
@@ -119,6 +126,7 @@ async function updateNotificationStatus(
 	notificationId: string,
 	status: 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED',
 	updates: {
+		externalMessageId?: string;
 		gatewayResponse?: string;
 		sentAt?: Date;
 		deliveredAt?: Date;

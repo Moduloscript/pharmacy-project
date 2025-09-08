@@ -1,3 +1,11 @@
+/**
+ * SECURITY NOTE: This test script uses environment variables for sensitive data.
+ * Set the following environment variables before running:
+ * - TEST_PHONE_NUMBER (your test phone number, e.g., +234XXXXXXXXX)
+ * - TERMII_API_KEY or SMS_API_KEY (your Termii API key)
+ * - TERMII_WEBHOOK_SECRET (webhook signature secret)
+ */
+
 #!/usr/bin/env node
 
 /**
@@ -23,7 +31,7 @@ const REAL_CONFIG = {
   baseUrl: process.env.SMS_BASE_URL || 'https://api.ng.termii.com',
   
   // Test phone number - set this in environment or update below
-  testNumber: process.env.TEST_PHONE_NUMBER || '+2348123456789', // Update with your number
+  testNumber: process.env.TEST_PHONE_NUMBER || '+234XXXXXXXXX', // Update with your number
   
   // Additional test numbers if available
   adminNumbers: (process.env.ADMIN_PHONE_NUMBERS || '').split(',').filter(n => n.trim()),
@@ -84,9 +92,9 @@ async function testTermiiProvider() {
     process.exit(1);
   }
   
-  if (REAL_CONFIG.testNumber === '+2348123456789') {
+  if (REAL_CONFIG.testNumber === '+234XXXXXXXXX') {
     warning('Using default test number. Set TEST_PHONE_NUMBER environment variable.');
-    warning('Example: export TEST_PHONE_NUMBER="+2348012345678"');
+    warning('Example: export TEST_PHONE_NUMBER="+234XXXXXXXXX"');
   }
   
   info(`API Key: ${REAL_CONFIG.apiKey.substring(0, 10)}...${REAL_CONFIG.apiKey.slice(-4)}`);
