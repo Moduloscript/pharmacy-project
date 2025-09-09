@@ -66,3 +66,8 @@ node_modules/
 
 # ngrok development files
 .ngrok-urls.json
+ngrok-temp.yml
+
+# Sensitive documentation - DO NOT COMMIT
+docs/
+*.md
