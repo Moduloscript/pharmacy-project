@@ -8,6 +8,7 @@ import { Badge } from '@ui/components/badge';
 import { Input } from '@ui/components/input';
 import { Label } from '@ui/components/label';
 import { Textarea } from '@ui/components/textarea';
+import { Alert, AlertDescription } from '@ui/components/alert';
 import { RadioGroup, RadioGroupItem } from '@ui/components/radio-group';
 import { Checkbox } from '@ui/components/checkbox';
 import { cn } from '@ui/lib';
@@ -21,7 +22,10 @@ import {
   FileTextIcon,
   ShieldCheckIcon,
   LoaderIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  Upload,
+  X,
+  AlertCircle
 } from 'lucide-react';
 import { 
   cartSummaryAtom,
@@ -91,6 +95,14 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
 
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [prescriptionFiles, setPrescriptionFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<Array<{
+    file: File;
+    progress: number;
+    status: 'uploading' | 'success' | 'error';
+    error?: string;
+  }>>([]);
+  const [filePreviewUrls, setFilePreviewUrls] = useState<string[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   const handleShippingNext = () => {
     // Validate shipping form
@@ -145,15 +157,30 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
         prescriptionFiles: prescriptionFiles.length > 0 ? prescriptionFiles : undefined
       };
 
-      // Process checkout
+      // Process checkout (without prescription files - they'll be uploaded separately)
+      const checkoutDataWithoutFiles = {
+        ...checkoutData,
+        prescriptionFiles: undefined // Don't send files with order creation
+      };
+      
       const result: CheckoutResult = await CheckoutService.processCheckout(
         cartItems,
-        checkoutData,
+        checkoutDataWithoutFiles,
         cartSummary
       );
 
       if (result.success && result.order) {
         setOrderId(result.order.id);
+        
+        // Handle prescription upload if needed
+        if (prescriptionFiles.length > 0 && prescriptionItems.length > 0) {
+          // Store order ID for prescription upload
+          sessionStorage.setItem('pendingPrescriptionOrderId', result.order.id);
+          sessionStorage.setItem('pendingPrescriptionFiles', JSON.stringify(
+            prescriptionFiles.map(f => ({ name: f.name, size: f.size }))
+          ));
+        }
+        
         setOrderComplete(true);
         clearCart();
         cartToast.showSuccess('Order placed successfully!');
@@ -178,16 +205,85 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
     }
   };
 
-  const handlePrescriptionUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle prescription file upload with progress tracking
+  const handlePrescriptionUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    setUploadingFiles(true);
+    const newUploadProgress: typeof uploadProgress = [];
+    const newPreviewUrls: string[] = [...filePreviewUrls];
+
+    // Add files to upload progress
+    for (const file of files) {
+      // Validate file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        cartToast.showError(`File ${file.name} exceeds 10MB limit`);
+        continue;
+      }
+
+      // Generate preview for images
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const url = e.target?.result as string;
+          newPreviewUrls.push(url);
+          setFilePreviewUrls([...newPreviewUrls]);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        newPreviewUrls.push('');
+      }
+
+      newUploadProgress.push({
+        file,
+        progress: 0,
+        status: 'uploading'
+      });
+    }
+
+    setUploadProgress(newUploadProgress);
+    
+    // Simulate upload progress for now
+    // In actual implementation, this would track real upload progress
+    for (let i = 0; i < newUploadProgress.length; i++) {
+      const progressItem = newUploadProgress[i];
+      
+      // Simulate progress
+      const interval = setInterval(() => {
+        setUploadProgress(prev => {
+          const updated = [...prev];
+          if (updated[i] && updated[i].status === 'uploading') {
+            updated[i].progress = Math.min(updated[i].progress + 10, 100);
+            if (updated[i].progress === 100) {
+              updated[i].status = 'success';
+              clearInterval(interval);
+            }
+          }
+          return updated;
+        });
+      }, 200);
+    }
+
+    // Add files to prescription files list
     setPrescriptionFiles(prev => [...prev, ...files]);
+    
+    // Clear upload progress after success
+    setTimeout(() => {
+      setUploadProgress([]);
+      setUploadingFiles(false);
+    }, 2000);
+    
+    cartToast.showInfo('Prescriptions will be uploaded after order is placed');
   };
 
   const removePrescriptionFile = (index: number) => {
     setPrescriptionFiles(prev => prev.filter((_, i) => i !== index));
+    setFilePreviewUrls(prev => prev.filter((_, i) => i !== index));
   };
 
-  const prescriptionItems = cartSummary.items.filter(item => item.requiresPrescription);
+  // Check if cart has prescription items
+  const prescriptionItems = cartItems.filter(item => item.product?.requiresPrescription);
 
   if (cartSummary.isEmpty) {
     return (
@@ -205,6 +301,9 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
   }
 
   if (orderComplete) {
+    // Check if prescriptions need to be uploaded
+    const hasPendingPrescriptions = sessionStorage.getItem('pendingPrescriptionOrderId') === orderId;
+    
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="p-8 text-center max-w-md">
@@ -213,10 +312,26 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
 <p className="text-muted-foreground mb-4">
             Your order {orderId} has been placed and is being processed.
           </p>
+          
+          {hasPendingPrescriptions && (
+            <Alert className="mb-4 text-left">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Your order contains items that require prescriptions. Please upload them to complete your order.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <div className="space-y-2">
-            <Link href="/app/orders">
-              <Button className="w-full">View Orders</Button>
-            </Link>
+            {hasPendingPrescriptions ? (
+              <Link href={`/app/orders/${orderId}#prescription-upload`}>
+                <Button className="w-full">Upload Prescriptions</Button>
+              </Link>
+            ) : (
+              <Link href="/app/orders">
+                <Button className="w-full">View Orders</Button>
+              </Link>
+            )}
             <Link href="/app/products">
               <Button variant="outline" className="w-full">Continue Shopping</Button>
             </Link>
@@ -446,32 +561,99 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
                         <div>
 <p className="font-medium text-highlight">Prescription Required</p>
 <p className="text-sm text-highlight mt-1">
-                            Please upload valid prescriptions for: {prescriptionItems.map(item => item.name).join(', ')}
+                          Please upload valid prescriptions for: {prescriptionItems.map(item => item.product?.name).join(', ')}
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    <Input
-                      type="file"
-                      multiple
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={handlePrescriptionUpload}
-                      className="mb-3"
-                    />
+                    {/* Upload Area */}
+                    <div
+                      onClick={() => document.getElementById('prescription-input')?.click()}
+                      className={cn(
+                        "border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer",
+                        "hover:border-gray-400 bg-gray-50/50",
+                        uploadingFiles && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <Input
+                        id="prescription-input"
+                        type="file"
+                        multiple
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={handlePrescriptionUpload}
+                        className="hidden"
+                        disabled={uploadingFiles}
+                      />
+                      <Upload className="mx-auto h-10 w-10 text-gray-400 mb-3" />
+                      <p className="text-sm font-medium text-gray-700">
+                        Click to upload prescriptions
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        PDF, JPEG, PNG (max 10MB)
+                      </p>
+                    </div>
 
+                    {/* Upload Progress */}
+                    {uploadProgress.length > 0 && (
+                      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <h4 className="text-sm font-medium mb-3">Uploading Files</h4>
+                        <div className="space-y-3">
+                          {uploadProgress.map((item, index) => (
+                            <div key={index} className="space-y-2">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="truncate flex-1 mr-2">{item.file.name}</span>
+                                <span className="text-gray-500">
+                                  {(item.file.size / 1024 / 1024).toFixed(2)} MB
+                                </span>
+                              </div>
+                              <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div 
+                                  className="absolute inset-y-0 left-0 bg-primary transition-all duration-300"
+                                  style={{ width: `${item.progress}%` }}
+                                />
+                              </div>
+                              {item.status === 'error' && (
+                                <p className="text-xs text-red-600">{item.error}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Uploaded Files */}
                     {prescriptionFiles.length > 0 && (
-                      <div className="space-y-2">
+                      <div className="mt-4 space-y-2">
+                        <h4 className="text-sm font-medium mb-2">Uploaded Files</h4>
                         {prescriptionFiles.map((file, index) => (
-                          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-<span className="text-sm text-card-foreground">{file.name}</span>
+                          <div key={index} className="flex items-center justify-between p-3 bg-white border rounded-lg">
+                            <div className="flex items-center space-x-3 flex-1">
+                              {file.type.startsWith('image/') && filePreviewUrls[index] ? (
+                                <div className="relative w-10 h-10 rounded overflow-hidden flex-shrink-0">
+                                  <img 
+                                    src={filePreviewUrls[index]} 
+                                    alt={file.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              ) : (
+                                <FileTextIcon className="size-8 text-gray-400 flex-shrink-0" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{file.name}</p>
+                                <p className="text-xs text-gray-500">
+                                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                                </p>
+                              </div>
+                            </div>
                             <Button
                               size="sm"
                               variant="ghost"
                               onClick={() => removePrescriptionFile(index)}
-className="text-destructive hover:text-destructive/90"
+                              className="text-destructive hover:text-destructive/90"
                             >
-                              Remove
+                              <X className="size-4" />
                             </Button>
                           </div>
                         ))}
@@ -594,6 +776,14 @@ className="text-destructive hover:text-destructive/90"
 
                 {/* Order Summary */}
                 <div className="space-y-6 mb-6">
+                  {prescriptionItems.length > 0 && prescriptionFiles.length === 0 && (
+                    <Alert variant="warning">
+                      <AlertTitle>Prescription required</AlertTitle>
+                      <AlertDescription>
+                        Your order contains prescription-required items, but no prescription file has been selected. Please go back to the Shipping step to upload your prescription so we can process your order.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   <div>
 <h3 className="font-semibold text-card-foreground mb-3">Shipping Address</h3>
                     <div className="p-4 bg-gray-50 rounded-lg text-sm">

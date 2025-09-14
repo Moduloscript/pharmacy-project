@@ -33,6 +33,10 @@ const updateStatusSchema = z.object({
   status: z.enum(['RECEIVED', 'PROCESSING', 'READY', 'DISPATCHED', 'DELIVERED', 'CANCELLED']),
 });
 
+const updateNotesSchema = z.object({
+  internalNotes: z.string(),
+});
+
 /**
  * GET /admin/orders
  * Get all orders for admin management
@@ -80,9 +84,14 @@ ordersRouter.get('/', zValidator('query', ordersQuerySchema), async (c) => {
               select: {
                 name: true,
                 category: true,
+                isPrescriptionRequired: true,
+                isControlled: true,
               }
             }
           }
+        },
+        prescriptions: {
+          select: { id: true, status: true }
         }
       },
       orderBy: {
@@ -96,6 +105,8 @@ ordersRouter.get('/', zValidator('query', ordersQuerySchema), async (c) => {
     const formattedOrders = orders.map(order => ({
       id: order.id,
       orderNumber: order.orderNumber,
+      requiresPrescription: order.orderItems.some(oi => (oi.product as any)?.isPrescriptionRequired || (oi.product as any)?.isControlled),
+      prescriptionStatus: order.prescriptions?.[0]?.status ?? null,
       customer: {
         id: order.customer.id,
         name: order.customer.user.name,
@@ -108,6 +119,8 @@ ordersRouter.get('/', zValidator('query', ordersQuerySchema), async (c) => {
         product: {
           name: item.product.name,
           category: item.product.category,
+          isPrescriptionRequired: (item.product as any)?.isPrescriptionRequired ?? false,
+          isControlled: (item.product as any)?.isControlled ?? false,
         },
         quantity: item.quantity,
         unitPrice: Number(item.unitPrice),
@@ -248,6 +261,38 @@ ordersRouter.put('/:id/status', zValidator('json', updateStatusSchema), async (c
   } catch (error) {
     console.error('Error updating order status:', error);
     return c.json({ error: 'Failed to update order status' }, 500);
+  }
+});
+
+/**
+ * PUT /admin/orders/:id/notes
+ * Update order internal notes
+ */
+ordersRouter.put('/:id/notes', zValidator('json', updateNotesSchema), async (c) => {
+  try {
+    const orderId = c.req.param('id');
+    const { internalNotes } = c.req.valid('json');
+    
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+    });
+    
+    if (!order) {
+      return c.json({ error: 'Order not found' }, 404);
+    }
+    
+    const updatedOrder = await db.order.update({
+      where: { id: orderId },
+      data: {
+        internalNotes,
+        updatedAt: new Date(),
+      },
+    });
+    
+    return c.json(updatedOrder);
+  } catch (error) {
+    console.error('Error updating order notes:', error);
+    return c.json({ error: 'Failed to update order notes' }, 500);
   }
 });
 

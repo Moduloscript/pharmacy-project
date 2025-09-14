@@ -105,6 +105,7 @@ export const config = {
 			avatars: process.env.NEXT_PUBLIC_AVATARS_BUCKET_NAME ?? "avatars",
 			productImages: process.env.NEXT_PUBLIC_PRODUCT_IMAGES_BUCKET_NAME ?? "product-images",
 			documents: process.env.NEXT_PUBLIC_DOCUMENTS_BUCKET_NAME ?? "documents",
+			prescriptions: process.env.NEXT_PUBLIC_PRESCRIPTIONS_BUCKET_NAME ?? "prescriptions",
 		},
 	},
 	contactForm: {

@@ -4,5 +4,6 @@ export type AppBindings = {
   Variables: {
     session: Session['session'];
     user: Session['user'];
+    csrfToken?: string;
   };
 };

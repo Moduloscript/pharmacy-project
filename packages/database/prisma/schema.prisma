@@ -29,7 +29,6 @@ model User {
   createdAt          DateTime
   updatedAt          DateTime
   username           String?      @unique
-  password           String?      // Added for better-auth email/password authentication  
   role               String?
   banned             Boolean?
   banReason          String?
@@ -37,15 +36,16 @@ model User {
   onboardingComplete Boolean      @default(false)
   paymentsCustomerId String?
   locale             String?
+  password           String?
   aiChats            AiChat[]
   purchases          Purchase[]
   accounts           Account[]
   customer           Customer?
+  documents          Document[]
   invitations        Invitation[]
   memberships        Member[]
   passkeys           Passkey[]
   sessions           Session[]
-  documents         Document[]
 
   @@map("user")
 }
@@ -126,9 +126,9 @@ model Organization {
   paymentsCustomerId String?
   aiChats            AiChat[]
   purchases          Purchase[]
+  documents          Document[]
   invitations        Invitation[]
   members            Member[]
-  documents          Document[]
 
   @@map("organization")
 }
@@ -199,35 +199,35 @@ model AiChat {
 }
 
 model Customer {
-  id                    String                     @id @default(cuid())
-  userId                String                     @unique
-  customerType          CustomerType
-  phone                 String
-  address               String?
-  city                  String?
-  state                 String?
-  lga                   String?
-  country               String                     @default("Nigeria")
-  businessName          String?
-  businessAddress       String?
-  pharmacyLicense       String?
-  taxId                 String?
-  businessPhone         String?
-  businessEmail         String?
-  verificationStatus    BusinessVerificationStatus @default(PENDING)
-  verificationDocuments String?
-  rejectionReason       String?
-  verifiedAt            DateTime?
-  creditLimit           Decimal?                   @db.Decimal(10, 2)
-  creditTermDays        Int?                       @default(30)
-  createdAt             DateTime                   @default(now())
-  updatedAt             DateTime                   @updatedAt
-  cartItems             CartItem[]
-  user                  User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders                Order[]
-  payments              Payment[]
+  id                      String                     @id @default(cuid())
+  userId                  String                     @unique
+  customerType            CustomerType
+  phone                   String
+  address                 String?
+  city                    String?
+  state                   String?
+  lga                     String?
+  country                 String                     @default("Nigeria")
+  businessName            String?
+  businessAddress         String?
+  pharmacyLicense         String?
+  taxId                   String?
+  businessPhone           String?
+  businessEmail           String?
+  verificationStatus      BusinessVerificationStatus @default(PENDING)
+  verificationDocuments   String?
+  creditLimit             Decimal?                   @db.Decimal(10, 2)
+  creditTermDays          Int?                       @default(30)
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+  rejectionReason         String?
+  verifiedAt              DateTime?
+  cartItems               CartItem[]
+  user                    User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notificationOptOuts     NotificationOptOut[]
   notificationPreferences NotificationPreferences?
-  notificationOptOuts   NotificationOptOut[]
+  orders                  Order[]
+  payments                Payment[]
 
   @@index([customerType])
   @@index([phone])
@@ -266,8 +266,6 @@ model Product {
   isRefrigerated         Boolean             @default(false)
   isControlled           Boolean             @default(false)
   slug                   String              @unique
-  images                 Json?    // JSON array of image objects with URLs, keys, metadata
-  imageUrl               String?  // Backward compatibility - primary image URL
   tags                   String?
   hasExpiry              Boolean             @default(true)
   shelfLifeMonths        Int?
@@ -275,12 +273,16 @@ model Product {
   bulkPricing            String?
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
+  imageUrl               String?
+  images                 Json?
   cartItems              CartItem[]
   inventoryMovements     InventoryMovement[]
   orderItems             OrderItem[]
 
   @@index([category])
   @@index([isActive])
+  @@index([isControlled], map: "idx_product_controlled")
+  @@index([isPrescriptionRequired], map: "idx_product_prescription_required")
   @@map("product")
 }
 
@@ -331,6 +333,7 @@ model Order {
   orderItems          OrderItem[]
   orderTracking       OrderTracking[]
   payments            Payment[]
+  prescriptions       Prescription[]
 
   @@index([createdAt])
   @@index([customerId])
@@ -373,27 +376,27 @@ model OrderTracking {
 }
 
 model Payment {
-  id               String        @id @default(cuid())
+  id               String            @id @default(cuid())
   customerId       String
   orderId          String?
-  amount           Decimal       @db.Decimal(10, 2)
-  currency         String        @default("NGN")
+  amount           Decimal           @db.Decimal(10, 2)
+  currency         String            @default("NGN")
   method           PaymentMethod
-  status           PaymentStatus @default(PENDING)
+  status           PaymentStatus     @default(PENDING)
   gatewayReference String?
   transactionId    String?
   gatewayResponse  String?
-  gatewayFee       Decimal?      @db.Decimal(10, 2)
-  appFee           Decimal?      @db.Decimal(10, 2)
+  gatewayFee       Decimal?          @db.Decimal(10, 2)
+  appFee           Decimal?          @db.Decimal(10, 2)
   paymentUrl       String?
   webhookData      String?
   failureReason    String?
-  retryCount       Int           @default(0)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  retryCount       Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   completedAt      DateTime?
-  customer         Customer      @relation(fields: [customerId], references: [id])
-  order            Order?        @relation(fields: [orderId], references: [id])
+  customer         Customer          @relation(fields: [customerId], references: [id])
+  order            Order?            @relation(fields: [orderId], references: [id])
   retryLogs        PaymentRetryLog[]
 
   @@index([customerId])
@@ -405,30 +408,29 @@ model Payment {
 
 /// Mirrors existing table `payment_retry_config` in the remote DB to avoid destructive drops
 model PaymentRetryConfig {
-  id              Int       @id @default(autoincrement())
-  payment_method  String
-  max_retries     Int       @default(3)
-  retry_delays    Int[]
-  enabled         Boolean?  @default(true)
-  created_at      DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime? @default(now()) @db.Timestamptz(6)
+  id             Int       @id @default(autoincrement())
+  payment_method String
+  max_retries    Int       @default(3)
+  retry_delays   Int[]
+  enabled        Boolean?  @default(true)
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime? @default(now()) @db.Timestamptz(6)
 
   @@map("payment_retry_config")
 }
 
 /// Mirrors existing table `payment_retry_log` in the remote DB to avoid destructive drops
 model PaymentRetryLog {
-  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  payment_id          String
-  retry_attempt       Int
-  retry_scheduled_at  DateTime  @db.Timestamptz(6)
-  retry_executed_at   DateTime? @db.Timestamptz(6)
-  retry_result        String?
-  error_message       String?
-  gateway_response    Json?
-  created_at          DateTime? @default(now()) @db.Timestamptz(6)
-
-  payment             Payment   @relation(fields: [payment_id], references: [id])
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  payment_id         String
+  retry_attempt      Int
+  retry_scheduled_at DateTime  @db.Timestamptz(6)
+  retry_executed_at  DateTime? @db.Timestamptz(6)
+  retry_result       String?
+  error_message      String?
+  gateway_response   Json?
+  created_at         DateTime? @default(now()) @db.Timestamptz(6)
+  payment            Payment   @relation(fields: [payment_id], references: [id])
 
   @@index([payment_id])
   @@map("payment_retry_log")
@@ -456,59 +458,80 @@ model InventoryMovement {
 }
 
 model Notification {
-  id                 String    @id @default(cuid())
-  customerId         String?
-  orderId            String?
-  type               String
-  channel            String
-  recipient          String
-  subject            String?
-  message            String
-  status             String    @default("PENDING")
-  externalMessageId  String?   // Provider's message ID (e.g., Termii message_id)
-  gatewayResponse    String?
-  retryCount         Int       @default(0)
-  maxRetries         Int       @default(3)
-  idempotencyKey     String?   @unique
-  createdAt          DateTime  @default(now())
-  sentAt             DateTime?
-  deliveredAt        DateTime?
+  id                String               @id @default(cuid())
+  customerId        String?
+  orderId           String?
+  recipient         String
+  subject           String?
+  message           String
+  gatewayResponse   String?
+  retryCount        Int                  @default(0)
+  maxRetries        Int                  @default(3)
+  createdAt         DateTime             @default(now())
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  idempotencyKey    String?
+  externalMessageId String?
+  prescriptionId    String?
+  recipientId       String?
+  recipientEmail    String?
+  recipientPhone    String?
+  body              String
+  scheduledAt       DateTime?
+  scheduledFor      DateTime?
+  failedAt          DateTime?
+  errorMessage      String?
+  metadata          Json?
+  expiresAt         DateTime?
+  type              NotificationType
+  channel           NotificationChannel
+  status            NotificationStatus   @default(PENDING)
+  priority          NotificationPriority @default(NORMAL)
 
-  @@index([channel])
-  @@index([status])
-  @@index([type])
   @@index([externalMessageId])
-  @@index([recipient, type, channel])
   @@map("notification")
 }
 
 model NotificationPreferences {
-  id               String   @id @default(cuid())
-  customerId       String   @unique
-  smsEnabled       Boolean  @default(true)
-  whatsappEnabled  Boolean  @default(true)
-  emailEnabled     Boolean  @default(true)
-  orderUpdates     Boolean  @default(true)
-  paymentUpdates   Boolean  @default(true)
-  deliveryUpdates  Boolean  @default(true)
-  promotions       Boolean  @default(false)
-  lowStockAlerts   Boolean  @default(false) // For admin users
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  customer         Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  id                        String   @id @default(cuid())
+  customerId                String   @unique
+  smsEnabled                Boolean  @default(true)
+  whatsappEnabled           Boolean  @default(true)
+  emailEnabled              Boolean  @default(true)
+  orderUpdates              Boolean  @default(true)
+  paymentUpdates            Boolean  @default(true)
+  deliveryUpdates           Boolean  @default(true)
+  promotions                Boolean  @default(false)
+  lowStockAlerts            Boolean  @default(false)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @default(now()) @updatedAt
+  prescriptionApproval      Boolean? @default(true)
+  prescriptionRejection     Boolean? @default(true)
+  prescriptionClarification Boolean? @default(true)
+  quietHoursEnabled         Boolean? @default(false)
+  quietHoursStart           String?
+  quietHoursEnd             String?
+  dailyNotificationLimit    Int?     @default(20)
+  weeklyNotificationLimit   Int?     @default(100)
+  emergencyOverride         Boolean? @default(true)
+  preferredChannel          String?
+  channelPriority           Json?
+  digestFrequency           String?
+  timezone                  String?
+  customer                  Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId])
   @@map("notification_preferences")
 }
 
 model NotificationOptOut {
-  id         String                   @id @default(cuid())
+  id         String                  @id @default(cuid())
   customerId String
   channel    NotificationChannel
   type       NotificationOptOutType?
   reason     String?
-  createdAt  DateTime                 @default(now())
-  customer   Customer                 @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime                @default(now())
+  customer   Customer                @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@unique([customerId, channel, type])
   @@index([customerId])
@@ -516,8 +539,26 @@ model NotificationOptOut {
   @@map("notification_opt_out")
 }
 
+model NotificationRateLimit {
+  id                  String    @id @default(cuid())
+  customerId          String
+  notificationType    String
+  windowStart         DateTime
+  windowEnd           DateTime
+  count               Int       @default(0)
+  exceeded            Boolean   @default(false)
+  lastNotificationAt  DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([customerId, notificationType, windowStart])
+  @@index([customerId])
+  @@index([windowEnd])
+  @@map("notification_rate_limit")
+}
+
 model Document {
-  id             String   @id @default(cuid())
+  id             String        @id @default(cuid())
   userId         String?
   organizationId String?
   name           String
@@ -525,9 +566,9 @@ model Document {
   mimeType       String?
   size           Int
   bucket         String
-  createdAt      DateTime @default(now())
-  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  user           User?         @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([organizationId])
@@ -542,6 +583,119 @@ model NigerianLocation {
   created_at DateTime? @default(now()) @db.Timestamp(6)
 
   @@map("nigerian_locations")
+}
+
+model Prescription {
+  id                    String                 @id @default(cuid())
+  orderId               String
+  status                PrescriptionStatus     @default(PENDING)
+  imageUrl              String?
+  documentKey           String?
+  notes                 String?
+  reviewedBy            String?
+  reviewedAt            DateTime?
+  rejectionReason       String?
+  clarificationRequest  String?
+  expiryDate            DateTime?
+  prescribedBy          String?
+  prescribedDate        DateTime?
+  dosageInstructions    String?
+  refillsRemaining      Int?                   @default(0)
+  isControlledSubstance Boolean                @default(false)
+  requiresVerification  Boolean                @default(true)
+  verificationLevel     Int                    @default(1)
+  internalNotes         String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  order                 Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  auditLogs             PrescriptionAuditLog[]
+
+  @@index([status])
+  @@index([orderId])
+  @@index([createdAt])
+  @@index([reviewedBy])
+  @@index([expiryDate], map: "idx_prescription_expiry")
+  @@index([orderId], map: "idx_prescription_order_id")
+  @@index([status], map: "idx_prescription_status")
+  @@map("prescription")
+}
+
+model PrescriptionAuditLog {
+  id             String                  @id @default(cuid())
+  prescriptionId String?
+  userId         String?
+  userEmail      String?
+  userName       String?
+  userRole       String?
+  action         PrescriptionAuditAction
+  entityType     String
+  entityId       String
+  previousValues Json?
+  newValues      Json?
+  metadata       Json?
+  ipAddress      String?
+  userAgent      String?
+  sessionId      String?
+  timestamp      DateTime                @default(now())
+  prescription   Prescription?           @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+
+  @@index([prescriptionId])
+  @@index([userId])
+  @@index([action])
+  @@index([timestamp])
+  @@map("prescription_audit_log")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model prescription_security_log {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  prescriptionId String?
+  orderId        String?
+  userId         String?
+  userEmail      String?
+  action         String
+  securityLevel  String?
+  details        Json?
+  ipAddress      String?
+  userAgent      String?
+  timestamp      DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([securityLevel], map: "idx_prescription_security_log_level")
+  @@index([timestamp], map: "idx_prescription_security_log_timestamp")
+  @@index([userId], map: "idx_prescription_security_log_user")
+}
+
+enum NotificationType {
+  ORDER_UPDATE
+  ORDER_CONFIRMATION
+  PRESCRIPTION_REQUIRED
+  PRESCRIPTION_APPROVED
+  PRESCRIPTION_REJECTED
+  PRESCRIPTION_REMINDER
+  PAYMENT_UPDATE
+  DELIVERY_UPDATE
+  LOW_STOCK_ALERT
+  PROMOTION
+  SYSTEM_ALERT
+}
+
+enum NotificationStatus {
+  PENDING
+  SCHEDULED
+  SENDING
+  SENT
+  DELIVERED
+  FAILED
+  CANCELLED
+  EXPIRED
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
 }
 
 enum PurchaseType {
@@ -627,4 +781,35 @@ enum NotificationOptOutType {
   PROMOTIONS
   LOW_STOCK_ALERTS
   ALL
+}
+
+enum PrescriptionStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  CLARIFICATION
+  EXPIRED
+  CANCELLED
+}
+
+enum PrescriptionAuditAction {
+  CREATE
+  VIEW
+  VIEW_LIST
+  UPDATE_STATUS
+  ADD_NOTES
+  REQUEST_CLARIFICATION
+  APPROVE
+  REJECT
+  DELETE
+  UPLOAD_FILE
+  DELETE_FILE
+  EXPORT
+  BULK_UPDATE
+  ACCESS_DENIED
+  RATE_LIMIT_EXCEEDED
+  VALIDATION_FAILED
+  SECURITY_EVENT
+  SECURITY_ALERT
 }

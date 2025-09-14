@@ -34,7 +34,7 @@ import {
   TrendingUpIcon
 } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { SupabaseImage } from '@/components/ui/supabase-image';
 
 // Types
 interface Product {
@@ -568,50 +568,27 @@ export function InventoryTable({ className }: InventoryTableProps) {
                 return (
                   <TableRow key={product.id}>
                     <TableCell>
-                      <div className="w-16 h-16 relative rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
-                        {product.imageUrl ? (
-                          <Image
-                            src={product.imageUrl}
-                            alt={product.name}
-                            fill
-                            className="object-cover"
-                            sizes="64px"
-                            onError={(e) => {
-                              console.error('🖼️ InventoryTable - Image failed to load:', {
-                                productName: product.name,
-                                imageUrl: product.imageUrl,
-                                productId: product.id,
-                                error: e
-                              });
-                              // Hide broken image and show placeholder
-                              e.currentTarget.style.display = 'none';
-                              const container = e.currentTarget.parentElement;
-                              if (container) {
-                                const placeholder = container.querySelector('.image-placeholder');
-                                if (placeholder) {
-                                  (placeholder as HTMLElement).style.display = 'flex';
-                                }
-                              }
-                            }}
-                            onLoad={() => {
-                              console.log('✅ InventoryTable - Image loaded successfully:', {
-                                productName: product.name,
-                                imageUrl: product.imageUrl
-                              });
-                            }}
-                          />
-                        ) : (
-                          <div className="flex items-center justify-center w-full h-full">
-                            <PackageIcon className="w-8 h-8 text-gray-400" />
-                          </div>
-                        )}
-                        {/* Always render placeholder, hidden when image loads */}
-                        <div 
-                          className="image-placeholder flex items-center justify-center w-full h-full" 
-                          style={{ display: product.imageUrl ? 'none' : 'flex' }}
-                        >
-                          <PackageIcon className="w-8 h-8 text-gray-400" />
-                        </div>
+                      <div className="w-16 h-16 relative rounded-md overflow-hidden bg-gray-100">
+                        <SupabaseImage
+                          src={product.imageUrl}
+                          alt={product.name}
+                          fill
+                          className="object-cover rounded-md"
+                          sizes="64px"
+                          fallbackIcon={<PackageIcon className="w-8 h-8 text-gray-400" />}
+                          onError={(e) => {
+                            console.error('🖼️ InventoryTable - Image failed to load:', {
+                              productName: product.name,
+                              imageUrl: product.imageUrl,
+                              productId: product.id
+                            });
+                          }}
+                          onLoad={() => {
+                            console.log('✅ InventoryTable - Image loaded successfully:', {
+                              productName: product.name
+                            });
+                          }}
+                        />
                       </div>
                     </TableCell>
                     <TableCell>

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { SupabaseImage } from '@/components/ui/supabase-image';
 import { cn } from "@ui/lib";
 import {
   Table,
@@ -156,18 +156,15 @@ export function ProductsTable({
                 {/* Product cell */}
                 <TableCell className={cn(cellPaddingX)}>
                   <div className="flex items-center gap-3">
-                    <div className="size-12 overflow-hidden rounded bg-muted/50 flex items-center justify-center">
-                      {imageUrl ? (
-                        <Image
-                          src={imageUrl}
-                          alt={product.name}
-                          width={48}
-                          height={48}
-                          className="size-12 object-cover"
-                        />
-                      ) : (
-                        <div className="size-6 rounded-full bg-foreground/10" />
-                      )}
+                    <div className="size-12 overflow-hidden rounded bg-muted/50 relative">
+                      <SupabaseImage
+                        src={imageUrl}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                        sizes="48px"
+                        fallbackIcon={<div className="size-6 rounded-full bg-foreground/10" />}
+                      />
                     </div>
                     <div className="min-w-0">
                       <div className="font-medium truncate text-foreground">{product.name}</div>

@@ -27,6 +27,8 @@ import { ordersRouter } from "./routes/orders";
 import { documentsRouter } from "./routes/documents";
 import { notificationsEnhancedRouter } from "./routes/notifications-enhanced";
 import { notificationsRouter } from "./routes/notifications";
+import { notificationPreferencesRouter } from "./routes/notification-preferences";
+import prescriptionsRouter from "./routes/prescriptions";
 
 import type { AppBindings } from "./types/context";
 
@@ -59,7 +61,9 @@ const appRouter = app
 	// Uncommented now that dependencies are fixed
 	.route("/cart", cartRouter)
 	.route("/orders", ordersRouter)
+	.route("/prescriptions", prescriptionsRouter)
 	.route("/notifications", notificationsEnhancedRouter)
+	.route("/notifications", notificationPreferencesRouter)
 	.route("/notifications", notificationsRouter);
 
 app.get(

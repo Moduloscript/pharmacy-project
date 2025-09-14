@@ -39,6 +39,7 @@ export type Config = {
 			avatars: string;
 			productImages: string;
 			documents: string;
+			prescriptions: string;
 		};
 	};
 	ui: {

@@ -1,15 +1,17 @@
-import { config } from "@repo/config";
-import { getSession } from "@saas/auth/lib/server";
-import { SettingsMenu } from "@saas/settings/components/SettingsMenu";
-import { PageHeader } from "@saas/shared/components/PageHeader";
-import { SidebarContentLayout } from "@saas/shared/components/SidebarContentLayout";
-import { UserAvatar } from "@shared/components/UserAvatar";
-import {
-	CreditCardIcon,
-	LockKeyholeIcon,
-	SettingsIcon,
-	TriangleAlertIcon,
-} from "lucide-react";
+	import { config } from "@repo/config";
+	import { getSession } from "@saas/auth/lib/server";
+	import { SettingsMenu } from "@saas/settings/components/SettingsMenu";
+	import { PageHeader } from "@saas/shared/components/PageHeader";
+	import { SidebarContentLayout } from "@saas/shared/components/SidebarContentLayout";
+	import { UserAvatar } from "@shared/components/UserAvatar";
+	import {
+		CreditCardIcon,
+		LockKeyholeIcon,
+		SettingsIcon,
+		TriangleAlertIcon,
+		BellIcon,
+		SlidersIcon,
+	} from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import type { PropsWithChildren } from "react";
@@ -40,6 +42,16 @@ export default async function SettingsLayout({ children }: PropsWithChildren) {
 					title: t("settings.menu.account.security"),
 					href: "/app/settings/security",
 					icon: <LockKeyholeIcon className="size-4 opacity-50" />,
+				},
+				{
+					title: t("settings.menu.account.notifications"),
+					href: "/app/settings/notifications",
+					icon: <BellIcon className="size-4 opacity-50" />,
+				},
+				{
+					title: t("settings.menu.account.preferences"),
+					href: "/app/settings/preferences",
+					icon: <SlidersIcon className="size-4 opacity-50" />,
 				},
 				...(config.users.enableBilling
 					? [

@@ -78,7 +78,7 @@ export const isValidDecimalInput =
 
 export const TransactionIsolationLevelSchema = z.enum(['ReadUncommitted','ReadCommitted','RepeatableRead','Serializable']);
 
-export const UserScalarFieldEnumSchema = z.enum(['id','name','email','emailVerified','image','createdAt','updatedAt','username','password','role','banned','banReason','banExpires','onboardingComplete','paymentsCustomerId','locale']);
+export const UserScalarFieldEnumSchema = z.enum(['id','name','email','emailVerified','image','createdAt','updatedAt','username','role','banned','banReason','banExpires','onboardingComplete','paymentsCustomerId','locale','password']);
 
 export const SessionScalarFieldEnumSchema = z.enum(['id','expiresAt','ipAddress','userAgent','userId','impersonatedBy','activeOrganizationId','token','createdAt','updatedAt']);
 
@@ -98,9 +98,9 @@ export const PurchaseScalarFieldEnumSchema = z.enum(['id','organizationId','user
 
 export const AiChatScalarFieldEnumSchema = z.enum(['id','organizationId','userId','title','messages','createdAt','updatedAt']);
 
-export const CustomerScalarFieldEnumSchema = z.enum(['id','userId','customerType','phone','address','city','state','lga','country','businessName','businessAddress','pharmacyLicense','taxId','businessPhone','businessEmail','verificationStatus','verificationDocuments','rejectionReason','verifiedAt','creditLimit','creditTermDays','createdAt','updatedAt']);
+export const CustomerScalarFieldEnumSchema = z.enum(['id','userId','customerType','phone','address','city','state','lga','country','businessName','businessAddress','pharmacyLicense','taxId','businessPhone','businessEmail','verificationStatus','verificationDocuments','creditLimit','creditTermDays','createdAt','updatedAt','rejectionReason','verifiedAt']);
 
-export const ProductScalarFieldEnumSchema = z.enum(['id','name','description','category','genericName','brandName','manufacturer','ndcNumber','nafdacNumber','strength','dosageForm','activeIngredient','retailPrice','wholesalePrice','cost','sku','barcode','stockQuantity','minStockLevel','maxStockLevel','packSize','unit','weight','dimensions','isActive','isPrescriptionRequired','isRefrigerated','isControlled','slug','images','imageUrl','tags','hasExpiry','shelfLifeMonths','minOrderQuantity','bulkPricing','createdAt','updatedAt']);
+export const ProductScalarFieldEnumSchema = z.enum(['id','name','description','category','genericName','brandName','manufacturer','ndcNumber','nafdacNumber','strength','dosageForm','activeIngredient','retailPrice','wholesalePrice','cost','sku','barcode','stockQuantity','minStockLevel','maxStockLevel','packSize','unit','weight','dimensions','isActive','isPrescriptionRequired','isRefrigerated','isControlled','slug','tags','hasExpiry','shelfLifeMonths','minOrderQuantity','bulkPricing','createdAt','updatedAt','imageUrl','images']);
 
 export const CartItemScalarFieldEnumSchema = z.enum(['id','customerId','productId','quantity','unitPrice','createdAt','updatedAt']);
 
@@ -118,11 +118,23 @@ export const PaymentRetryLogScalarFieldEnumSchema = z.enum(['id','payment_id','r
 
 export const InventoryMovementScalarFieldEnumSchema = z.enum(['id','productId','type','quantity','reason','reference','previousStock','newStock','batchNumber','expiryDate','userId','notes','createdAt']);
 
-export const NotificationScalarFieldEnumSchema = z.enum(['id','customerId','orderId','type','channel','recipient','subject','message','status','gatewayResponse','retryCount','maxRetries','createdAt','sentAt','deliveredAt']);
+export const NotificationScalarFieldEnumSchema = z.enum(['id','customerId','orderId','recipient','subject','message','gatewayResponse','retryCount','maxRetries','createdAt','sentAt','deliveredAt','idempotencyKey','externalMessageId','prescriptionId','recipientId','recipientEmail','recipientPhone','body','scheduledAt','scheduledFor','failedAt','errorMessage','metadata','expiresAt','type','channel','status','priority']);
+
+export const NotificationPreferencesScalarFieldEnumSchema = z.enum(['id','customerId','smsEnabled','whatsappEnabled','emailEnabled','orderUpdates','paymentUpdates','deliveryUpdates','promotions','lowStockAlerts','createdAt','updatedAt','prescriptionApproval','prescriptionRejection','prescriptionClarification','quietHoursEnabled','quietHoursStart','quietHoursEnd','dailyNotificationLimit','weeklyNotificationLimit','emergencyOverride','preferredChannel','channelPriority','digestFrequency','timezone']);
+
+export const NotificationOptOutScalarFieldEnumSchema = z.enum(['id','customerId','channel','type','reason','createdAt']);
+
+export const NotificationRateLimitScalarFieldEnumSchema = z.enum(['id','customerId','notificationType','windowStart','windowEnd','count','exceeded','lastNotificationAt','createdAt','updatedAt']);
 
 export const DocumentScalarFieldEnumSchema = z.enum(['id','userId','organizationId','name','key','mimeType','size','bucket','createdAt']);
 
 export const NigerianLocationScalarFieldEnumSchema = z.enum(['id','state','lga','zone','created_at']);
+
+export const PrescriptionScalarFieldEnumSchema = z.enum(['id','orderId','status','imageUrl','documentKey','notes','reviewedBy','reviewedAt','rejectionReason','clarificationRequest','expiryDate','prescribedBy','prescribedDate','dosageInstructions','refillsRemaining','isControlledSubstance','requiresVerification','verificationLevel','internalNotes','createdAt','updatedAt']);
+
+export const PrescriptionAuditLogScalarFieldEnumSchema = z.enum(['id','prescriptionId','userId','userEmail','userName','userRole','action','entityType','entityId','previousValues','newValues','metadata','ipAddress','userAgent','sessionId','timestamp']);
+
+export const Prescription_security_logScalarFieldEnumSchema = z.enum(['id','prescriptionId','orderId','userId','userEmail','action','securityLevel','details','ipAddress','userAgent','timestamp']);
 
 export const SortOrderSchema = z.enum(['asc','desc']);
 
@@ -133,6 +145,18 @@ export const QueryModeSchema = z.enum(['default','insensitive']);
 export const NullsOrderSchema = z.enum(['first','last']);
 
 export const JsonNullValueFilterSchema = z.enum(['DbNull','JsonNull','AnyNull',]).transform((value) => value === 'JsonNull' ? Prisma.JsonNull : value === 'DbNull' ? Prisma.JsonNull : value === 'AnyNull' ? Prisma.AnyNull : value);
+
+export const NotificationTypeSchema = z.enum(['ORDER_UPDATE','ORDER_CONFIRMATION','PRESCRIPTION_REQUIRED','PRESCRIPTION_APPROVED','PRESCRIPTION_REJECTED','PRESCRIPTION_REMINDER','PAYMENT_UPDATE','DELIVERY_UPDATE','LOW_STOCK_ALERT','PROMOTION','SYSTEM_ALERT']);
+
+export type NotificationTypeType = `${z.infer<typeof NotificationTypeSchema>}`
+
+export const NotificationStatusSchema = z.enum(['PENDING','SCHEDULED','SENDING','SENT','DELIVERED','FAILED','CANCELLED','EXPIRED']);
+
+export type NotificationStatusType = `${z.infer<typeof NotificationStatusSchema>}`
+
+export const NotificationPrioritySchema = z.enum(['LOW','NORMAL','HIGH','URGENT']);
+
+export type NotificationPriorityType = `${z.infer<typeof NotificationPrioritySchema>}`
 
 export const PurchaseTypeSchema = z.enum(['SUBSCRIPTION','ONE_TIME']);
 
@@ -166,6 +190,22 @@ export const BusinessVerificationStatusSchema = z.enum(['PENDING','VERIFIED','RE
 
 export type BusinessVerificationStatusType = `${z.infer<typeof BusinessVerificationStatusSchema>}`
 
+export const NotificationChannelSchema = z.enum(['SMS','WHATSAPP','EMAIL','PUSH']);
+
+export type NotificationChannelType = `${z.infer<typeof NotificationChannelSchema>}`
+
+export const NotificationOptOutTypeSchema = z.enum(['ORDER_UPDATES','PAYMENT_UPDATES','DELIVERY_UPDATES','PROMOTIONS','LOW_STOCK_ALERTS','ALL']);
+
+export type NotificationOptOutTypeType = `${z.infer<typeof NotificationOptOutTypeSchema>}`
+
+export const PrescriptionStatusSchema = z.enum(['PENDING','UNDER_REVIEW','APPROVED','REJECTED','CLARIFICATION','EXPIRED','CANCELLED']);
+
+export type PrescriptionStatusType = `${z.infer<typeof PrescriptionStatusSchema>}`
+
+export const PrescriptionAuditActionSchema = z.enum(['CREATE','VIEW','VIEW_LIST','UPDATE_STATUS','ADD_NOTES','REQUEST_CLARIFICATION','APPROVE','REJECT','DELETE','UPLOAD_FILE','DELETE_FILE','EXPORT','BULK_UPDATE','ACCESS_DENIED','RATE_LIMIT_EXCEEDED','VALIDATION_FAILED','SECURITY_EVENT','SECURITY_ALERT']);
+
+export type PrescriptionAuditActionType = `${z.infer<typeof PrescriptionAuditActionSchema>}`
+
 /////////////////////////////////////////
 // MODELS
 /////////////////////////////////////////
@@ -183,7 +223,6 @@ export const UserSchema = z.object({
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   username: z.string().nullable(),
-  password: z.string().nullable(),
   role: z.string().nullable(),
   banned: z.boolean().nullable(),
   banReason: z.string().nullable(),
@@ -191,6 +230,7 @@ export const UserSchema = z.object({
   onboardingComplete: z.boolean(),
   paymentsCustomerId: z.string().nullable(),
   locale: z.string().nullable(),
+  password: z.string().nullable(),
 })
 
 export type User = z.infer<typeof UserSchema>
@@ -377,12 +417,12 @@ export const CustomerSchema = z.object({
   businessPhone: z.string().nullable(),
   businessEmail: z.string().nullable(),
   verificationDocuments: z.string().nullable(),
-  rejectionReason: z.string().nullable(),
-  verifiedAt: z.coerce.date().nullable(),
   creditLimit: z.instanceof(Prisma.Decimal, { message: "Field 'creditLimit' must be a Decimal. Location: ['Models', 'Customer']"}).nullable(),
   creditTermDays: z.number().int().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
+  rejectionReason: z.string().nullable(),
+  verifiedAt: z.coerce.date().nullable(),
 })
 
 export type Customer = z.infer<typeof CustomerSchema>
@@ -421,8 +461,6 @@ export const ProductSchema = z.object({
   isRefrigerated: z.boolean(),
   isControlled: z.boolean(),
   slug: z.string(),
-  images: JsonValueSchema.nullable(),
-  imageUrl: z.string().nullable(),
   tags: z.string().nullable(),
   hasExpiry: z.boolean(),
   shelfLifeMonths: z.number().int().nullable(),
@@ -430,6 +468,8 @@ export const ProductSchema = z.object({
   bulkPricing: z.string().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
+  imageUrl: z.string().nullable(),
+  images: JsonValueSchema.nullable(),
 })
 
 export type Product = z.infer<typeof ProductSchema>
@@ -614,24 +654,106 @@ export type InventoryMovement = z.infer<typeof InventoryMovementSchema>
 /////////////////////////////////////////
 
 export const NotificationSchema = z.object({
+  type: NotificationTypeSchema,
+  channel: NotificationChannelSchema,
+  status: NotificationStatusSchema,
+  priority: NotificationPrioritySchema,
   id: z.string().cuid(),
   customerId: z.string().nullable(),
   orderId: z.string().nullable(),
-  type: z.string(),
-  channel: z.string(),
   recipient: z.string(),
   subject: z.string().nullable(),
   message: z.string(),
-  status: z.string(),
   gatewayResponse: z.string().nullable(),
   retryCount: z.number().int(),
   maxRetries: z.number().int(),
   createdAt: z.coerce.date(),
   sentAt: z.coerce.date().nullable(),
   deliveredAt: z.coerce.date().nullable(),
+  idempotencyKey: z.string().nullable(),
+  externalMessageId: z.string().nullable(),
+  prescriptionId: z.string().nullable(),
+  recipientId: z.string().nullable(),
+  recipientEmail: z.string().nullable(),
+  recipientPhone: z.string().nullable(),
+  body: z.string(),
+  scheduledAt: z.coerce.date().nullable(),
+  scheduledFor: z.coerce.date().nullable(),
+  failedAt: z.coerce.date().nullable(),
+  errorMessage: z.string().nullable(),
+  metadata: JsonValueSchema.nullable(),
+  expiresAt: z.coerce.date().nullable(),
 })
 
 export type Notification = z.infer<typeof NotificationSchema>
+
+/////////////////////////////////////////
+// NOTIFICATION PREFERENCES SCHEMA
+/////////////////////////////////////////
+
+export const NotificationPreferencesSchema = z.object({
+  id: z.string().cuid(),
+  customerId: z.string(),
+  smsEnabled: z.boolean(),
+  whatsappEnabled: z.boolean(),
+  emailEnabled: z.boolean(),
+  orderUpdates: z.boolean(),
+  paymentUpdates: z.boolean(),
+  deliveryUpdates: z.boolean(),
+  promotions: z.boolean(),
+  lowStockAlerts: z.boolean(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  prescriptionApproval: z.boolean().nullable(),
+  prescriptionRejection: z.boolean().nullable(),
+  prescriptionClarification: z.boolean().nullable(),
+  quietHoursEnabled: z.boolean().nullable(),
+  quietHoursStart: z.string().nullable(),
+  quietHoursEnd: z.string().nullable(),
+  dailyNotificationLimit: z.number().int().nullable(),
+  weeklyNotificationLimit: z.number().int().nullable(),
+  emergencyOverride: z.boolean().nullable(),
+  preferredChannel: z.string().nullable(),
+  channelPriority: JsonValueSchema.nullable(),
+  digestFrequency: z.string().nullable(),
+  timezone: z.string().nullable(),
+})
+
+export type NotificationPreferences = z.infer<typeof NotificationPreferencesSchema>
+
+/////////////////////////////////////////
+// NOTIFICATION OPT OUT SCHEMA
+/////////////////////////////////////////
+
+export const NotificationOptOutSchema = z.object({
+  channel: NotificationChannelSchema,
+  type: NotificationOptOutTypeSchema.nullable(),
+  id: z.string().cuid(),
+  customerId: z.string(),
+  reason: z.string().nullable(),
+  createdAt: z.coerce.date(),
+})
+
+export type NotificationOptOut = z.infer<typeof NotificationOptOutSchema>
+
+/////////////////////////////////////////
+// NOTIFICATION RATE LIMIT SCHEMA
+/////////////////////////////////////////
+
+export const NotificationRateLimitSchema = z.object({
+  id: z.string().cuid(),
+  customerId: z.string(),
+  notificationType: z.string(),
+  windowStart: z.coerce.date(),
+  windowEnd: z.coerce.date(),
+  count: z.number().int(),
+  exceeded: z.boolean(),
+  lastNotificationAt: z.coerce.date().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type NotificationRateLimit = z.infer<typeof NotificationRateLimitSchema>
 
 /////////////////////////////////////////
 // DOCUMENT SCHEMA
@@ -664,3 +786,82 @@ export const NigerianLocationSchema = z.object({
 })
 
 export type NigerianLocation = z.infer<typeof NigerianLocationSchema>
+
+/////////////////////////////////////////
+// PRESCRIPTION SCHEMA
+/////////////////////////////////////////
+
+export const PrescriptionSchema = z.object({
+  status: PrescriptionStatusSchema,
+  id: z.string().cuid(),
+  orderId: z.string(),
+  imageUrl: z.string().nullable(),
+  documentKey: z.string().nullable(),
+  notes: z.string().nullable(),
+  reviewedBy: z.string().nullable(),
+  reviewedAt: z.coerce.date().nullable(),
+  rejectionReason: z.string().nullable(),
+  clarificationRequest: z.string().nullable(),
+  expiryDate: z.coerce.date().nullable(),
+  prescribedBy: z.string().nullable(),
+  prescribedDate: z.coerce.date().nullable(),
+  dosageInstructions: z.string().nullable(),
+  refillsRemaining: z.number().int().nullable(),
+  isControlledSubstance: z.boolean(),
+  requiresVerification: z.boolean(),
+  verificationLevel: z.number().int(),
+  internalNotes: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type Prescription = z.infer<typeof PrescriptionSchema>
+
+/////////////////////////////////////////
+// PRESCRIPTION AUDIT LOG SCHEMA
+/////////////////////////////////////////
+
+export const PrescriptionAuditLogSchema = z.object({
+  action: PrescriptionAuditActionSchema,
+  id: z.string().cuid(),
+  prescriptionId: z.string().nullable(),
+  userId: z.string().nullable(),
+  userEmail: z.string().nullable(),
+  userName: z.string().nullable(),
+  userRole: z.string().nullable(),
+  entityType: z.string(),
+  entityId: z.string(),
+  previousValues: JsonValueSchema.nullable(),
+  newValues: JsonValueSchema.nullable(),
+  metadata: JsonValueSchema.nullable(),
+  ipAddress: z.string().nullable(),
+  userAgent: z.string().nullable(),
+  sessionId: z.string().nullable(),
+  timestamp: z.coerce.date(),
+})
+
+export type PrescriptionAuditLog = z.infer<typeof PrescriptionAuditLogSchema>
+
+/////////////////////////////////////////
+// PRESCRIPTION SECURITY LOG SCHEMA
+/////////////////////////////////////////
+
+/**
+ * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+ * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+ */
+export const prescription_security_logSchema = z.object({
+  id: z.string(),
+  prescriptionId: z.string().nullable(),
+  orderId: z.string().nullable(),
+  userId: z.string().nullable(),
+  userEmail: z.string().nullable(),
+  action: z.string(),
+  securityLevel: z.string().nullable(),
+  details: JsonValueSchema.nullable(),
+  ipAddress: z.string().nullable(),
+  userAgent: z.string().nullable(),
+  timestamp: z.coerce.date().nullable(),
+})
+
+export type prescription_security_log = z.infer<typeof prescription_security_logSchema>

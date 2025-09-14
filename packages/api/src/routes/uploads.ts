@@ -58,6 +58,12 @@ export const uploadsRouter = new Hono().basePath("/uploads").post(
 		return c.json({ signedUrl });
 	}
 
+	// Allow prescriptions bucket
+	if (bucket === config.storage.bucketNames.prescriptions) {
+		const signedUrl = await getSignedUploadUrl(path, { bucket, contentType });
+		return c.json({ signedUrl });
+	}
+
 	throw new HTTPException(403);
 	},
 );

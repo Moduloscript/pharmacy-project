@@ -5,7 +5,7 @@ import { db } from '@repo/database'
 import { getSession } from '@repo/auth/lib/server'
 import { createMiddleware } from 'hono/factory'
 import { nanoid } from 'nanoid'
-import { notificationService } from '@repo/mail'
+import { enhancedNotificationService } from '@repo/mail'
 
 import type { AppBindings } from '../types/context'
 const app = new Hono<AppBindings>()
@@ -407,7 +407,8 @@ app.get('/:orderId', async (c) => {
           orderBy: {
             createdAt: 'desc'
           }
-        }
+        },
+        prescriptions: true
       }
     })
     
@@ -419,6 +420,19 @@ app.get('/:orderId', async (c) => {
           message: 'Order not found' 
         }
       }, 404)
+    }
+    
+    // Derive latest/approved prescription to expose on the order payload
+    let prescriptionId: string | null = null
+    let prescriptionStatus: string | null = null
+    const prescriptions = (order as any).prescriptions as Array<{ id: string; status: string; createdAt: Date }> | undefined
+    if (prescriptions && prescriptions.length > 0) {
+      const approved = prescriptions.find(p => p.status === 'APPROVED')
+      const chosen = approved || prescriptions.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+      if (chosen) {
+        prescriptionId = chosen.id
+        prescriptionStatus = chosen.status
+      }
     }
     
     return c.json({
@@ -486,7 +500,9 @@ app.get('/:orderId', async (c) => {
             transactionId: payment.transactionId,
             createdAt: payment.createdAt,
             completedAt: payment.completedAt
-          }))
+          })),
+          prescriptionId,
+          prescriptionStatus
         }
       }
     })
@@ -506,6 +522,9 @@ app.get('/:orderId', async (c) => {
 app.post('/', zValidator('json', createOrderSchema), async (c) => {
   const user = c.get('user')
   const data = c.req.valid('json')
+  
+  // Import prescription validation service
+  const { PrescriptionValidationService } = await import('../services/prescription-validation')
   
   try {
     // Get customer profile
@@ -561,6 +580,15 @@ app.post('/', zValidator('json', createOrderSchema), async (c) => {
       }, 400)
     }
     
+    // CRITICAL: Validate prescriptions for controlled medications
+    const prescriptionValidation = await PrescriptionValidationService.validateOrderPrescriptions(
+      customer.id,
+      data.items
+    )
+    
+    // Note: If prescriptions are required, continue order creation and
+    // create a pending prescription record linked to the order. Do not block here.
+    
     // Calculate order totals
     const subtotal = data.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0)
     const deliveryFee = data.deliveryMethod === 'EXPRESS' ? 1000 : 
@@ -580,7 +608,7 @@ app.post('/', zValidator('json', createOrderSchema), async (c) => {
       estimatedDelivery.setDate(estimatedDelivery.getDate() + 3)
     }
     
-    // Create order with transaction
+    // Create order with transaction (increased timeout for complex operations)
     const order = await db.$transaction(async (prisma) => {
       // Create the order
       const newOrder = await prisma.order.create({
@@ -638,6 +666,38 @@ app.post('/', zValidator('json', createOrderSchema), async (c) => {
         }
       })
       
+      // Create prescription requirement if needed
+      const prescriptionItems = orderItems.filter((item, index) => {
+        const validation = prescriptionValidation.itemValidations[index]
+        return validation && validation.requiresPrescription
+      })
+      
+      if (prescriptionItems.length > 0) {
+        // Create a prescription requirement for this order
+        await PrescriptionValidationService.createPrescriptionRequirement(
+          newOrder.id,
+          customer.id,
+          prescriptionItems.map(item => {
+            const product = products.find(p => p.id === item.productId)!
+            return {
+              productId: item.productId,
+              productName: product.name
+            }
+          }),
+          prisma
+        )
+        
+        // Update order status to indicate prescription needed
+        await prisma.order.update({
+          where: { id: newOrder.id },
+          data: {
+            internalNotes: 'Order requires prescription verification before processing'
+          }
+        })
+        
+        // Note: Notification will be sent after transaction completes
+      }
+      
       // Update product stock quantities
       await Promise.all(
         data.items.map(item => 
@@ -664,10 +724,39 @@ app.post('/', zValidator('json', createOrderSchema), async (c) => {
         ...newOrder,
         orderItems
       }
+    }, {
+      maxWait: 10000, // Maximum time to wait for a new transaction to start (10 seconds)
+      timeout: 20000, // Maximum time a transaction can run (20 seconds)
     })
-    // Enqueue order confirmation notification (non-blocking)
+    
+    // Send prescription notification if required (non-blocking after transaction)
     try {
-      await notificationService.sendOrderConfirmation({
+      const prescriptionItems = order.orderItems.filter((item, index) => {
+        const validation = prescriptionValidation.itemValidations[index]
+        return validation && validation.requiresPrescription
+      })
+      
+      if (prescriptionItems.length > 0) {
+        const { sendPrescriptionRequiredNotification } = await import('../services/order-prescription-notifications')
+        await sendPrescriptionRequiredNotification(
+          order.id,
+          customer.id,
+          order.orderNumber,
+          prescriptionItems.map(item => ({
+            productId: item.productId,
+            productName: item.productName
+          }))
+        )
+      }
+    } catch (prescriptionNotifyErr) {
+      console.error('Error sending prescription required notification:', prescriptionNotifyErr)
+      // Don't fail the order creation if notification fails
+    }
+    
+    // Enqueue order confirmation notification (non-blocking)
+    // Uses enhanced notification service with preference checking
+    try {
+      await enhancedNotificationService.sendOrderConfirmation({
         id: order.id,
         orderNumber: order.orderNumber,
         customerId: customer.id,

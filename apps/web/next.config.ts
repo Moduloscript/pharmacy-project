@@ -19,10 +19,10 @@ const nextConfig: NextConfig = {
 				hostname: "avatars.githubusercontent.com",
 			},
 			{
-				// supabase storage for product images
+				// supabase storage - all patterns
 				protocol: "https",
 				hostname: "ehuuqltrlfcmrsiwgrml.supabase.co",
-				pathname: "/storage/v1/s3/product-images/**",
+				pathname: "/storage/**",
 			},
 		],
 	},

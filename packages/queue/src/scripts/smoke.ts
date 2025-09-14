@@ -1,4 +1,5 @@
 import { db } from '@repo/database';
+import { NotificationType, NotificationChannel } from '@prisma/client';
 import { createNotificationWorker, registerNotificationProvider } from '../worker.js';
 import { addNotificationJob } from '../notifications.js';
 import type { NotificationJobData, NotificationJobResult, NotificationProvider } from '../types.js';
@@ -46,11 +47,11 @@ async function main() {
   const recipient = process.env.SMOKE_TEST_PHONE || '+2348012345678';
   const record = await db.notification.create({
     data: {
-      type: 'order_confirmation',
-      channel: 'sms',
+      type: NotificationType.ORDER_CONFIRMATION,
+      channel: NotificationChannel.SMS,
       recipient,
+      body: 'This is a BenPharma SMS smoke test. If you received this, notifications are working.',
       message: 'This is a BenPharma SMS smoke test. If you received this, notifications are working.',
-      status: 'PENDING',
     },
   });
 

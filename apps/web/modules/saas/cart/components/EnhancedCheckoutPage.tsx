@@ -279,7 +279,12 @@ export function EnhancedCheckoutPage({ className, onOrderComplete }: EnhancedChe
     setPrescriptionFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const prescriptionItems = cartSummary.items.filter(item => item.requiresPrescription);
+  const prescriptionItems = cartSummary.items.filter(
+    (item) =>
+    item.product?.is_prescription_required ||
+    item.product?.isPrescriptionRequired ||
+    item.product?.isControlled
+  );
 
   if (cartSummary.isEmpty) {
     return (
@@ -561,7 +566,7 @@ export function EnhancedCheckoutPage({ className, onOrderComplete }: EnhancedChe
                         <div>
 <p className="font-medium text-highlight">Prescription Required</p>
 <p className="text-sm text-highlight mt-1">
-                            Please upload valid prescriptions for: {prescriptionItems.map(item => item.name).join(', ')}
+                          Please upload valid prescriptions for: {prescriptionItems.map(item => item.product?.name).join(', ')}
                           </p>
                         </div>
                       </div>
@@ -765,6 +770,14 @@ className="text-destructive hover:text-destructive/90"
 
                 {/* Order Summary */}
                 <div className="space-y-6 mb-6">
+                  {cartSummary.items.some(item => item.product?.is_prescription_required || item.product?.isPrescriptionRequired || item.product?.isControlled) && prescriptionFiles.length === 0 && (
+                    <Alert variant="warning">
+                      <AlertTitle>Prescription required</AlertTitle>
+                      <AlertDescription>
+                        Your order contains prescription-required items, but no prescription file has been selected. Please go back to the Shipping step to upload your prescription so we can process your order.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   <div>
                     <h3 className="font-semibold text-card-foreground mb-3">Shipping Address</h3>
                     <div className="p-4 bg-gray-50 rounded-lg text-sm">

@@ -110,3 +110,97 @@ html, body {
 .animate-slide-up {
 	animation: slide-up 0.3s ease-out;
 }
+
+/* Enhanced Dark Mode Theme Variables for Prescriptions */
+:root {
+	/* Light mode defaults */
+	--rx-bg: #ffffff;
+	--rx-surface: #f9fafb;
+	--rx-elevated: #f3f4f6;
+	--rx-border: #e5e7eb;
+	--rx-muted: #6b7280;
+	--rx-text: #111827;
+	--rx-accent: #2563eb;
+	--rx-success: #10b981;
+	--rx-warning: #f59e0b;
+	--rx-danger: #ef4444;
+	--rx-pending: #f59e0b;
+	--rx-clarify: #3b82f6;
+}
+
+.dark {
+	/* Dark mode overrides */
+	--rx-bg: #0b0f14;
+	--rx-surface: #0f141a;
+	--rx-elevated: #1a1f2e;
+	--rx-border: #2a3441;
+	--rx-muted: #9ca3af;
+	--rx-text: #f3f4f6;
+	--rx-accent: #60a5fa;
+	--rx-success: #34d399;
+	--rx-warning: #fbbf24;
+	--rx-danger: #f87171;
+	--rx-pending: #fbbf24;
+	--rx-clarify: #60a5fa;
+}
+
+/* Prescription Status Badge Styles */
+.rx-badge {
+	@apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium;
+	transition: all 0.2s ease;
+}
+
+.rx-badge-pending {
+	background-color: color-mix(in srgb, var(--rx-pending) 15%, transparent);
+	color: var(--rx-pending);
+	border: 1px solid color-mix(in srgb, var(--rx-pending) 25%, transparent);
+}
+
+.rx-badge-approved {
+	background-color: color-mix(in srgb, var(--rx-success) 15%, transparent);
+	color: var(--rx-success);
+	border: 1px solid color-mix(in srgb, var(--rx-success) 25%, transparent);
+}
+
+.rx-badge-rejected {
+	background-color: color-mix(in srgb, var(--rx-danger) 15%, transparent);
+	color: var(--rx-danger);
+	border: 1px solid color-mix(in srgb, var(--rx-danger) 25%, transparent);
+}
+
+.rx-badge-clarify {
+	background-color: color-mix(in srgb, var(--rx-clarify) 15%, transparent);
+	color: var(--rx-clarify);
+	border: 1px solid color-mix(in srgb, var(--rx-clarify) 25%, transparent);
+}
+
+/* Table enhancements */
+.rx-table {
+	@apply w-full text-sm;
+}
+
+.rx-table thead {
+	@apply sticky top-0 z-10;
+	background-color: var(--rx-elevated);
+	border-bottom: 1px solid var(--rx-border);
+}
+
+.rx-table th {
+	@apply px-4 py-3 text-left font-medium;
+	color: var(--rx-muted);
+	@apply uppercase tracking-wider text-xs;
+}
+
+.rx-table tbody tr {
+	border-bottom: 1px solid var(--rx-border);
+	transition: background-color 0.15s ease;
+}
+
+.rx-table tbody tr:hover {
+	background-color: var(--rx-elevated);
+}
+
+.rx-table td {
+	@apply px-4 py-4;
+	color: var(--rx-text);
+}

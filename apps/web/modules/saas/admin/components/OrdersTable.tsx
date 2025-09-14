@@ -40,6 +40,8 @@ import { toast } from 'sonner';
 interface Order {
   id: string;
   orderNumber: string;
+  requiresPrescription?: boolean;
+  prescriptionStatus?: string | null;
   customer: {
     id: string;
     name: string;
@@ -481,6 +483,16 @@ export function OrdersTable({ className }: OrdersTableProps) {
                         <p className="font-medium truncate max-w-[120px]" title={order.orderNumber}>
                           {order.orderNumber}
                         </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {order.requiresPrescription && (
+                            <Badge className="text-[10px] py-0.5 px-1.5">Rx required</Badge>
+                          )}
+                          {order.prescriptionStatus && (
+                            <Badge className="text-[10px] py-0.5 px-1.5">
+                              Rx: {order.prescriptionStatus}
+                            </Badge>
+                          )}
+                        </div>
                         {order.deliveryFee > 0 && (
                           <p className="text-xs text-gray-500">
                             + {formatCurrency(order.deliveryFee)} delivery
@@ -556,7 +568,7 @@ export function OrdersTable({ className }: OrdersTableProps) {
                           <Select
                             value={order.orderStatus}
                             onValueChange={(value) => handleStatusUpdate(order.id, value)}
-                            disabled={updateStatusMutation.isPending}
+                            disabled={updateStatusMutation.isPending || (order.requiresPrescription && order.prescriptionStatus !== 'APPROVED')}
                           >
                             <SelectTrigger className="w-32 h-8">
                               <SelectValue />
@@ -593,6 +605,13 @@ export function OrdersTable({ className }: OrdersTableProps) {
                           <EyeIcon className="size-4" />
                         </Button>
                       </Link>
+                      {order.requiresPrescription && (
+                        <Link href={`/app/admin/prescriptions`}>
+                          <Button variant="outline" size="sm">
+                            Review Rx
+                          </Button>
+                        </Link>
+                      )}
                       
                       <Button variant="outline" size="sm">
                         <MessageSquareIcon className="size-4" />

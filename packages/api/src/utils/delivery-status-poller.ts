@@ -111,11 +111,297 @@ async function updateNotificationWithPolledStatus(
   
   const updateData: any = {
     status: internalStatus,
-    gatewayResponse: JSON.stringify({
-      ...JSON.parse(await getExistingGatewayResponse(notificationId) || '{}'),
-      polledStatus: providerResponse,
-      lastPolledAt: new Date().toISOString()
-    })
   };
-  
-  if (internalStatus === 'DELIVERED' && providerResponse.deliveredAt) {\n    updateData.deliveredAt = providerResponse.deliveredAt;\n  } else if (internalStatus === 'SENT') {\n    // Only set sentAt if it hasn't been set before\n    const existing = await db.notification.findUnique({\n      where: { id: notificationId },\n      select: { sentAt: true }\n    });\n    if (existing && !existing.sentAt) {\n      updateData.sentAt = new Date();\n    }\n  }\n  \n  await db.notification.update({\n    where: { id: notificationId },\n    data: updateData\n  });\n  \n  console.log(`📊 Polled status update for notification ${notificationId}: ${internalStatus}`);\n}\n\n/**\n * Get existing gateway response for a notification\n */\nasync function getExistingGatewayResponse(notificationId: string): Promise<string | null> {\n  const notification = await db.notification.findUnique({\n    where: { id: notificationId },\n    select: { gatewayResponse: true }\n  });\n  \n  return notification?.gatewayResponse || null;\n}\n\n/**\n * Poll delivery status for pending notifications\n */\nexport async function pollPendingNotificationStatuses(options: {\n  provider?: string;\n  batchSize?: number;\n  maxAge?: number; // Max age in hours\n  onlyChannels?: string[];\n} = {}) {\n  const {\n    provider = 'termii',\n    batchSize = 50,\n    maxAge = 24, // 24 hours\n    onlyChannels = ['sms']\n  } = options;\n  \n  console.log(`🔍 Polling ${provider} for delivery status updates (batch size: ${batchSize})`);\n  \n  const maxAgeDate = new Date();\n  maxAgeDate.setHours(maxAgeDate.getHours() - maxAge);\n  \n  try {\n    // Find notifications that need status updates\n    const pendingNotifications = await db.notification.findMany({\n      where: {\n        channel: {\n          in: onlyChannels\n        },\n        status: {\n          in: ['PENDING', 'PROCESSING', 'SENT']\n        },\n        createdAt: {\n          gte: maxAgeDate\n        },\n        gatewayResponse: {\n          not: null\n        }\n      },\n      orderBy: {\n        createdAt: 'desc'\n      },\n      take: batchSize\n    });\n    \n    if (pendingNotifications.length === 0) {\n      console.log('✅ No pending notifications found for status polling');\n      return { polled: 0, updated: 0, errors: 0 };\n    }\n    \n    console.log(`📝 Found ${pendingNotifications.length} notifications to poll`);\n    \n    let polled = 0;\n    let updated = 0;\n    let errors = 0;\n    \n    for (const notification of pendingNotifications) {\n      try {\n        // Extract message ID from gateway response\n        const messageId = extractMessageIdFromGatewayResponse(\n          notification.gatewayResponse!,\n          provider\n        );\n        \n        if (!messageId) {\n          console.warn(`⚠️ No message ID found for notification ${notification.id}`);\n          continue;\n        }\n        \n        // Poll the provider\n        let providerResponse: ProviderStatusResponse | null = null;\n        \n        switch (provider) {\n          case 'termii':\n            providerResponse = await pollTermiiStatus(messageId);\n            break;\n          default:\n            console.warn(`Unsupported provider for polling: ${provider}`);\n            continue;\n        }\n        \n        polled++;\n        \n        if (!providerResponse) {\n          console.warn(`⚠️ No status response for notification ${notification.id}`);\n          continue;\n        }\n        \n        // Check if status has changed\n        const newInternalStatus = mapProviderStatusToInternal(providerResponse.status, provider);\n        if (newInternalStatus !== notification.status && newInternalStatus !== 'UNKNOWN') {\n          await updateNotificationWithPolledStatus(\n            notification.id,\n            providerResponse,\n            provider\n          );\n          updated++;\n        }\n        \n        // Add delay between requests to avoid rate limiting\n        if (polled < pendingNotifications.length) {\n          await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay\n        }\n        \n      } catch (error) {\n        console.error(`❌ Error polling status for notification ${notification.id}:`, error);\n        errors++;\n      }\n    }\n    \n    const summary = { polled, updated, errors };\n    console.log(`📊 Status polling completed:`, summary);\n    \n    return summary;\n    \n  } catch (error) {\n    console.error('❌ Error in status polling batch:', error);\n    throw error;\n  }\n}\n\n/**\n * Poll status for a specific notification\n */\nexport async function pollNotificationStatus(notificationId: string, provider = 'termii') {\n  try {\n    const notification = await db.notification.findUnique({\n      where: { id: notificationId },\n      select: {\n        id: true,\n        status: true,\n        channel: true,\n        gatewayResponse: true\n      }\n    });\n    \n    if (!notification) {\n      throw new Error('Notification not found');\n    }\n    \n    if (!notification.gatewayResponse) {\n      throw new Error('No gateway response found - cannot extract message ID');\n    }\n    \n    const messageId = extractMessageIdFromGatewayResponse(notification.gatewayResponse, provider);\n    if (!messageId) {\n      throw new Error('Message ID not found in gateway response');\n    }\n    \n    let providerResponse: ProviderStatusResponse | null = null;\n    \n    switch (provider) {\n      case 'termii':\n        providerResponse = await pollTermiiStatus(messageId);\n        break;\n      default:\n        throw new Error(`Unsupported provider: ${provider}`);\n    }\n    \n    if (!providerResponse) {\n      throw new Error('No response from provider');\n    }\n    \n    const newStatus = mapProviderStatusToInternal(providerResponse.status, provider);\n    \n    if (newStatus !== notification.status && newStatus !== 'UNKNOWN') {\n      await updateNotificationWithPolledStatus(notificationId, providerResponse, provider);\n      return {\n        updated: true,\n        previousStatus: notification.status,\n        newStatus,\n        providerResponse\n      };\n    }\n    \n    return {\n      updated: false,\n      currentStatus: notification.status,\n      providerResponse\n    };\n    \n  } catch (error) {\n    console.error(`❌ Error polling status for notification ${notificationId}:`, error);\n    throw error;\n  }\n}\n\n/**\n * Start periodic status polling (for use in background jobs)\n */\nexport function startPeriodicStatusPolling(intervalMinutes = 10) {\n  console.log(`🔄 Starting periodic status polling every ${intervalMinutes} minutes`);\n  \n  const pollFn = async () => {\n    try {\n      await pollPendingNotificationStatuses();\n    } catch (error) {\n      console.error('❌ Error in periodic status polling:', error);\n    }\n  };\n  \n  // Run immediately\n  pollFn();\n  \n  // Then run periodically\n  const intervalId = setInterval(pollFn, intervalMinutes * 60 * 1000);\n  \n  return () => {\n    console.log('🛑 Stopping periodic status polling');\n    clearInterval(intervalId);\n  };\n}"}}}
+
+  // Merge gateway response with previous stored response (if any)
+  try {
+    const existingStr = (await getExistingGatewayResponse(notificationId)) || '{}';
+    const existing = JSON.parse(existingStr);
+    updateData.gatewayResponse = JSON.stringify({
+      ...existing,
+      polledStatus: providerResponse,
+      lastPolledAt: new Date().toISOString(),
+    });
+  } catch {
+    updateData.gatewayResponse = JSON.stringify({
+      polledStatus: providerResponse,
+      lastPolledAt: new Date().toISOString(),
+    });
+  }
+
+  if (internalStatus === 'DELIVERED' && providerResponse.deliveredAt) {
+    updateData.deliveredAt = providerResponse.deliveredAt;
+  } else if (internalStatus === 'SENT') {
+    // Only set sentAt if it hasn't been set before
+    const existing = await db.notification.findUnique({
+      where: { id: notificationId },
+      select: { sentAt: true },
+    });
+    if (existing && !existing.sentAt) {
+      updateData.sentAt = new Date();
+    }
+  }
+
+  await db.notification.update({
+    where: { id: notificationId },
+    data: updateData,
+  });
+
+  console.log(
+    `📊 Polled status update for notification ${notificationId}: ${internalStatus}`,
+  );
+}
+
+/**
+ * Get existing gateway response for a notification
+ */
+async function getExistingGatewayResponse(
+  notificationId: string,
+): Promise<string | null> {
+  const notification = await db.notification.findUnique({
+    where: { id: notificationId },
+    select: { gatewayResponse: true },
+  });
+
+  return notification?.gatewayResponse || null;
+}
+
+/**
+ * Poll delivery status for pending notifications
+ */
+export async function pollPendingNotificationStatuses(options: {
+  provider?: string;
+  batchSize?: number;
+  maxAge?: number; // Max age in hours
+  onlyChannels?: string[];
+} = {}) {
+  const {
+    provider = 'termii',
+    batchSize = 50,
+    maxAge = 24, // 24 hours
+    onlyChannels = ['sms'],
+  } = options;
+
+  console.log(
+    `🔍 Polling ${provider} for delivery status updates (batch size: ${batchSize})`,
+  );
+
+  const maxAgeDate = new Date();
+  maxAgeDate.setHours(maxAgeDate.getHours() - maxAge);
+
+  try {
+    // Find notifications that need status updates
+    const pendingNotifications = await db.notification.findMany({
+      where: {
+        channel: {
+          in: onlyChannels,
+        },
+        status: {
+          in: ['PENDING', 'PROCESSING', 'SENT'],
+        },
+        createdAt: {
+          gte: maxAgeDate,
+        },
+        gatewayResponse: {
+          not: null,
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: batchSize,
+    });
+
+    if (pendingNotifications.length === 0) {
+      console.log('✅ No pending notifications found for status polling');
+      return { polled: 0, updated: 0, errors: 0 };
+    }
+
+    console.log(`📝 Found ${pendingNotifications.length} notifications to poll`);
+
+    let polled = 0;
+    let updated = 0;
+    let errors = 0;
+
+    for (const notification of pendingNotifications) {
+      try {
+        // Extract message ID from gateway response
+        const messageId = extractMessageIdFromGatewayResponse(
+          notification.gatewayResponse!,
+          provider,
+        );
+
+        if (!messageId) {
+          console.warn(`⚠️ No message ID found for notification ${notification.id}`);
+          continue;
+        }
+
+        // Poll the provider
+        let providerResponse: ProviderStatusResponse | null = null;
+
+        switch (provider) {
+          case 'termii':
+            providerResponse = await pollTermiiStatus(messageId);
+            break;
+          default:
+            console.warn(`Unsupported provider for polling: ${provider}`);
+            continue;
+        }
+
+        polled++;
+
+        if (!providerResponse) {
+          console.warn(
+            `⚠️ No status response for notification ${notification.id}`,
+          );
+          continue;
+        }
+
+        // Check if status has changed
+        const newInternalStatus = mapProviderStatusToInternal(
+          providerResponse.status,
+          provider,
+        );
+        if (
+          newInternalStatus !== notification.status &&
+          newInternalStatus !== 'UNKNOWN'
+        ) {
+          await updateNotificationWithPolledStatus(
+            notification.id,
+            providerResponse,
+            provider,
+          );
+          updated++;
+        }
+
+        // Add delay between requests to avoid rate limiting
+        if (polled < pendingNotifications.length) {
+          await new Promise((resolve) => setTimeout(resolve, 200)); // 200ms delay
+        }
+      } catch (error) {
+        console.error(
+          `❌ Error polling status for notification ${notification.id}:`,
+          error,
+        );
+        errors++;
+      }
+    }
+
+    const summary = { polled, updated, errors };
+    console.log(`📊 Status polling completed:`, summary);
+
+    return summary;
+  } catch (error) {
+    console.error('❌ Error in status polling batch:', error);
+    throw error;
+  }
+}
+
+/**
+ * Poll status for a specific notification
+ */
+export async function pollNotificationStatus(
+  notificationId: string,
+  provider = 'termii',
+) {
+  try {
+    const notification = await db.notification.findUnique({
+      where: { id: notificationId },
+      select: {
+        id: true,
+        status: true,
+        channel: true,
+        gatewayResponse: true,
+      },
+    });
+
+    if (!notification) {
+      throw new Error('Notification not found');
+    }
+
+    if (!notification.gatewayResponse) {
+      throw new Error('No gateway response found - cannot extract message ID');
+    }
+
+    const messageId = extractMessageIdFromGatewayResponse(
+      notification.gatewayResponse,
+      provider,
+    );
+    if (!messageId) {
+      throw new Error('Message ID not found in gateway response');
+    }
+
+    let providerResponse: ProviderStatusResponse | null = null;
+
+    switch (provider) {
+      case 'termii':
+        providerResponse = await pollTermiiStatus(messageId);
+        break;
+      default:
+        throw new Error(`Unsupported provider: ${provider}`);
+    }
+
+    if (!providerResponse) {
+      throw new Error('No response from provider');
+    }
+
+    const newStatus = mapProviderStatusToInternal(
+      providerResponse.status,
+      provider,
+    );
+
+    if (newStatus !== notification.status && newStatus !== 'UNKNOWN') {
+      await updateNotificationWithPolledStatus(
+        notificationId,
+        providerResponse,
+        provider,
+      );
+      return {
+        updated: true,
+        previousStatus: notification.status,
+        newStatus,
+        providerResponse,
+      };
+    }
+
+    return {
+      updated: false,
+      currentStatus: notification.status,
+      providerResponse,
+    };
+  } catch (error) {
+    console.error(
+      `❌ Error polling status for notification ${notificationId}:`,
+      error,
+    );
+    throw error;
+  }
+}
+
+/**
+ * Start periodic status polling (for use in background jobs)
+ */
+export function startPeriodicStatusPolling(intervalMinutes = 10) {
+  console.log(
+    `🔄 Starting periodic status polling every ${intervalMinutes} minutes`,
+  );
+
+  const pollFn = async () => {
+    try {
+      await pollPendingNotificationStatuses();
+    } catch (error) {
+      console.error('❌ Error in periodic status polling:', error);
+    }
+  };
+
+  // Run immediately
+  pollFn();
+
+  // Then run periodically
+  const intervalId = setInterval(pollFn, intervalMinutes * 60 * 1000);
+
+  return () => {
+    console.log('🛑 Stopping periodic status polling');
+    clearInterval(intervalId);
+  };
+}

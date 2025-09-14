@@ -3,6 +3,7 @@ export * from './provider/index';
 
 // Export new notification functionality
 export { NotificationService } from './notification-service';
+export { EnhancedNotificationService, enhancedNotificationService } from './notification-service-enhanced';
 export type { INotificationProvider, NotificationTemplate, ProviderResponse } from './provider/notifications';
 export { BaseNotificationProvider } from './provider/notifications';
 

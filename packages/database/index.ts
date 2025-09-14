@@ -1,7 +1,7 @@
-export { PrismaClient } from "@prisma/client";
+export { PrismaClient, PrescriptionStatus, PrescriptionAuditAction } from "@prisma/client";
 export * from "./src/client";
 export { db } from "./src/client";
-export * from "./src/zod";
+export * from "./src/zod/index";
 
 declare global {
 	namespace PrismaJson {

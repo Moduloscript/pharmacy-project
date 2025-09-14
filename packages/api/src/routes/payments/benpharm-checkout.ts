@@ -37,7 +37,9 @@ const benpharmiCheckoutSchema = z.object({
   gateway: z.enum(['FLUTTERWAVE', 'OPAY', 'PAYSTACK']).optional(),
   // Optional OPay preferred method (omit to show all methods)
   opayPayMethod: z.enum(['BankCard', 'BankTransfer', 'BankUSSD', 'OPay']).optional(),
-  purchaseOrderNumber: z.string().optional()
+  purchaseOrderNumber: z.string().optional(),
+  // Optional: Use an existing order created via /api/orders
+  orderId: z.string().optional()
 });
 
 type BenpharmiCheckoutRequest = z.infer<typeof benpharmiCheckoutSchema>;
@@ -55,6 +57,9 @@ app.post('/benpharm-checkout', authMiddleware, zValidator('json', benpharmiCheck
       totalAmount: data.totalAmount,
       itemCount: data.items.length
     });
+    
+    // Import prescription validation service
+    const { PrescriptionValidationService } = await import('../../services/prescription-validation');
 
     // Derive client IP for gateway risk controls
     // Use environment variable for default IP (security best practice)
@@ -92,6 +97,122 @@ app.post('/benpharm-checkout', authMiddleware, zValidator('json', benpharmiCheck
 
     // Ensure a customer record exists for this user
     let customer = await db.customer.findUnique({ where: { userId: user.id } });
+
+    // If existing orderId provided, use that order instead of creating a new one
+    if (data.orderId && customer) {
+      const order = await db.order.findFirst({
+        where: { id: data.orderId, customerId: customer.id },
+        include: {
+          orderItems: { include: { product: { select: { isPrescriptionRequired: true, isControlled: true, name: true } } } },
+          prescriptions: true
+        }
+      });
+
+      if (!order) {
+        return c.json({ success: false, error: { message: 'Order not found for customer' } }, 404);
+      }
+
+      // Determine if prescription is required and ensure a prescription exists (any status)
+      const requiresRx = order.orderItems.some(oi => (oi.product as any)?.isPrescriptionRequired || (oi.product as any)?.isControlled);
+      if (requiresRx) {
+        const hasAnyRx = (order as any).prescriptions && (order as any).prescriptions.length > 0;
+        if (!hasAnyRx) {
+          logger.warn('Payment blocked: Prescription not uploaded for order', { orderId: order.id, userId: user.id });
+          return c.json({
+            success: false,
+            error: {
+              code: 'PRESCRIPTION_REQUIRED',
+              message: 'Please upload a prescription before proceeding to payment',
+              requiresPrescription: true
+            }
+          }, 400);
+        }
+      }
+
+      // Use order number as reference and order total for amount (kobo)
+      const ref = order.orderNumber;
+      const totalAmount = Math.round(Number(order.total) * 100);
+
+      const gateway = data.gateway || 'FLUTTERWAVE';
+      const gatewayData = {
+        ...data,
+        productId: order.id,
+        totalAmount,
+        // Provide order items to aid gateway descriptions
+        items: order.orderItems.map(oi => ({
+          productId: oi.productId,
+          sku: oi.productSKU || undefined,
+          name: oi.productName,
+          quantity: oi.quantity,
+          unitPrice: Math.round(Number(oi.unitPrice) * 100)
+        }))
+      } as any;
+
+      const paymentResult = await createBenpharmiPayment(gatewayData, gateway, ref, clientIp);
+      if (paymentResult.success) {
+        return c.json({
+          success: true,
+          checkoutLink: (paymentResult as any).paymentUrl,
+          reference: (paymentResult as any).reference,
+          gateway: gateway,
+          message: 'Payment created successfully'
+        });
+      }
+
+      const fallbackResult = await handlePaymentFallback(gatewayData, gateway, ref, clientIp);
+      if (fallbackResult.success) {
+        return c.json({
+          success: true,
+          checkoutLink: (fallbackResult as any).paymentUrl,
+          reference: (fallbackResult as any).reference,
+          gateway: (fallbackResult as any).gateway,
+          message: 'Payment created with fallback gateway'
+        });
+      }
+
+      return c.json({ success: false, error: { message: (paymentResult as any).error || (fallbackResult as any).error || 'Payment creation failed' } }, 502);
+    }
+    
+    // CRITICAL SECURITY: Validate prescriptions before allowing payment
+    // Check if any items have productId for prescription validation
+    const itemsWithProductId = data.items.filter(item => item.productId);
+    
+    if (itemsWithProductId.length > 0 && customer) {
+      // Validate prescriptions for the order items
+      const prescriptionValidation = await PrescriptionValidationService.validateOrderPrescriptions(
+        customer.id,
+        itemsWithProductId.map(item => ({
+          productId: item.productId!,
+          quantity: item.quantity
+        }))
+      );
+      
+      // Check if any items require prescriptions
+      const requiresPrescription = prescriptionValidation.itemValidations.some(
+        item => item.requiresPrescription
+      );
+      
+      if (requiresPrescription && !prescriptionValidation.isValid) {
+        logger.warn('Payment blocked: Prescription validation failed', {
+          userId: user.id,
+          customerId: customer.id,
+          errors: prescriptionValidation.errors,
+          items: prescriptionValidation.itemValidations
+        });
+        
+        return c.json({
+          success: false,
+          error: {
+            code: 'PRESCRIPTION_REQUIRED',
+            message: 'Cannot process payment: Valid prescription required for controlled medications',
+            details: prescriptionValidation.errors,
+            requiresPrescription: true,
+            itemValidations: prescriptionValidation.itemValidations
+          }
+        }, 400);
+      }
+    }
+    
     if (!customer) {
       // Validate and normalize the phone number for Nigerian format
       let normalizedPhone = data.customer.phone;

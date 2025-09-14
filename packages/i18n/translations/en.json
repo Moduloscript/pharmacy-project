@@ -500,6 +500,14 @@
 		"perSeat": "seat"
 	},
 	"settings": {
+		"notifications": {
+			"title": "Notification Preferences",
+			"subtitle": "Manage how and when you receive notifications"
+		},
+		"preferences": {
+			"title": "Communication Preferences",
+			"subtitle": "Customize your communication and notification settings"
+		},
 		"account": {
 			"avatar": {
 				"description": "To change your avatar click the picture in this block and select a file from your computer to upload.",
@@ -639,6 +647,8 @@
 				"dangerZone": "Danger zone",
 				"general": "General",
 				"security": "Security",
+				"notifications": "Notifications",
+				"preferences": "Preferences",
 				"title": "Account"
 			},
 			"organization": {

@@ -148,31 +148,25 @@ export class SessionManager {
   }
 
   /**
-   * Clean up expired sessions from storage
+   * Clean up legacy cart storage in localStorage (we now use sessionStorage only)
    */
   static cleanupExpiredSessions(): void {
     try {
       if (typeof localStorage === 'undefined') return;
 
       const keys = Object.keys(localStorage);
-      const cartKeys = keys.filter(key => key.startsWith('benpharm-cart-session-'));
 
-      cartKeys.forEach(key => {
-        try {
-          const sessionData = JSON.parse(localStorage.getItem(key) || '{}');
-          if (sessionData.session && this.isExpired(sessionData.session)) {
-            localStorage.removeItem(key);
-            // Also remove associated cart data
-            const cartKey = key.replace('-session-', '-items-');
-            localStorage.removeItem(cartKey);
-          }
-        } catch (e) {
-          // Invalid session data, remove it
-          localStorage.removeItem(key);
-        }
-      });
+      // Remove old per-session cart mirrors from localStorage
+      keys
+        .filter((key) => key.startsWith('benpharm-cart-items-'))
+        .forEach((key) => {
+          try { localStorage.removeItem(key); } catch {}
+        });
+
+      // Remove legacy session copy in localStorage (session uses sessionStorage now)
+      try { localStorage.removeItem('benpharm-cart-session'); } catch {}
     } catch (error) {
-      console.warn('Failed to cleanup expired sessions:', error);
+      console.warn('Failed to cleanup legacy cart storage:', error);
     }
   }
 
@@ -296,32 +290,21 @@ export const isSessionActiveAtom = atom(
 export const initializeSessionAtom = atom(
   null,
   (get, set) => {
-    let currentState = get(cartSessionStateAtom);
+    const currentState = get(cartSessionStateAtom);
 
-    // If no session exists, create a new one
-    if (!currentState) {
-      currentState = {
-        session: SessionManager.createSession(),
-        metadata: SessionManager.createMetadata(),
-      };
-      set(cartSessionStateAtom, currentState);
-      return;
-    }
-
-    // If session is expired, create a new one
-    if (SessionManager.isExpired(currentState.session)) {
+    // If there's no session or it's not active, start a fresh one
+    if (!currentState || !SessionManager.isActive(currentState.session)) {
+      // Clean up any legacy localStorage mirrors and stale keys
+      SessionManager.cleanupExpiredSessions();
       const newState = {
         session: SessionManager.createSession(),
-        metadata: {
-          ...currentState.metadata,
-          version: currentState.metadata.version + 1,
-        },
+        metadata: SessionManager.createMetadata(),
       };
       set(cartSessionStateAtom, newState);
       return;
     }
 
-    // Session is valid, just update activity
+    // Otherwise just update activity
     const updatedSession = SessionManager.updateActivity(currentState.session);
     set(cartSessionStateAtom, {
       ...currentState,

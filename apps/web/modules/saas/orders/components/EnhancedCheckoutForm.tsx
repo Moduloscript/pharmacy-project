@@ -15,7 +15,7 @@ import { Separator } from '@ui/components/separator'
 import { Badge } from '@ui/components/badge'
 import { RadioGroup, RadioGroupItem } from '@ui/components/radio-group'
 import { useCartToast } from '@saas/shared/hooks/use-toast'
-import { Loader2, CreditCard, Truck, Package, MapPin, Phone, User, Globe, CheckCircle } from 'lucide-react'
+import { Loader2, CreditCard, Truck, Package, MapPin, Phone, User, Globe, CheckCircle, Upload } from 'lucide-react'
 import { nigerianStates, getLGAs, formatNaira } from '@/lib/nigerian-locations'
 import { 
   selectedStateAtom, 
@@ -30,6 +30,10 @@ import {
   startPaymentWithExpirationAtom,
   type CartItem
 } from '../../cart/lib/cart-store'
+import { useState, useRef } from 'react'
+import { CheckoutPrescriptionUpload, type CheckoutPrescriptionUploadRef, type CheckoutPrescriptionFile } from './CheckoutPrescriptionUpload'
+import { uploadPrescriptionAfterOrder } from '../lib/prescription-upload-helpers'
+import { useSession } from '../../auth/hooks/use-session'
 
 // Enhanced atoms for Nigerian payment system integration
 const enhancedCheckoutFormAtom = atom({
@@ -85,6 +89,7 @@ interface EnhancedCheckoutFormProps {
 
 export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFormProps) {
   const cartToast = useCartToast()
+  const { user } = useSession()
   const queryClient = useQueryClient()
   
   // Atoms
@@ -158,7 +163,7 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
     onMutate: () => {
       setIsLoading(true)
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setIsLoading(false)
       
       if (data.paymentUrl) {
@@ -172,7 +177,24 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
           window.location.href = data.paymentUrl!
         }, 2000)
       } else {
-        // Direct order completed - clear cart immediately
+        // Direct order completed
+        // If prescription files were selected and items require prescription, upload them
+        try {
+          if (requiresPrescription && prescriptionFiles.length > 0 && data.orderId) {
+            const uploadResult = await uploadPrescriptionAfterOrder(data.orderId, prescriptionFiles, user?.id || '')
+            
+            if (uploadResult.success) {
+              cartToast.showSuccess('Prescription uploaded successfully and linked to your order.')
+            } else {
+              cartToast.showError(`Order created, but prescription upload failed: ${uploadResult.error}. You can upload it from the order page.`)
+            }
+          }
+        } catch (e) {
+          // Non-blocking errors
+          console.warn('Prescription upload step failed:', e)
+          cartToast.showError('Order created, but failed to upload prescription. You can upload it from the order page.')
+        }
+
         cartToast.showSuccess(`Order Created Successfully! Your order #${data.orderNumber} has been created.`)
         
         // Clear cart for direct orders (cash on delivery, invoice, etc.)
@@ -198,16 +220,62 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
   
   // Create Nigerian payment using enhanced system
   const createNigerianPayment = async (orderData: EnhancedCheckoutFormData) => {
+    // 1) Create the order first via /api/orders
+    const orderCreateResp = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: cartData?.data?.items?.map((item: CartItem) => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice
+        })) || [],
+        deliveryMethod: orderData.deliveryMethod,
+        deliveryAddress: orderData.deliveryAddress,
+        deliveryCity: 'Benin City',
+        deliveryState: orderData.deliveryState,
+        deliveryLGA: orderData.deliveryLGA,
+        deliveryPhone: orderData.deliveryPhone,
+        deliveryNotes: orderData.deliveryNotes,
+        // Optional: include mapped gateway method
+        paymentMethod: ['FLUTTERWAVE','OPAY','PAYSTACK'].includes(orderData.paymentMethod) ? orderData.paymentMethod as any : undefined,
+        purchaseOrderNumber: orderData.purchaseOrderNumber
+      })
+    })
+
+    if (!orderCreateResp.ok) {
+      const err = await orderCreateResp.json().catch(() => ({}))
+      throw new Error(err?.error?.message || 'Failed to create order before payment')
+    }
+    const orderResult = await orderCreateResp.json()
+    const createdOrderId = orderResult?.data?.order?.id as string
+    const createdOrderNumber = orderResult?.data?.order?.orderNumber as string
+    const createdOrderTotal = Number(orderResult?.data?.order?.total || 0)
+
+    // 2) If prescription is required and a file is selected, upload before payment
+    try {
+      if (requiresPrescription && prescriptionFiles.length > 0 && createdOrderId) {
+        const uploadResult = await uploadPrescriptionAfterOrder(createdOrderId, prescriptionFiles, user?.id || '')
+        
+        if (!uploadResult.success) {
+          cartToast.showError(`Order created, but prescription upload failed: ${uploadResult.error}. You can upload from the order page.`)
+        }
+      }
+    } catch (e) {
+      console.warn('Non-blocking prescription upload error before payment:', e)
+    }
+
+    // 3) Initialize Nigerian payment referencing the created order
     const response = await fetch('/api/payments/benpharm-checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'one-time',
-        productId: `benpharm_order_${Date.now()}`,
+        productId: createdOrderId,
         email: orderData.customerEmail,
         name: orderData.customerName,
         redirectUrl: `${window.location.origin}/app/orders?payment=success`,
-        // Nigerian order data
+        orderId: createdOrderId,
         customer: {
           email: orderData.customerEmail,
           phone: formatNigerianPhone(orderData.deliveryPhone),
@@ -216,14 +284,13 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
           lga: orderData.deliveryLGA
         },
         items: cartData?.data?.items?.map((item: CartItem) => ({
-          // Include productId (and sku if available) so backend can persist real order items
           productId: item.product.id,
           sku: (item.product as any)?.sku || undefined,
           name: item.product.name,
           quantity: item.quantity,
-          unitPrice: item.unitPrice * 100 // Convert to kobo
+          unitPrice: item.unitPrice * 100
         })) || [],
-        totalAmount: (subtotal + deliveryFee) * 100, // Convert to kobo
+        totalAmount: Math.round(createdOrderTotal * 100),
         deliveryAddress: orderData.deliveryAddress,
         deliveryFee: deliveryFee * 100,
         deliveryMethod: orderData.deliveryMethod,
@@ -240,8 +307,8 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
     const result = await response.json()
     return {
       paymentUrl: result.checkoutLink,
-      orderId: `benpharm_order_${Date.now()}`,
-      orderNumber: `BPO-${Date.now()}`
+      orderId: createdOrderId,
+      orderNumber: createdOrderNumber
     }
   }
   
@@ -256,7 +323,14 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
           quantity: item.quantity,
           unitPrice: item.unitPrice
         })) || [],
-        ...orderData
+        deliveryMethod: orderData.deliveryMethod,
+        deliveryAddress: orderData.deliveryAddress,
+        deliveryCity: 'Benin City',
+        deliveryState: orderData.deliveryState,
+        deliveryLGA: orderData.deliveryLGA,
+        deliveryPhone: orderData.deliveryPhone,
+        deliveryNotes: orderData.deliveryNotes,
+        purchaseOrderNumber: orderData.purchaseOrderNumber
       })
     })
     
@@ -299,7 +373,14 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
   
   const subtotal = cartData?.data?.summary?.subtotal || 0
   const total = subtotal + deliveryFee
-  
+
+  // Prescription upload state (optional, shown when required)
+  const prescriptionUploadRef = useRef<CheckoutPrescriptionUploadRef>(null)
+  const [prescriptionFiles, setPrescriptionFiles] = useState<CheckoutPrescriptionFile[]>([])
+  const requiresPrescription = cartItems?.some(
+    (item: any) => item?.product?.is_prescription_required || item?.product?.isPrescriptionRequired || item?.product?.isControlled
+  )
+
   const onSubmit = (data: EnhancedCheckoutFormData) => {
     createEnhancedOrderMutation.mutate(data)
   }
@@ -595,6 +676,28 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
             </CardContent>
           </Card>
         )}
+
+        {/* Prescription Upload (if required) */}
+        {requiresPrescription ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <Upload className="h-5 w-5 text-muted-foreground" />
+                Prescription Upload
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Your cart contains prescription-required items. Upload a clear image or PDF of your prescription.
+              </p>
+              <CheckoutPrescriptionUpload
+                ref={prescriptionUploadRef}
+                onFilesChange={setPrescriptionFiles}
+                compact={true}
+              />
+            </CardContent>
+          </Card>
+        ) : null}
         
         {/* Payment Method */}
         <Card>

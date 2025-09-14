@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { SupabaseImage } from '@/components/ui/supabase-image';
 import { Badge } from '@ui/components/badge';
 import { Button } from '@ui/components/button';
 import { Card } from '@ui/components/card';
@@ -70,29 +70,15 @@ export function ProductCard({
     )}>
       <div className="relative">
         {/* Product Image */}
-        <div className="aspect-square overflow-hidden bg-muted">
-          {imageUrl ? (
-            <Image
-              src={imageUrl}
-              alt={product.name}
-              width={320}
-              height={320}
-              className="size-full object-cover transition-transform group-hover:scale-105"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
-                if (placeholder) {
-                  placeholder.style.display = 'flex';
-                }
-              }}
-            />
-          ) : null}
-          <div 
-            className="flex size-full items-center justify-center bg-muted" 
-            style={{ display: imageUrl ? 'none' : 'flex' }}
-          >
-            <Package className="size-12 text-foreground/30" />
-          </div>
+        <div className="aspect-square overflow-hidden bg-muted relative">
+          <SupabaseImage
+            src={imageUrl}
+            alt={product.name}
+            fill
+            className="object-cover transition-transform group-hover:scale-105"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            fallbackIcon={<Package className="size-12 text-foreground/30" />}
+          />
         </div>
 
         {/* Stock Status */}

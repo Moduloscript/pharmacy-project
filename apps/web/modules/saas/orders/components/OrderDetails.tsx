@@ -22,11 +22,14 @@ import {
   FileText,
   User,
   Mail,
-  RefreshCw
+  RefreshCw,
+  Upload
 } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@ui/components/alert'
 import { formatNaira } from '@/lib/nigerian-locations'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { PrescriptionUpload } from './PrescriptionUpload'
 
 // Simple status colors
 const getStatusColor = (status: string) => {
@@ -47,6 +50,7 @@ const getStatusIcon = (status: string) => {
 
 interface OrderDetailsProps {
   orderId: string
+  isAdmin?: boolean
 }
 
 interface OrderItem {
@@ -58,6 +62,8 @@ interface OrderItem {
     brandName?: string
     nafdacNumber?: string
     description?: string
+    isPrescriptionRequired?: boolean
+    isControlled?: boolean
   }
   quantity: number
   unitPrice: number
@@ -103,25 +109,51 @@ interface Order {
     timestamp: string
     updatedBy?: string
   }>
+  prescriptionId?: string
+  prescriptionStatus?: string
+  requiresPrescription?: boolean
 }
 
-export function OrderDetails({ orderId }: OrderDetailsProps) {
+export function OrderDetails({ orderId, isAdmin = false }: OrderDetailsProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
   
   // Fetch order details
   const { data: order, isLoading, error, refetch } = useQuery<Order>({
-    queryKey: ['order', orderId],
+    queryKey: ['order', orderId, isAdmin],
     queryFn: async () => {
-      const response = await fetch(`/api/orders/${orderId}`)
+      const endpoint = isAdmin ? `/api/admin/orders/${orderId}` : `/api/orders/${orderId}`
+      const response = await fetch(endpoint)
       if (!response.ok) {
         if (response.status === 404) {
           throw new Error('Order not found')
         }
+        if (response.status === 403) {
+          throw new Error('You do not have permission to view this order')
+        }
         throw new Error('Failed to fetch order details')
       }
       const data = await response.json()
-      return data.data.order
+      const orderData = data.data?.order || data
+      
+      // Normalize the data structure - admin endpoint returns orderItems instead of items
+      if (orderData.orderItems && !orderData.items) {
+        orderData.items = orderData.orderItems
+      }
+      
+      // Ensure tracking array exists
+      if (!orderData.tracking) {
+        orderData.tracking = []
+      }
+      
+      // Normalize customer data structure for admin endpoint
+      if (orderData.customer && orderData.customer.user) {
+        // Admin endpoint nests name and email under user
+        orderData.customer.contactName = orderData.customer.user.name || orderData.customer.contactName
+        orderData.customer.email = orderData.customer.user.email || orderData.customer.email
+      }
+      
+      return orderData
     }
   })
   
@@ -200,6 +232,16 @@ export function OrderDetails({ orderId }: OrderDetailsProps) {
 
   if (!order) return null
   
+  // Check if order requires prescription - handle both items and orderItems structures
+  const orderItems = order?.items || order?.orderItems || []
+  const requiresPrescription = orderItems.some(item => 
+    item?.product?.isPrescriptionRequired || item?.product?.isControlled
+  )
+  const needsPrescriptionUpload = requiresPrescription && 
+    !order.prescriptionId && 
+    order.status !== 'CANCELLED' &&
+    order.status !== 'DELIVERED'
+  
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       {/* Simple Header */}
@@ -244,6 +286,79 @@ export function OrderDetails({ orderId }: OrderDetailsProps) {
       </div>
       
       <div className="container mx-auto py-8 px-4 space-y-8">
+      
+        {/* Prescription Upload Section - Phase 1 MVP */}
+        {needsPrescriptionUpload && (
+          <Card data-prescription-upload className="border-2 border-orange-200 shadow-sm bg-orange-50 rounded-lg overflow-hidden dark:bg-orange-950/20 dark:border-orange-800">
+            <CardHeader className="bg-orange-100 border-b border-orange-200 dark:bg-orange-900/30 dark:border-orange-800">
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-3 text-xl text-orange-900 dark:text-orange-100">
+                    <div className="p-2 bg-orange-200 rounded-lg border border-orange-300 dark:bg-orange-900 dark:border-orange-700">
+                      <AlertCircle className="h-6 w-6 text-orange-700 dark:text-orange-300" strokeWidth={1.5} />
+                    </div>
+                    Prescription Required
+                  </CardTitle>
+                  <p className="text-orange-700 mt-2 dark:text-orange-300">
+                    Your order contains items that require a valid prescription
+                  </p>
+                </div>
+                <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">
+                  Action Required
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Alert className="rounded-none border-0 bg-orange-50 dark:bg-orange-950/20">
+                <Upload className="h-4 w-4" />
+                <AlertTitle>Upload Your Prescription</AlertTitle>
+                <AlertDescription>
+                  To process your order, we need a valid prescription from a licensed healthcare provider. 
+                  Your order will remain on hold until the prescription is verified by our pharmacist.
+                </AlertDescription>
+              </Alert>
+              <div className="p-8">
+                <PrescriptionUpload 
+                  orderId={order.id}
+                  onSuccess={() => {
+                    toast.success('Prescription uploaded successfully! Our pharmacist will review it shortly.')
+                    refetch() // Refresh order details
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Show prescription status if already uploaded */}
+        {order.prescriptionId && order.prescriptionStatus && (
+          <Card className="border border-slate-200 shadow-sm bg-white rounded-lg overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+            <CardHeader className="bg-slate-50 border-b border-slate-200 dark:bg-slate-800 dark:border-slate-700">
+              <CardTitle className="flex items-center gap-3 text-xl text-slate-900 dark:text-slate-100">
+                <div className="p-2 bg-white rounded-lg border border-slate-200 dark:bg-slate-900 dark:border-slate-700">
+                  <FileText className="h-6 w-6 text-slate-700 dark:text-slate-300" strokeWidth={1.5} />
+                </div>
+                Prescription Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-600 mb-1 dark:text-slate-400">Status</p>
+                  <p className="text-lg font-medium text-slate-900 dark:text-slate-100">
+                    {order.prescriptionStatus}
+                  </p>
+                </div>
+                <Badge 
+                  variant={order.prescriptionStatus === 'APPROVED' ? 'default' : 
+                          order.prescriptionStatus === 'REJECTED' ? 'destructive' : 'secondary'}
+                >
+                  {order.prescriptionStatus}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       
         {/* Order Status Timeline */}
         <Card className="overflow-hidden border border-slate-200 shadow-sm bg-white rounded-lg dark:bg-slate-900 dark:border-slate-800">
@@ -434,7 +549,7 @@ export function OrderDetails({ orderId }: OrderDetailsProps) {
           </CardHeader>
           <CardContent className="p-8">
             <div className="space-y-4">
-              {order.items.map((item) => (
+              {orderItems.map((item) => (
                 <div key={item.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
                   <div className="flex-1">
                     <h3 className="font-semibold text-lg text-slate-900 mb-2 dark:text-slate-100">{item.product.name}</h3>

@@ -89,10 +89,10 @@ const sessionCartStorage: SyncStorage<unknown> = {
         return JSON.parse(fromSession);
       }
 
-      // Fallback to localStorage under same dynKey (survives reloads in same tab)
+      // If a legacy mirror exists in localStorage, remove it (we no longer mirror there)
       const fromLocalDyn = localStorage.getItem(dynKey);
       if (fromLocalDyn != null) {
-        return JSON.parse(fromLocalDyn);
+        try { localStorage.removeItem(dynKey); } catch {}
       }
 
       // One-time legacy migration gate: only for the session that first locks legacy
@@ -118,8 +118,6 @@ const sessionCartStorage: SyncStorage<unknown> = {
       const dynKey = perSessionCartKey();
       const str = JSON.stringify(newValue);
       sessionStorage.setItem(dynKey, str);
-      // mirror to localStorage to survive full reloads (optional)
-      localStorage.setItem(dynKey, str);
     } catch {
       // noop
     }
@@ -392,7 +390,7 @@ export const clearCartAtom = atom(
       // Mark session as completed for successful flow
       set(completeSessionAtom);
       // Create new session for future shopping
-      setTimeout(() => set(initializeSessionAtom), 100);
+      set(initializeSessionAtom);
     } else if (reason === 'session_expired') {
       // Initialize new session for expired session
       set(initializeSessionAtom);
