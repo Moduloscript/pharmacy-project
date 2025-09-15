@@ -8,10 +8,10 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    # command: redis-server --appendonly yes --requirepass yourStrongPassword123
-    # 💡 Set REDIS_PASSWORD in a non-versioned .env file and reference as an arg or env below.
+    # 💡 Set REDIS_PASSWORD in a non-versioned .env file for security
     command: redis-server --appendonly yes
-    # If you need a password, use: --requirepass ${REDIS_PASSWORD} (and set REDIS_PASSWORD in your .env)
+    # To add authentication, use environment variables:
+    # command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "--raw", "ping"]
