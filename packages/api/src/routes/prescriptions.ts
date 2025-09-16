@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import { db, PrescriptionStatus } from '@repo/database'
-import { getSignedUploadUrl, getSignedUrl } from '@repo/storage'
+import { getSignedUploadUrl, getSignedUrl, getObjectMetadata } from '@repo/storage'
 import { config } from '@repo/config'
 import { sendPrescriptionStatusNotification, notifyPharmacistOfNewPrescription } from '../services/prescription-notifications'
 import { prescriptionViewRateLimit, prescriptionUpdateRateLimit } from '../middleware/prescription-rate-limit'
@@ -462,17 +462,24 @@ app.get('/:prescriptionId/file', prescriptionViewRateLimit, async (c) => {
       }
     )
     
-    // Get signed URL for the file
-    const signedUrl = await getSignedUrl(prescription.documentKey, {
-      bucket: config.storage.bucketNames.prescriptions,
-      expiresIn: 60 * 60 // 1 hour
-    })
+    // Get signed URL and metadata for the file
+    const [meta, signedUrl] = await Promise.all([
+      getObjectMetadata(prescription.documentKey, { bucket: config.storage.bucketNames.prescriptions }),
+      getSignedUrl(prescription.documentKey, {
+        bucket: config.storage.bucketNames.prescriptions,
+        expiresIn: 60 * 60 // 1 hour
+      })
+    ])
     
     return c.json({
       success: true,
       data: {
         url: signedUrl,
         fileName: prescription.documentKey.split('/').pop(),
+        contentType: meta.contentType ?? undefined,
+        size: meta.size ?? undefined,
+        lastModified: meta.lastModified ? meta.lastModified.toISOString() : undefined,
+        exists: meta.exists,
         expiresIn: 3600
       }
     })
@@ -1106,49 +1113,66 @@ app.get('/:prescriptionId/files', prescriptionViewRateLimit, async (c) => {
       }, 403)
     }
     
-    type RxFile = { url: string; uploadedAt: Date; key: string | null; contentType?: string | null }
-    const files: RxFile[] = []
+  type RxFile = { url: string; uploadedAt: Date; key: string | null; contentType?: string | null; size?: number | null; lastModified?: string | null; exists?: boolean; kind?: 'image' | 'pdf' | 'other' }
+  const files: RxFile[] = []
 
-    // Helper to HEAD-check a URL and extract content-type
-    async function probe(url: string): Promise<{ ok: boolean; contentType: string | null }> {
-      try {
-        const head = await fetch(url, { method: 'HEAD' })
-        if (!head.ok) return { ok: false, contentType: null }
-        return { ok: true, contentType: head.headers.get('content-type') }
-      } catch {
-        return { ok: false, contentType: null }
+  // Helper to HEAD-check a URL and extract content-type for legacy external urls
+  async function probe(url: string): Promise<{ ok: boolean; contentType: string | null; size: number | null; lastModified: string | null }> {
+    try {
+      const head = await fetch(url, { method: 'HEAD' })
+      if (!head.ok) return { ok: false, contentType: null, size: null, lastModified: null }
+      return {
+        ok: true,
+        contentType: head.headers.get('content-type'),
+        size: head.headers.get('content-length') ? Number(head.headers.get('content-length')) : null,
+        lastModified: head.headers.get('last-modified')
       }
+    } catch {
+      return { ok: false, contentType: null, size: null, lastModified: null }
     }
+  }
     
     // Generate signed URL if document exists; verify it responds
     if (prescription.documentKey) {
       try {
+        const meta = await getObjectMetadata(prescription.documentKey, { bucket: config.storage.bucketNames.prescriptions })
         const signedUrl = await getSignedUrl(prescription.documentKey, {
           bucket: config.storage.bucketNames.prescriptions,
           expiresIn: 60 * 60 * 24 // 24 hours
         })
-        const check = await probe(signedUrl)
-        // Push even if probe fails; contentType may be undefined and the client can still use the URL
+        const kind: 'image' | 'pdf' | 'other' = meta.contentType?.startsWith('image/')
+          ? 'image'
+          : (meta.contentType === 'application/pdf' ? 'pdf' : 'other')
         files.push({
           url: signedUrl,
           uploadedAt: prescription.updatedAt,
           key: prescription.documentKey,
-          contentType: check.ok ? (check.contentType ?? undefined) : undefined
+          contentType: meta.contentType ?? undefined,
+          size: meta.size ?? undefined,
+          lastModified: meta.lastModified ? meta.lastModified.toISOString() : null,
+          exists: meta.exists,
+          kind,
         })
       } catch {}
     }
-    
     // Include legacy imageUrl if it exists and is not a placeholder
-    if (prescription.imageUrl && !prescription.imageUrl.startsWith('/uploads/')) {
-      const legacyUrl = prescription.imageUrl
-      const check = await probe(legacyUrl)
-      files.push({
-        url: legacyUrl,
-        uploadedAt: prescription.updatedAt,
-        key: null,
-        contentType: check.contentType ?? undefined
-      })
-    }
+  if (prescription.imageUrl && !prescription.imageUrl.startsWith('/uploads/')) {
+    const legacyUrl = prescription.imageUrl
+    const check = await probe(legacyUrl)
+    const kind: 'image' | 'pdf' | 'other' = (check.contentType?.startsWith('image/'))
+      ? 'image'
+      : (check.contentType === 'application/pdf' ? 'pdf' : 'other')
+    files.push({
+      url: legacyUrl,
+      uploadedAt: prescription.updatedAt,
+      key: null,
+      contentType: check.contentType ?? undefined,
+      size: check.size ?? undefined,
+      lastModified: check.lastModified,
+      exists: check.ok,
+      kind,
+    })
+  }
     
     return c.json({
       success: true,

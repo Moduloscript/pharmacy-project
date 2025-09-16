@@ -127,3 +127,35 @@ export const uploadFile = async (
     throw new Error("Could not upload file")
   }
 }
+
+export const getObjectMetadata: GetObjectMetadataHandler = async (path, { bucket }) => {
+  const client = getSupabaseClient()
+  try {
+    // Supabase Storage doesn't have a direct head API via SDK; create a short signed URL and HEAD it
+    const { data, error } = await client.storage
+      .from(bucket)
+      .createSignedUrl(path, 60)
+
+    if (error || !data?.signedUrl) {
+      return { exists: false, contentType: null, size: null, lastModified: null }
+    }
+
+    const head = await fetch(data.signedUrl, { method: 'HEAD' })
+    if (!head.ok) {
+      return { exists: head.status !== 404, contentType: null, size: null, lastModified: null }
+    }
+
+    const ct = head.headers.get('content-type')
+    const len = head.headers.get('content-length')
+    const lm = head.headers.get('last-modified')
+    return {
+      exists: true,
+      contentType: ct,
+      size: len ? Number(len) : null,
+      lastModified: lm ? new Date(lm) : null,
+    }
+  } catch (e) {
+    logger.error(e)
+    return { exists: false, contentType: null, size: null, lastModified: null }
+  }
+}

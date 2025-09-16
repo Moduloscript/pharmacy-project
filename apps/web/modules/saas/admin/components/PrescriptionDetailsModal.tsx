@@ -10,6 +10,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@ui/components/dialog';
+import { PdfViewerModal } from './PdfViewerModal';
 import { Separator } from '@ui/components/separator';
 import {
   FileText,
@@ -62,6 +63,10 @@ export function PrescriptionDetailsModal({
 }: PrescriptionDetailsModalProps) {
   const [imageError, setImageError] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>(prescription?.fileUrl || '');
+  const [previewKind, setPreviewKind] = useState<'image' | 'pdf' | 'other' | null>(null);
+  const [previewContentType, setPreviewContentType] = useState<string | undefined>(undefined);
+  const [previewExists, setPreviewExists] = useState<boolean>(true);
+  const [pdfViewer, setPdfViewer] = useState<{ open: boolean; src: string; filename?: string }>({ open: false, src: '' });
 
   useEffect(() => {
     if (!prescription) return;
@@ -72,13 +77,41 @@ export function PrescriptionDetailsModal({
         const res = await fetch(`/api/prescriptions/${prescription.id}/files`, { credentials: 'include' });
         if (res.ok) {
           const json = await res.json();
-          const url = json?.data?.files?.[0]?.url;
-          if (!cancelled) setPreviewUrl(url || prescription?.fileUrl || '');
+          const f = json?.data?.files?.[0];
+          const url = f?.url || prescription?.fileUrl || '';
+          if (!cancelled) {
+            setPreviewUrl(url);
+            setPreviewContentType(f?.contentType || undefined);
+            const inferredKind = (f?.kind as ('image' | 'pdf' | 'other' | undefined))
+              || (f?.contentType?.startsWith?.('image/') ? 'image' : (f?.contentType === 'application/pdf' ? 'pdf' : undefined));
+            if (inferredKind) {
+              setPreviewKind(inferredKind);
+            } else {
+              // Fallback by extension
+              if (/\.(pdf)(\?|$)/i.test(url)) setPreviewKind('pdf');
+              else if (/(\.jpg|\.jpeg|\.png|\.gif|\.webp)(\?|$)/i.test(url)) setPreviewKind('image');
+              else setPreviewKind('other');
+            }
+            setPreviewExists(f?.exists !== false);
+          }
         } else {
-          if (!cancelled) setPreviewUrl(prescription?.fileUrl || '');
+          if (!cancelled) {
+            const url = prescription?.fileUrl || '';
+            setPreviewUrl(url);
+            // Fallback inference by URL
+            if (/\.(pdf)(\?|$)/i.test(url)) setPreviewKind('pdf');
+            else if (/(\.jpg|\.jpeg|\.png|\.gif|\.webp)(\?|$)/i.test(url)) setPreviewKind('image');
+            else setPreviewKind('other');
+          }
         }
       } catch {
-        if (!cancelled) setPreviewUrl(prescription?.fileUrl || '');
+        if (!cancelled) {
+          const url = prescription?.fileUrl || '';
+          setPreviewUrl(url);
+          if (/\.(pdf)(\?|$)/i.test(url)) setPreviewKind('pdf');
+          else if (/(\.jpg|\.jpeg|\.png|\.gif|\.webp)(\?|$)/i.test(url)) setPreviewKind('image');
+          else setPreviewKind('other');
+        }
       }
     }
     refresh();
@@ -109,6 +142,12 @@ export function PrescriptionDetailsModal({
         }
       } catch {}
 
+      // If we already know it's a PDF and have a URL, open the PDF viewer immediately
+      if (previewKind === 'pdf' && previewUrl) {
+        setPdfViewer({ open: true, src: previewUrl, filename: prescription?.fileName || 'document.pdf' });
+        return;
+      }
+
       console.debug('[Details Preview] Fetching files for', prescription.id);
       const res = await fetch(`/api/prescriptions/${prescription.id}/files`, { credentials: 'include' });
       console.debug('[Details Preview] /files status', res.status);
@@ -116,8 +155,16 @@ export function PrescriptionDetailsModal({
         const json = await res.json();
         const file = json?.data?.files?.[0];
         const url = file?.url || previewUrl || prescription?.fileUrl;
+        const fileName = prescription?.fileName || '';
         console.debug('[Details Preview] resolved url', url, { contentType: file?.contentType });
-        if (url) window.open(url, '_blank');
+        if (url) {
+          const isPdf = (file?.contentType === 'application/pdf') || /\.(pdf)(\?|$)/i.test(fileName) || /(\.pdf)(\?|$)/i.test(url);
+          if (isPdf) {
+            setPdfViewer({ open: true, src: url, filename: fileName || 'document.pdf' });
+          } else {
+            window.open(url, '_blank');
+          }
+        }
       } else if (previewUrl) {
         console.warn('[Details Preview] /files failed, falling back to previewUrl');
         window.open(previewUrl, '_blank');
@@ -129,6 +176,7 @@ export function PrescriptionDetailsModal({
   };
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh]">
         <DialogHeader>
@@ -222,24 +270,32 @@ export function PrescriptionDetailsModal({
                       className="gap-2"
                     >
                       <ExternalLink className="h-4 w-4" />
-                      Open in New Tab
+                      Open
                     </Button>
                   </div>
                   
                   <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
-                    {!imageError && ((previewUrl || '').match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i)) ? (
+                    {!imageError && (previewKind === 'image' || (previewUrl || '').match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i)) ? (
                       <img
                         src={previewUrl}
                         alt="Prescription"
                         className="max-w-full h-auto max-h-96 mx-auto rounded-lg shadow-sm"
                         onError={() => setImageError(true)}
                       />
-                    ) : ((previewUrl || '').match(/\.(pdf)(\?|$)/i)) ? (
-                      <object data={previewUrl} type="application/pdf" width="100%" height="600">
-                        <p className="text-sm">
-                          Unable to preview PDF. You can open it in a new tab.
+                    ) : (previewKind === 'pdf' || ((previewUrl || '').match(/\.(pdf)(\?|$)/i))) ? (
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground mb-2">
+                          PDF file detected
                         </p>
-                      </object>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Click the button below to preview the PDF
+                        </p>
+                        <Button variant="outline" onClick={() => setPdfViewer({ open: true, src: previewUrl, filename: prescription?.fileName || 'document.pdf' })} className="gap-2">
+                          <Eye className="h-4 w-4" />
+                          Preview PDF
+                        </Button>
+                      </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-8 text-center">
                         <FileText className="h-12 w-12 text-muted-foreground mb-4" />
@@ -356,5 +412,9 @@ export function PrescriptionDetailsModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* PDF Viewer Modal */}
+    <PdfViewerModal open={pdfViewer.open} src={pdfViewer.src} filename={pdfViewer.filename} onClose={() => setPdfViewer({ open: false, src: '' })} />
+  </>
   );
 }

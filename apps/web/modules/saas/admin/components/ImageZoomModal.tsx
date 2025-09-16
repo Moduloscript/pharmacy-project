@@ -104,6 +104,33 @@ export function ImageZoomModal({ open, src, filename, onClose }: ImageZoomModalP
     a.click();
   }
 
+  // Keyboard shortcuts when modal is open
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (!open) return;
+      // Avoid repeating browser defaults
+      const key = e.key;
+      if (['+', '=', '-', '0', 'r', 'R', 'f', 'F', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Escape', 'd', 'D'].includes(key)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      if (key === '+' || key === '=') setScale((s) => Math.min(8, s + 0.2));
+      if (key === '-') setScale((s) => Math.max(0.25, s - 0.2));
+      if (key === '0') { setScale(1); setFit(false); setTx(0); setTy(0); }
+      if (key === 'r' || key === 'R') setRotation((r) => (r + 90) % 360);
+      if (key === 'f' || key === 'F') handleToggleFit();
+      if (key === 'ArrowLeft') setTx((v) => v + 20);
+      if (key === 'ArrowRight') setTx((v) => v - 20);
+      if (key === 'ArrowUp') setTy((v) => v + 20);
+      if (key === 'ArrowDown') setTy((v) => v - 20);
+      if (key === 'd' || key === 'D') download();
+      if (key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKey, { capture: true });
+    return () => window.removeEventListener('keydown', onKey, { capture: true } as any);
+  }, [open]);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl w-[95vw] h-[90vh] p-0">

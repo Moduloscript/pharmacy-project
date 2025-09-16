@@ -15,6 +15,7 @@ import { cn } from '@ui/lib';
 import { AlertCircle, Lock, FileText, Eye, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageZoomModal } from './ImageZoomModal';
+import { PdfViewerModal } from './PdfViewerModal';
 
 const localBusyAtom = atom<string | null>(null);
 
@@ -81,6 +82,7 @@ export function PrescriptionsTable() {
 
   // Image viewer state
   const [viewer, setViewer] = useState<{ open: boolean; src: string; filename?: string }>(() => ({ open: false, src: '' }));
+  const [pdfViewer, setPdfViewer] = useState<{ open: boolean; src: string; filename?: string }>(() => ({ open: false, src: '' }));
 
   const handleApprove = (id: string, orderNumber: string) => {
     setDialogState({
@@ -336,7 +338,12 @@ export function PrescriptionsTable() {
                                       // Prefer zoom modal for all images for better UX (especially on Pending tab)
                                       setViewer({ open: true, src: url, filename: p.fileName || 'prescription' });
                                     } else {
-                                      window.open(url, '_blank');
+                                      const isPdf = (file?.contentType === 'application/pdf') || /\.(pdf)(\?|$)/i.test(p.fileName || '') || /(\.pdf)(\?|$)/i.test(url);
+                                      if (isPdf) {
+                                        setPdfViewer({ open: true, src: url, filename: p.fileName || 'document.pdf' });
+                                      } else {
+                                        window.open(url, '_blank');
+                                      }
                                     }
                                   } else {
                                     console.error('[Preview] /files request failed', res.status, 'attempting JSON /file endpoint');
@@ -463,6 +470,9 @@ export function PrescriptionsTable() {
 
       {/* Image Zoom Viewer */}
       <ImageZoomModal open={viewer.open} src={viewer.src} filename={viewer.filename} onClose={() => setViewer({ open: false, src: '' })} />
+
+      {/* PDF Viewer */}
+      <PdfViewerModal open={pdfViewer.open} src={pdfViewer.src} filename={pdfViewer.filename} onClose={() => setPdfViewer({ open: false, src: '' })} />
     </div>
   );
 }
