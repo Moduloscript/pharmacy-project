@@ -9,6 +9,41 @@ import {
 } from '@repo/queue';
 import type { INotificationProvider, NotificationTemplate } from './provider/notifications';
 
+import {
+  NotificationType as PrismaNotificationType,
+  NotificationChannel as PrismaNotificationChannel,
+  NotificationStatus as PrismaNotificationStatus,
+} from '@prisma/client';
+
+// Mapping helpers to convert internal strings to Prisma enums
+function mapType(t: string): PrismaNotificationType {
+  switch ((t || '').toLowerCase()) {
+    case 'order_confirmation':
+      return PrismaNotificationType.ORDER_CONFIRMATION;
+    case 'payment_success':
+      return PrismaNotificationType.PAYMENT_UPDATE;
+    case 'delivery_update':
+      return PrismaNotificationType.DELIVERY_UPDATE;
+    case 'low_stock_alert':
+      return PrismaNotificationType.LOW_STOCK_ALERT;
+    default:
+      return PrismaNotificationType.SYSTEM_ALERT;
+  }
+}
+
+function mapChannel(c: string): PrismaNotificationChannel {
+  switch ((c || '').toLowerCase()) {
+    case 'email':
+      return PrismaNotificationChannel.EMAIL;
+    case 'sms':
+      return PrismaNotificationChannel.SMS;
+    case 'whatsapp':
+      return PrismaNotificationChannel.WHATSAPP;
+    default:
+      return PrismaNotificationChannel.EMAIL;
+  }
+}
+
 /**
  * Central notification service that orchestrates all notification channels
  * This service handles creating notification records and queueing jobs
@@ -77,6 +112,27 @@ export class NotificationService {
 				});
 
 				await queueOrderConfirmation(smsNotification);
+			}
+
+			// Email notification (via Resend)
+			if (customer.user.email) {
+				const emailNotification = await this.createNotificationRecord({
+					type: 'order_confirmation',
+					channel: 'email',
+					recipient: customer.user.email,
+					customerId: customer.id,
+					orderId: order.id,
+					template: 'order_confirmation_email',
+					templateParams: {
+						customer_name: customer.user.name,
+						order_number: order.orderNumber,
+						total_amount: order.total,
+						delivery_address: order.deliveryAddress,
+						tracking_url: `${process.env.NEXT_PUBLIC_SITE_URL}/orders/${order.id}`
+					}
+				});
+
+				await queueOrderConfirmation(emailNotification);
 			}
 
 			// Future: WhatsApp notification (when enabled)
@@ -149,6 +205,25 @@ export class NotificationService {
 
 			await queuePaymentSuccess(notification);
 
+			// Also send email if available
+			if (customer.user.email) {
+				const emailNotification = await this.createNotificationRecord({
+					type: 'payment_success',
+					channel: 'email',
+					recipient: customer.user.email,
+					customerId: customer.id,
+					orderId: order.id,
+					template: 'payment_success_email',
+					templateParams: {
+						order_number: order.orderNumber,
+						amount: payment.amount,
+						method: payment.method
+					}
+				});
+
+				await queuePaymentSuccess(emailNotification);
+			}
+
 		} catch (error) {
 			console.error('Error sending payment success notification:', error);
 		}
@@ -195,6 +270,27 @@ export class NotificationService {
 			});
 
 			await queueDeliveryUpdate(notification);
+
+			// Also send email if available
+			if (customer.user.email) {
+				const emailNotification = await this.createNotificationRecord({
+					type: 'delivery_update',
+					channel: 'email',
+					recipient: customer.user.email,
+					customerId: customer.id,
+					orderId: order.id,
+					template: 'delivery_update_email',
+					templateParams: {
+						order_number: order.orderNumber,
+						status_label: this.getStatusLabel(order.status),
+						eta_or_notes: estimatedDelivery 
+							? `ETA: ${estimatedDelivery.toLocaleDateString()}`
+							: 'We will update you shortly'
+					}
+				});
+
+				await queueDeliveryUpdate(emailNotification);
+			}
 
 		} catch (error) {
 			console.error('Error sending delivery update:', error);
@@ -258,13 +354,20 @@ export class NotificationService {
 		orderId?: string;
 		priority?: 'low' | 'normal' | 'high';
 	}): Promise<NotificationJobData> {
+		const body =
+			data.message ??
+			(data.template
+				? `Template: ${data.template} ${data.templateParams ? JSON.stringify(data.templateParams) : ''}`.trim()
+				: '');
+
 		const notification = await db.notification.create({
 			data: {
-				type: data.type,
-				channel: data.channel,
+				type: mapType(data.type as unknown as string),
+				channel: mapChannel(data.channel),
 				recipient: data.recipient,
 				message: data.message || '',
-				status: 'PENDING',
+				body,
+				status: PrismaNotificationStatus.PENDING,
 				customerId: data.customerId,
 				orderId: data.orderId,
 			}

@@ -82,11 +82,18 @@ export async function auditPrescriptionView(
 ): Promise<void> {
   await createPrescriptionAuditLog({
     userId,
+    userEmail: context?.userEmail,
+    userName: context?.userName,
+    userRole: context?.userRole,
     action: 'VIEW',
     entityType: 'PRESCRIPTION',
     entityId: prescriptionId,
-    metadata: context,
-    timestamp: new Date()
+    metadata: {
+      ipAddress: context?.ipAddress,
+      userAgent: context?.userAgent,
+      ...('metadata' in context ? (context as any).metadata : {}),
+    },
+    timestamp: new Date(),
   })
 }
 

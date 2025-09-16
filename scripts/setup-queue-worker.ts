@@ -11,6 +11,7 @@
 import * as dotenv from 'dotenv';
 import { createNotificationWorker, registerNotificationProvider } from '../packages/queue/dist/worker.js';
 import { TermiiProvider } from '../packages/mail/src/provider/termii';
+import { ResendEmailProvider } from '../packages/mail/src/provider/email-resend';
 
 // Load environment variables
 dotenv.config();
@@ -98,6 +99,24 @@ async function setupQueueWorker() {
   section('Registering Notification Providers');
   
   const registeredProviders: string[] = [];
+  
+  // Register Email Provider (Resend)
+  try {
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const mailFrom = process.env.MAIL_FROM;
+
+    if (resendApiKey && mailFrom) {
+      const resendProvider = new ResendEmailProvider();
+      registerNotificationProvider(resendProvider);
+      registeredProviders.push('Email (Resend)');
+      success(`Resend email provider registered with worker (from: ${mailFrom})`);
+    } else {
+      warning('Email provider not fully configured - skipping email registration');
+      info('Set RESEND_API_KEY and MAIL_FROM in your environment to enable email notifications');
+    }
+  } catch (err) {
+    error(`Failed to register Resend email provider: ${err instanceof Error ? err.message : 'Unknown error'}`);
+  }
   
   // Register SMS Provider (Termii)
   try {

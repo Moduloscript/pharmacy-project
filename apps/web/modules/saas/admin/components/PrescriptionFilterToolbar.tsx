@@ -10,7 +10,13 @@ import type { PrescriptionStatus } from '../lib/prescriptions';
 interface PrescriptionFilterToolbarProps {
   status: PrescriptionStatus;
   onStatusChange: (status: PrescriptionStatus) => void;
+  search?: string;
   onSearchChange?: (search: string) => void;
+  hasFile?: boolean;
+  onHasFileChange?: (v: boolean) => void;
+  startDate?: string | null;
+  endDate?: string | null;
+  onDateRangeChange?: (range: { startDate: string | null; endDate: string | null }) => void;
   totalCounts?: {
     pending: number;
     clarification: number;
@@ -29,11 +35,20 @@ const statusTabs: { value: PrescriptionStatus; label: string }[] = [
 export function PrescriptionFilterToolbar({ 
   status, 
   onStatusChange, 
+  search,
   onSearchChange,
+  hasFile = false,
+  onHasFileChange,
+  startDate = null,
+  endDate = null,
+  onDateRangeChange,
   totalCounts 
 }: PrescriptionFilterToolbarProps) {
-  const [searchValue, setSearchValue] = useState('');
+  const [searchValue, setSearchValue] = useState(search ?? '');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [showDates, setShowDates] = useState(false);
+  const [localStart, setLocalStart] = useState<string | ''>(startDate ?? '');
+  const [localEnd, setLocalEnd] = useState<string | ''>(endDate ?? '');
 
   // Debounce search
   useEffect(() => {
@@ -46,6 +61,16 @@ export function PrescriptionFilterToolbar({
   const handleClearSearch = () => {
     setSearchValue('');
     onSearchChange?.('');
+  };
+
+  const handleApplyDates = () => {
+    onDateRangeChange?.({ startDate: localStart || null, endDate: localEnd || null });
+  };
+
+  const handleClearDates = () => {
+    setLocalStart('');
+    setLocalEnd('');
+    onDateRangeChange?.({ startDate: null, endDate: null });
   };
 
   return (
@@ -87,16 +112,40 @@ export function PrescriptionFilterToolbar({
 
         {/* Additional filters placeholder */}
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowDates(v => !v)}>
             <Calendar className="h-4 w-4" />
             Date Range
           </Button>
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button
+            variant={hasFile ? 'default' : 'outline'}
+            size="sm"
+            className="gap-2"
+            onClick={() => onHasFileChange?.(!hasFile)}
+            aria-pressed={hasFile}
+          >
             <FileText className="h-4 w-4" />
             Has File
           </Button>
         </div>
       </div>
+
+      {/* Optional date inputs */}
+      {showDates && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="flex items-center gap-2">
+            <label className="text-sm" style={{ color: 'var(--rx-muted)' }}>From</label>
+            <Input type="date" value={localStart} onChange={(e) => setLocalStart(e.target.value)} />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm" style={{ color: 'var(--rx-muted)' }}>To</label>
+            <Input type="date" value={localEnd} onChange={(e) => setLocalEnd(e.target.value)} />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={handleApplyDates}>Apply</Button>
+            <Button size="sm" variant="outline" onClick={handleClearDates}>Clear</Button>
+          </div>
+        </div>
+      )}
 
       {/* Status tabs */}
       <div className="flex gap-1 rounded-lg p-1" style={{ backgroundColor: 'var(--rx-elevated)' }}>

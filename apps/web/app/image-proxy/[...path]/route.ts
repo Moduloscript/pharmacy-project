@@ -42,6 +42,7 @@ export const GET = async (
     config.storage.bucketNames.avatars,
     config.storage.bucketNames.documents,
     config.storage.bucketNames.productImages,
+    config.storage.bucketNames.prescriptions,
   ];
 
   if (!allowedBuckets.includes(bucket)) {

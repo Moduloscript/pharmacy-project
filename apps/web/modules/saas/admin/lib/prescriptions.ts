@@ -37,6 +37,10 @@ export async function fetchAdminPrescriptions(params: {
   page?: number;
   limit?: number;
   status?: PrescriptionStatus;
+  search?: string;
+  hasFile?: boolean;
+  startDate?: string; // ISO date
+  endDate?: string;   // ISO date
 }): Promise<PaginatedPrescriptions> {
   const query = new URLSearchParams();
   if (params.page) query.set('page', String(params.page));
@@ -50,6 +54,10 @@ export async function fetchAdminPrescriptions(params: {
     NEEDS_CLARIFICATION: 'CLARIFICATION',
   };
   if (params.status) query.set('status', statusMap[params.status]);
+  if (params.search) query.set('search', params.search);
+  if (typeof params.hasFile === 'boolean') query.set('hasFile', String(params.hasFile));
+  if (params.startDate) query.set('startDate', params.startDate);
+  if (params.endDate) query.set('endDate', params.endDate);
 
   // Use public API route for prescriptions
   const res = await fetch(`/api/prescriptions?${query.toString()}`, {

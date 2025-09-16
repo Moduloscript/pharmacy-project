@@ -44,12 +44,15 @@ const getPrescriptionsSchema = z.object({
   status: z.nativeEnum(PrescriptionStatus).optional(),
   page: z.string().regex(/^\d+$/).transform(Number).optional().default('1'),
   limit: z.string().regex(/^\d+$/).transform(Number).optional().default('10'),
-  search: z.string().optional()
+  search: z.string().optional(),
+  hasFile: z.enum(['true','false']).transform(v => v === 'true').optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional()
 })
 
 app.get('/', prescriptionViewRateLimit, zValidator('query', getPrescriptionsSchema), async (c) => {
   const user = c.get('user')
-  const { status, page, limit, search } = c.req.valid('query')
+  const { status, page, limit, search, hasFile, startDate, endDate } = c.req.valid('query')
   
   // Check if user is admin or pharmacist
   if (!isAdminOrPharmacist(user)) {
@@ -79,7 +82,7 @@ app.get('/', prescriptionViewRateLimit, zValidator('query', getPrescriptionsSche
     action: 'VIEW_LIST',
     entityType: 'PRESCRIPTION',
     entityId: 'list',
-    metadata: { status, page, limit, search },
+    metadata: { status, page, limit, search, hasFile, startDate, endDate },
     ipAddress: c.req.header('x-forwarded-for') || c.req.header('x-real-ip'),
     userAgent: c.req.header('user-agent'),
     timestamp: new Date()
@@ -88,18 +91,36 @@ app.get('/', prescriptionViewRateLimit, zValidator('query', getPrescriptionsSche
   try {
     const offset = (page - 1) * limit
 
-    // Build where clause
-    const whereClause: any = {}
-    if (status) {
-      whereClause.status = status
-    }
-    if (search) {
-      whereClause.OR = [
+  // Build where clause using AND to combine independent filters
+  const and: any[] = []
+  if (status) {
+    and.push({ status })
+  }
+  if (search) {
+    and.push({
+      OR: [
         { order: { orderNumber: { contains: search, mode: 'insensitive' } } },
         { order: { customer: { businessName: { contains: search, mode: 'insensitive' } } } },
         { order: { customer: { user: { name: { contains: search, mode: 'insensitive' } } } } }
       ]
-    }
+    })
+  }
+  if (hasFile) {
+    and.push({
+      OR: [
+        { documentKey: { not: null } },
+        { AND: [ { imageUrl: { not: null } }, { NOT: { imageUrl: { startsWith: '/uploads/' } } } ] }
+      ]
+    })
+  }
+  if (startDate || endDate) {
+    const createdAt: any = {}
+    if (startDate) createdAt.gte = new Date(startDate)
+    if (endDate) createdAt.lte = new Date(endDate)
+    and.push({ createdAt })
+  }
+
+  const whereClause: any = and.length ? { AND: and } : {}
 
     // Get total count
     const total = await db.prescription.count({ where: whereClause })
@@ -152,7 +173,11 @@ app.get('/', prescriptionViewRateLimit, zValidator('query', getPrescriptionsSche
               expiresIn: 60 * 60, // 1 hour
             })
             fileName = p.documentKey.split('/').pop() || null
-          } catch {}
+          } catch {
+            // Fallback to redirect route so the browser can resolve the file directly
+            fileUrl = `/api/prescriptions/${p.id}/file/redirect`
+            fileName = p.documentKey.split('/').pop() || null
+          }
         } else if (p.imageUrl && !p.imageUrl.startsWith('/uploads/')) {
           fileUrl = p.imageUrl
           fileName = p.imageUrl.split('/').pop() || null
@@ -297,8 +322,6 @@ app.patch('/:prescriptionId/document', csrfProtection(), prescriptionUpdateRateL
       where: { id: prescriptionId },
       data: {
         documentKey,
-        // Store a permanent URL reference if needed
-        imageUrl: `/api/prescriptions/${prescriptionId}/file`,
         updatedAt: new Date()
       },
       include: {
@@ -370,8 +393,13 @@ app.patch('/:prescriptionId/document', csrfProtection(), prescriptionUpdateRateL
   }
 })
 
-// Get prescription file
+// Get prescription file (JSON with signed URL)
 app.get('/:prescriptionId/file', prescriptionViewRateLimit, async (c) => {
+  try {
+    const accept = c.req.header('accept')
+    const ref = c.req.header('referer')
+    console.log('[API /file] Request accept:', accept, 'referer:', ref)
+  } catch {}
   const user = c.get('user')
   const prescriptionId = c.req.param('prescriptionId')
   
@@ -397,11 +425,11 @@ app.get('/:prescriptionId/file', prescriptionViewRateLimit, async (c) => {
       }, 404)
     }
     
-    // Check authorization
+    // Check authorization (owner or admin/pharmacist)
     const isOwner = prescription.order.customer.userId === user.id
-    const isAdmin = user.role === 'admin'
+    const hasPriv = isOwner || isAdminOrPharmacist(user)
     
-    if (!isOwner && !isAdmin) {
+    if (!hasPriv) {
       return c.json({
         success: false,
         error: {
@@ -422,14 +450,17 @@ app.get('/:prescriptionId/file', prescriptionViewRateLimit, async (c) => {
     }
     
     // Log view action
-    await auditPrescriptionView(prescriptionId, {
-      userId: user.id,
-      userEmail: user.email,
-      userName: user.name,
-      userRole: user.role,
-      ipAddress: c.req.header('x-forwarded-for') || c.req.header('x-real-ip'),
-      userAgent: c.req.header('user-agent')
-    })
+    await auditPrescriptionView(
+      user.id, // userId
+      prescriptionId, // prescriptionId
+      {
+        userEmail: user.email,
+        userName: user.name,
+        userRole: user.role,
+        ipAddress: c.req.header('x-forwarded-for') || c.req.header('x-real-ip'),
+        userAgent: c.req.header('user-agent'),
+      }
+    )
     
     // Get signed URL for the file
     const signedUrl = await getSignedUrl(prescription.documentKey, {
@@ -454,6 +485,54 @@ app.get('/:prescriptionId/file', prescriptionViewRateLimit, async (c) => {
         message: 'Failed to get prescription file'
       }
     }, 500)
+  }
+})
+
+// Get prescription file redirect (useful for <img src> thumbnails)
+app.get('/:prescriptionId/file/redirect', prescriptionViewRateLimit, async (c) => {
+  const user = c.get('user')
+  const prescriptionId = c.req.param('prescriptionId')
+
+  try {
+    const prescription = await db.prescription.findUnique({
+      where: { id: prescriptionId },
+      include: { order: { include: { customer: true } } }
+    })
+
+    if (!prescription) {
+      return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Prescription not found' } }, 404)
+    }
+
+    const isOwner = prescription.order.customer.userId === user.id
+    const hasPriv = isOwner || isAdminOrPharmacist(user)
+    if (!hasPriv) {
+      return c.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'You do not have permission to view this prescription' } }, 403)
+    }
+
+    if (!prescription.documentKey && !(prescription.imageUrl && !prescription.imageUrl.startsWith('/uploads/'))) {
+      return c.json({ success: false, error: { code: 'NO_DOCUMENT', message: 'No document uploaded for this prescription' } }, 404)
+    }
+
+    // Prefer documentKey signed URL; fallback to legacy imageUrl
+    let targetUrl: string | null = null
+    if (prescription.documentKey) {
+      targetUrl = await getSignedUrl(prescription.documentKey, {
+        bucket: config.storage.bucketNames.prescriptions,
+        expiresIn: 60 * 60 // 1 hour
+      })
+    } else if (prescription.imageUrl && !prescription.imageUrl.startsWith('/uploads/')) {
+      targetUrl = prescription.imageUrl
+    }
+
+    if (!targetUrl) {
+      return c.json({ success: false, error: { code: 'NO_DOCUMENT', message: 'No document available' } }, 404)
+    }
+
+    // 302 redirect to the file so the browser can load it directly
+    return c.redirect(targetUrl, 302)
+  } catch (error) {
+    console.error('Error redirecting to prescription file:', error)
+    return c.json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to get file' } }, 500)
   }
 })
 
@@ -975,7 +1054,7 @@ app.post('/', csrfProtection(), prescriptionUpdateRateLimit, zValidator('json', 
   }
 })
 
-// Get prescription files with signed URLs
+// Get prescription files with signed URLs (with existence check and contentType)
 app.get('/:prescriptionId/files', prescriptionViewRateLimit, async (c) => {
   const user = c.get('user')
   const prescriptionId = c.req.param('prescriptionId')
@@ -1013,11 +1092,11 @@ app.get('/:prescriptionId/files', prescriptionViewRateLimit, async (c) => {
       }, 404)
     }
     
-    // Check access permissions
+    // Check access permissions (owner or admin/pharmacist)
     const isOwner = prescription.order.customer.userId === user.id
-    const isAdmin = user.role === 'admin'
+    const hasPriv = isOwner || isAdminOrPharmacist(user)
     
-    if (!isOwner && !isAdmin) {
+    if (!hasPriv) {
       return c.json({
         success: false,
         error: {
@@ -1027,28 +1106,47 @@ app.get('/:prescriptionId/files', prescriptionViewRateLimit, async (c) => {
       }, 403)
     }
     
-    const files = []
+    type RxFile = { url: string; uploadedAt: Date; key: string | null; contentType?: string | null }
+    const files: RxFile[] = []
+
+    // Helper to HEAD-check a URL and extract content-type
+    async function probe(url: string): Promise<{ ok: boolean; contentType: string | null }> {
+      try {
+        const head = await fetch(url, { method: 'HEAD' })
+        if (!head.ok) return { ok: false, contentType: null }
+        return { ok: true, contentType: head.headers.get('content-type') }
+      } catch {
+        return { ok: false, contentType: null }
+      }
+    }
     
-    // Generate signed URL if document exists
+    // Generate signed URL if document exists; verify it responds
     if (prescription.documentKey) {
-      const signedUrl = await getSignedUrl(prescription.documentKey, {
-        bucket: config.storage.bucketNames.prescriptions,
-        expiresIn: 60 * 60 * 24 // 24 hours
-      })
-      
-      files.push({
-        url: signedUrl,
-        uploadedAt: prescription.updatedAt,
-        key: prescription.documentKey
-      })
+      try {
+        const signedUrl = await getSignedUrl(prescription.documentKey, {
+          bucket: config.storage.bucketNames.prescriptions,
+          expiresIn: 60 * 60 * 24 // 24 hours
+        })
+        const check = await probe(signedUrl)
+        // Push even if probe fails; contentType may be undefined and the client can still use the URL
+        files.push({
+          url: signedUrl,
+          uploadedAt: prescription.updatedAt,
+          key: prescription.documentKey,
+          contentType: check.ok ? (check.contentType ?? undefined) : undefined
+        })
+      } catch {}
     }
     
     // Include legacy imageUrl if it exists and is not a placeholder
     if (prescription.imageUrl && !prescription.imageUrl.startsWith('/uploads/')) {
+      const legacyUrl = prescription.imageUrl
+      const check = await probe(legacyUrl)
       files.push({
-        url: prescription.imageUrl,
+        url: legacyUrl,
         uploadedAt: prescription.updatedAt,
-        key: null
+        key: null,
+        contentType: check.contentType ?? undefined
       })
     }
     

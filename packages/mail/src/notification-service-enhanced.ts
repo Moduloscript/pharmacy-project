@@ -329,6 +329,7 @@ export class EnhancedNotificationService {
 			const priority = order.status === 'DELIVERED' ? 'high' : 'normal';
 			const channels = ['sms', 'whatsapp', 'email']; // SMS preferred for delivery updates
 
+			let emailQueued = false;
 			for (const channel of channels) {
 				// Skip if no contact info
 				if (channel === 'email' && !customer.user.email) continue;
@@ -394,6 +395,10 @@ export class EnhancedNotificationService {
 					priority: priority === 'high' ? 1 : 5
 				});
 
+				if (actualChannel === 'email') {
+					emailQueued = true;
+				}
+
 				// Record sent
 				await NotificationPreferenceChecker.recordNotificationSent(
 					order.customerId,
@@ -404,6 +409,56 @@ export class EnhancedNotificationService {
 				
 				// Send to preferred channel only unless high priority
 				if (priority !== 'high') break;
+			}
+
+			// Additionally, ensure an email is queued for key statuses if not already queued
+			if (!emailQueued && customer.user.email && (order.status === 'DISPATCHED' || order.status === 'DELIVERED')) {
+				const emailAllowed = await NotificationPreferenceChecker.checkNotificationAllowed({
+					customerId: order.customerId,
+					channel: 'email',
+					type: notificationType,
+					priority
+				});
+				if (emailAllowed.allowed) {
+					// Create a corresponding DB notification record for email
+					const emailNotification = await db.notification.create({
+						data: {
+							customerId: order.customerId,
+							orderId: order.id,
+							type: mapType(notificationType),
+							channel: PrismaNotificationChannel.EMAIL,
+							recipient: customer.user.email!,
+							subject: `Delivery Update - Order #${order.orderNumber}`,
+							message: this.getDeliveryUpdateMessage('email', order, estimatedDelivery, customer),
+							body: this.getDeliveryUpdateMessage('email', order, estimatedDelivery, customer),
+							status: PrismaNotificationStatus.PENDING,
+							priority: mapPriority(priority),
+							metadata: {
+								orderNumber: order.orderNumber,
+								orderStatus: order.status,
+								estimatedDelivery: estimatedDelivery?.toISOString()
+							}
+						}
+					});
+
+					const emailJob: NotificationJobData = {
+						notificationId: emailNotification.id,
+						type: notificationType as any,
+						channel: 'email' as any,
+						recipient: customer.user.email!,
+						template: 'delivery_update_email',
+						templateParams: {
+							customer_name: customer.user.name,
+							order_number: order.orderNumber,
+							status_label: this.getStatusLabel(order.status),
+							eta_or_notes: estimatedDelivery 
+								? `ETA: ${estimatedDelivery.toLocaleDateString()}`
+								: 'We will update you shortly'
+						}
+					};
+					await addNotificationJob(notificationType, emailJob, { attempts: 3, priority: 5 });
+					console.log(`📧 Also queued email delivery update for Order #${order.orderNumber}`);
+				}
 			}
 
 		} catch (error) {

@@ -7,10 +7,14 @@ import { atom, useAtom } from 'jotai';
 import { Button } from '@ui/components/button';
 import { PrescriptionActionDialog } from './PrescriptionActionDialog';
 import { PrescriptionFilterToolbar } from './PrescriptionFilterToolbar';
+import { PrescriptionDetailsModal } from './PrescriptionDetailsModal';
+import { PrescriptionThumbnail } from './PrescriptionThumbnail';
 import { StatusChip } from './StatusChip';
 import { useRoleAccess, usePermission } from '@saas/auth/hooks/useRoleAccess';
 import { cn } from '@ui/lib';
 import { AlertCircle, Lock, FileText, Eye, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { ImageZoomModal } from './ImageZoomModal';
 
 const localBusyAtom = atom<string | null>(null);
 
@@ -42,6 +46,14 @@ export function PrescriptionsTable() {
   const {
     status,
     setStatus,
+    search,
+    setSearch,
+    hasFile,
+    setHasFile,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
     prescriptions,
     isLoading,
     isError,
@@ -60,7 +72,15 @@ export function PrescriptionsTable() {
     orderNumber: string;
   }>({ isOpen: false, action: null, prescriptionId: '', orderNumber: '' });
 
+  const [detailsModalState, setDetailsModalState] = useState<{
+    isOpen: boolean;
+    prescription: any | null;
+  }>({ isOpen: false, prescription: null });
+
   const rows = useMemo(() => prescriptions, [prescriptions]);
+
+  // Image viewer state
+  const [viewer, setViewer] = useState<{ open: boolean; src: string; filename?: string }>(() => ({ open: false, src: '' }));
 
   const handleApprove = (id: string, orderNumber: string) => {
     setDialogState({
@@ -128,6 +148,17 @@ export function PrescriptionsTable() {
     setDialogState({ isOpen: false, action: null, prescriptionId: '', orderNumber: '' });
   };
 
+  const handleViewDetails = (prescription: any) => {
+    setDetailsModalState({
+      isOpen: true,
+      prescription,
+    });
+  };
+
+  const handleDetailsModalClose = () => {
+    setDetailsModalState({ isOpen: false, prescription: null });
+  };
+
   // Show loading state while checking authentication
   if (isLoadingAuth) {
     return (
@@ -158,9 +189,15 @@ export function PrescriptionsTable() {
       <PrescriptionFilterToolbar
         status={status}
         onStatusChange={setStatus}
-        onSearchChange={(search) => {
-          // TODO: Implement search functionality
-          console.log('Search:', search);
+        search={search}
+        onSearchChange={setSearch}
+        hasFile={hasFile}
+        onHasFileChange={setHasFile}
+        startDate={startDate}
+        endDate={endDate}
+        onDateRangeChange={({ startDate, endDate }) => {
+          setStartDate(startDate);
+          setEndDate(endDate);
         }}
       />
 
@@ -234,20 +271,113 @@ export function PrescriptionsTable() {
                         </div>
                       </td>
                       <td className="whitespace-nowrap">
-                        {p.fileUrl ? (
+                        <div className="flex items-center gap-2">
+                          <PrescriptionThumbnail prescriptionId={p.id} />
+                          {/* Always enable preview; signed URL is resolved on demand */}
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="gap-2"
-                            onClick={() => window.open(p.fileUrl, '_blank')}
-                            disabled={isBusy}
-                          >
-                            <Eye className="h-4 w-4" />
-                            Preview
-                          </Button>
-                        ) : (
-                          <span className="text-sm" style={{ color: 'var(--rx-muted)' }}>No file</span>
-                        )}
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="gap-2"
+                              onClick={async (e) => {
+                                // Always stop propagation to prevent any parent row/link navigation
+                                e.preventDefault();
+                                e.stopPropagation();
+                                try {
+                                  // Defensive: prevent any parent <a> default navigation to JSON endpoints
+                                  try {
+                                    const anchor = (e.currentTarget as HTMLElement)?.closest('a') as HTMLAnchorElement | null;
+                                    if (anchor && /\/api\/prescriptions\/.+\/file(?!\/redirect)/.test(anchor.href)) {
+                                      console.debug('[Preview] Preventing default anchor navigation to JSON endpoint:', anchor.href);
+                                      anchor.removeAttribute('href');
+                                    }
+                                  } catch {}
+
+                                  console.debug('[Preview] Clicked for prescription', p.id, { status: p.status, isPending });
+                                  // Ask API for all available files (handles legacy and current)
+                                  const res = await fetch(`/api/prescriptions/${p.id}/files`, { credentials: 'include' });
+                                  console.debug('[Preview] /files response status', res.status);
+                                  if (res.ok) {
+                                    const json = await res.json();
+                                    const files = json?.data?.files as Array<{ url: string; contentType?: string } | undefined>;
+                                    console.debug('[Preview] files payload', files);
+                                    const file = files?.[0];
+                                    let url = file?.url || p.fileUrl || '';
+                                    // If URL points to JSON endpoint, switch to redirect endpoint
+                                    if (/\/api\/prescriptions\/.+\/file$/.test(url) || !url) {
+                                      url = `/api/prescriptions/${p.id}/file/redirect`;
+                                    }
+                                    // Determine if image: contentType OR filename ext OR url ext
+                                    const hasImageCt = !!file?.contentType?.startsWith('image/');
+                                    const fromFileName = (p.fileName || '').match(/\.(jpg|jpeg|png|gif|webp)$/i) != null;
+                                    const fromUrl = /(\.jpg|\.jpeg|\.png|\.gif|\.webp)(\?|$)/i.test(url);
+                                    let isImage = hasImageCt || fromFileName || fromUrl;
+                                    console.debug('[Preview] resolved url', url, { contentType: file?.contentType, isImage, currentTabStatus: status, fileName: p.fileName });
+
+                                    if (!isImage && /\/api\/prescriptions\/.+\/file\/redirect$/.test(url)) {
+                                      // We only have a redirect URL; fetch JSON endpoint to inspect fileName and decide if image
+                                      try {
+                                        const j = await fetch(`/api/prescriptions/${p.id}/file`, { credentials: 'include', headers: { 'Accept': 'application/json' } });
+                                        if (j.ok) {
+                                          const data = await j.json();
+                                          const jsonUrl = data?.data?.url as string | undefined;
+                                          const jsonFileName = (data?.data?.fileName as string | undefined) || p.fileName || '';
+                                          const isImgByJson = /\.(jpg|jpeg|png|gif|webp)$/i.test(jsonFileName) || /(\.jpg|\.jpeg|\.png|\.gif|\.webp)(\?|$)/i.test(jsonUrl || '');
+                                          console.debug('[Preview] refined isImage via JSON /file', { jsonUrl, jsonFileName, isImgByJson });
+                                          if (isImgByJson && jsonUrl) {
+                                            isImage = true;
+                                            url = jsonUrl;
+                                          }
+                                        }
+                                      } catch {}
+                                    }
+
+                                    if (isImage) {
+                                      // Prefer zoom modal for all images for better UX (especially on Pending tab)
+                                      setViewer({ open: true, src: url, filename: p.fileName || 'prescription' });
+                                    } else {
+                                      window.open(url, '_blank');
+                                    }
+                                  } else {
+                                    console.error('[Preview] /files request failed', res.status, 'attempting JSON /file endpoint');
+                                    try {
+                                      const j = await fetch(`/api/prescriptions/${p.id}/file`, { credentials: 'include', headers: { 'Accept': 'application/json' } });
+                                      if (j.ok) {
+                                        const data = await j.json();
+                                        let url = data?.data?.url as string | undefined;
+                                        const fileName = (data?.data?.fileName as string | undefined) || p.fileName || '';
+                                        if (!url) {
+                                          console.warn('[Preview] /file returned no url, falling back to redirect');
+                                          url = `/api/prescriptions/${p.id}/file/redirect`;
+                                        }
+                                        const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName) || /(\.jpg|\.jpeg|\.png|\.gif|\.webp)(\?|$)/i.test(url);
+                                        console.debug('[Preview] JSON /file resolved', { url, fileName, isImage });
+                                        if (isImage) {
+                                          setViewer({ open: true, src: url, filename: fileName || 'prescription' });
+                                        } else {
+                                          window.open(url, '_blank');
+                                        }
+                                      } else {
+                                        console.error('[Preview] /file also failed', j.status, 'falling back to redirect');
+                                        const fallback = `/api/prescriptions/${p.id}/file/redirect`;
+                                        window.open(fallback, '_blank');
+                                      }
+                                    } catch (e) {
+                                      console.error('[Preview] exception calling /file', e);
+                                      const fallback = `/api/prescriptions/${p.id}/file/redirect`;
+                                      window.open(fallback, '_blank');
+                                    }
+                                  }
+                                } catch (err) {
+                                  console.error('[Preview] Exception while opening preview', err);
+                                  toast.error('Failed to open preview');
+                                }
+                              }}
+                              disabled={isBusy}
+                            >
+                              Preview
+                            </Button>
+                        </div>
                       </td>
                       <td className="whitespace-nowrap">
                         <StatusChip status={p.status} />
@@ -287,10 +417,7 @@ export function PrescriptionsTable() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
-                                // TODO: Open details drawer
-                                console.log('View details for', p.id);
-                              }}
+                              onClick={() => handleViewDetails(p)}
                               disabled={isBusy}
                             >
                               View Details
@@ -326,6 +453,16 @@ export function PrescriptionsTable() {
         orderNumber={dialogState.orderNumber}
         onConfirm={handleDialogConfirm}
       />
+
+      {/* Prescription Details Modal */}
+      <PrescriptionDetailsModal
+        prescription={detailsModalState.prescription}
+        isOpen={detailsModalState.isOpen}
+        onClose={handleDetailsModalClose}
+      />
+
+      {/* Image Zoom Viewer */}
+      <ImageZoomModal open={viewer.open} src={viewer.src} filename={viewer.filename} onClose={() => setViewer({ open: false, src: '' })} />
     </div>
   );
 }

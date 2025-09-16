@@ -114,9 +114,9 @@ html, body {
 /* Enhanced Dark Mode Theme Variables for Prescriptions */
 :root {
 	/* Light mode defaults */
-	--rx-bg: #ffffff;
-	--rx-surface: #f9fafb;
-	--rx-elevated: #f3f4f6;
+	--rx-bg: #f2f4f3;
+	--rx-surface: #f2f4f3;
+	--rx-elevated: #e8eae9;
 	--rx-border: #e5e7eb;
 	--rx-muted: #6b7280;
 	--rx-text: #111827;

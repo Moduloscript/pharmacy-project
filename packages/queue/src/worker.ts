@@ -34,8 +34,8 @@ export function createNotificationWorker(options: QueueOptions = {}): Worker {
 					throw new Error(`No provider registered for channel: ${data.channel}`);
 				}
 
-				// Update notification status to 'processing'
-				await updateNotificationStatus(data.notificationId, 'SENT', {
+				// Mark as pending/processing before attempting send
+				await updateNotificationStatus(data.notificationId, 'PENDING', {
 					gatewayResponse: `Processing via ${provider.name}`
 				});
 

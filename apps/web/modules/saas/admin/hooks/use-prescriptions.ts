@@ -9,14 +9,22 @@ import {
 
 // Jotai atoms for filters
 export const prescriptionStatusAtom = atom<PrescriptionStatus>('PENDING_VERIFICATION');
+export const prescriptionSearchAtom = atom<string>('');
+export const prescriptionHasFileAtom = atom<boolean>(false);
+export const prescriptionStartDateAtom = atom<string | null>(null);
+export const prescriptionEndDateAtom = atom<string | null>(null);
 
 export function useAdminPrescriptions() {
   const [status, setStatus] = useAtom(prescriptionStatusAtom);
+  const [search, setSearch] = useAtom(prescriptionSearchAtom);
+  const [hasFile, setHasFile] = useAtom(prescriptionHasFileAtom);
+  const [startDate, setStartDate] = useAtom(prescriptionStartDateAtom);
+  const [endDate, setEndDate] = useAtom(prescriptionEndDateAtom);
   const queryClient = useQueryClient();
 
   const query = useInfiniteQuery({
-    queryKey: ['admin-prescriptions', status],
-    queryFn: ({ pageParam = 1 }) => fetchAdminPrescriptions({ page: pageParam, limit: 10, status }),
+    queryKey: ['admin-prescriptions', status, search, hasFile, startDate, endDate],
+    queryFn: ({ pageParam = 1 }) => fetchAdminPrescriptions({ page: pageParam, limit: 10, status, search, hasFile, startDate: startDate ?? undefined, endDate: endDate ?? undefined }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
       if (lastPage.pagination.page < lastPage.pagination.pages) {
@@ -41,6 +49,14 @@ export function useAdminPrescriptions() {
   return {
     status,
     setStatus,
+    search,
+    setSearch,
+    hasFile,
+    setHasFile,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
     prescriptions,
     isLoading: query.isLoading,
     isError: query.isError,

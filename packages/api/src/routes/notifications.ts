@@ -4,6 +4,39 @@ import { zValidator } from '@hono/zod-validator';
 import { authMiddleware } from '../middleware/auth';
 import { db } from '@repo/database';
 import { addNotificationJob } from '@repo/queue';
+import {
+  NotificationType as PrismaNotificationType,
+  NotificationChannel as PrismaNotificationChannel,
+  NotificationStatus as PrismaNotificationStatus,
+} from '@prisma/client';
+
+function mapType(t: string): PrismaNotificationType {
+  switch ((t || '').toLowerCase()) {
+    case 'order_confirmation':
+      return PrismaNotificationType.ORDER_CONFIRMATION;
+    case 'payment_success':
+      return PrismaNotificationType.PAYMENT_UPDATE;
+    case 'delivery_update':
+      return PrismaNotificationType.DELIVERY_UPDATE;
+    case 'low_stock_alert':
+      return PrismaNotificationType.LOW_STOCK_ALERT;
+    default:
+      return PrismaNotificationType.SYSTEM_ALERT;
+  }
+}
+
+function mapChannel(c: string): PrismaNotificationChannel {
+  switch ((c || '').toLowerCase()) {
+    case 'email':
+      return PrismaNotificationChannel.EMAIL;
+    case 'sms':
+      return PrismaNotificationChannel.SMS;
+    case 'whatsapp':
+      return PrismaNotificationChannel.WHATSAPP;
+    default:
+      return PrismaNotificationChannel.EMAIL;
+  }
+}
 
 // Admin-only notifications test router
 import type { AppBindings } from '../types/context';
@@ -43,11 +76,12 @@ export const notificationsRouter = new Hono<AppBindings>()
         // Create a notification record in DB (PENDING)
         const record = await db.notification.create({
           data: {
-            type,
-            channel,
+            type: mapType(type),
+            channel: mapChannel(channel),
             recipient,
             message: message || '',
-            status: 'PENDING',
+            body: message || '',
+            status: PrismaNotificationStatus.PENDING,
           },
         });
 

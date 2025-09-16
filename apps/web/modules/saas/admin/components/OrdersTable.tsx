@@ -180,6 +180,58 @@ export function OrdersTable({ className }: OrdersTableProps) {
   
   const updateStatusMutation = useUpdateOrderStatus();
 
+  // Action handlers
+  const handleCallCustomer = (phone: string, customerName: string) => {
+    // Open phone dialer or copy number
+    if (navigator.userAgent.match(/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i)) {
+      // Mobile device - open phone dialer
+      window.location.href = `tel:${phone}`;
+    } else {
+      // Desktop - copy to clipboard and show notification
+      navigator.clipboard.writeText(phone).then(() => {
+        toast.success('Phone number copied to clipboard', {
+          description: `${customerName}: ${phone}`
+        });
+      }).catch(() => {
+        toast.error('Failed to copy phone number');
+      });
+    }
+  };
+
+  const handleSendMessage = (order: Order) => {
+    const { customer } = order;
+    const message = `Hi ${customer.name}, regarding your order ${order.orderNumber}. How can we help you today?`;
+    
+    if (customer.phone) {
+      // Try to open SMS app if on mobile, otherwise copy message
+      if (navigator.userAgent.match(/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i)) {
+        window.location.href = `sms:${customer.phone}?body=${encodeURIComponent(message)}`;
+      } else {
+        // Desktop - copy message template
+        navigator.clipboard.writeText(`${customer.phone}\n${message}`).then(() => {
+          toast.success('Message template copied to clipboard', {
+            description: `Ready to send to ${customer.name}`
+          });
+        }).catch(() => {
+          toast.error('Failed to copy message template');
+        });
+      }
+    } else {
+      toast.error('No phone number available for this customer');
+    }
+  };
+
+  const handleTrackDelivery = (order: Order) => {
+    // For now, show order details with tracking info
+    // In a real implementation, this would integrate with delivery service API
+    toast.info('Tracking delivery', {
+      description: `Opening tracking details for order ${order.orderNumber}`
+    });
+    
+    // Navigate to order details with tracking focus
+    window.open(`/app/admin/orders/${order.id}?tab=delivery`, '_blank');
+  };
+
   // Filter orders based on current filters
   const filteredOrders = useMemo(() => {
     let filtered = orders;
@@ -522,6 +574,8 @@ export function OrdersTable({ className }: OrdersTableProps) {
                               variant="outline"
                               size="sm"
                               className="h-6 px-2 text-xs"
+                              onClick={() => handleCallCustomer(order.customer.phone!, order.customer.name)}
+                              title={`Call ${order.customer.name}: ${order.customer.phone}`}
                             >
                               <PhoneIcon className="size-3 mr-1" />
                               Call
@@ -613,12 +667,22 @@ export function OrdersTable({ className }: OrdersTableProps) {
                         </Link>
                       )}
                       
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleSendMessage(order)}
+                        title={`Send message to ${order.customer.name}`}
+                      >
                         <MessageSquareIcon className="size-4" />
                       </Button>
                       
                       {order.orderStatus === 'DISPATCHED' && (
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleTrackDelivery(order)}
+                          title={`Track delivery for order ${order.orderNumber}`}
+                        >
                           <TruckIcon className="size-4" />
                         </Button>
                       )}
@@ -726,11 +790,21 @@ export function OrdersTable({ className }: OrdersTableProps) {
                       </Button>
                     </Link>
                     {order.customer.phone && (
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleCallCustomer(order.customer.phone!, order.customer.name)}
+                        title={`Call ${order.customer.name}`}
+                      >
                         <PhoneIcon className="size-4" />
                       </Button>
                     )}
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleSendMessage(order)}
+                      title={`Message ${order.customer.name}`}
+                    >
                       <MessageSquareIcon className="size-4" />
                     </Button>
                   </div>

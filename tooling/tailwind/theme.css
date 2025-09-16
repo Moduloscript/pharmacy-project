@@ -59,26 +59,26 @@
 		--border: #e3ebf6;
 		--input: #c7ced8;
 		--ring: #4e6df5;
-		--background: #fafafe;
+		--background: #f2f4f3;
 		--foreground: #292b35;
 		--primary: #4e6df5;
-		--primary-foreground: #f6f7f9;
+		--primary-foreground: #f2f4f3;
 		--secondary: #292b35;
-		--secondary-foreground: #ffffff;
+		--secondary-foreground: #f2f4f3;
 		--destructive: #ef4444;
-		--destructive-foreground: #ffffff;
+		--destructive-foreground: #f2f4f3;
 		--success: #39a561;
-		--success-foreground: #ffffff;
-		--muted: #f8fafc;
+		--success-foreground: #f2f4f3;
+		--muted: #f2f4f3;
 		--muted-foreground: #64748b;
-		--accent: #ddddea;
+		--accent: #e8eae9;
 		--accent-foreground: #292b35;
-		--popover: #ffffff;
+		--popover: #f2f4f3;
 		--popover-foreground: #292b35;
-		--card: #ffffff;
+		--card: #f2f4f3;
 		--card-foreground: #292b35;
 		--highlight: #e5a158;
-		--highlight-foreground: #ffffff;
+		--highlight-foreground: #f2f4f3;
 		--radius: 0.75rem;
 
 		/* fumadocs */
