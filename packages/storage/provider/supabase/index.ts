@@ -4,6 +4,7 @@ import type {
   GetSignedUploadUrlHandler,
   GetSignedUrlHander,
   DeleteObjectHandler,
+  GetObjectMetadataHandler,
 } from "../../types"
 
 let supabaseClient: ReturnType<typeof createClient> | null = null

@@ -185,6 +185,9 @@ export function PrescriptionsTable() {
     );
   }
 
+  // Render-time log of PDF viewer state
+  console.log('[PDFModal] PrescriptionsTable render', { open: pdfViewer.open, hasSrc: !!pdfViewer.src, filename: pdfViewer.filename });
+
   return (
     <div className="space-y-6">
       {/* Filter Toolbar */}
@@ -285,6 +288,7 @@ export function PrescriptionsTable() {
                                 // Always stop propagation to prevent any parent row/link navigation
                                 e.preventDefault();
                                 e.stopPropagation();
+                                console.log('[Preview] onClick fired for', p.id);
                                 try {
                                   // Defensive: prevent any parent <a> default navigation to JSON endpoints
                                   try {
@@ -301,10 +305,18 @@ export function PrescriptionsTable() {
                                   console.debug('[Preview] /files response status', res.status);
                                   if (res.ok) {
                                     const json = await res.json();
-                                    const files = json?.data?.files as Array<{ url: string; contentType?: string } | undefined>;
+                                    const files = json?.data?.files as Array<{ url: string; contentType?: string; key?: string | null; kind?: 'image' | 'pdf' | 'other' } | undefined>;
                                     console.debug('[Preview] files payload', files);
                                     const file = files?.[0];
                                     let url = file?.url || p.fileUrl || '';
+                                    // Prefer direct signed URL for PDFs; fallback to proxy if only key is available
+                                    if ((file?.kind === 'pdf' || file?.contentType === 'application/pdf')) {
+                                      if (file?.url) {
+                                        url = file.url;
+                                      } else if (file?.key) {
+                                        url = `/image-proxy/prescriptions/${encodeURIComponent(file.key)}`;
+                                      }
+                                    }
                                     // If URL points to JSON endpoint, switch to redirect endpoint
                                     if (/\/api\/prescriptions\/.+\/file$/.test(url) || !url) {
                                       url = `/api/prescriptions/${p.id}/file/redirect`;
@@ -336,12 +348,19 @@ export function PrescriptionsTable() {
 
                                     if (isImage) {
                                       // Prefer zoom modal for all images for better UX (especially on Pending tab)
+                                      console.log('[Preview] opening image viewer', { url, fileName: p.fileName });
                                       setViewer({ open: true, src: url, filename: p.fileName || 'prescription' });
                                     } else {
                                       const isPdf = (file?.contentType === 'application/pdf') || /\.(pdf)(\?|$)/i.test(p.fileName || '') || /(\.pdf)(\?|$)/i.test(url);
                                       if (isPdf) {
-                                        setPdfViewer({ open: true, src: url, filename: p.fileName || 'document.pdf' });
+                                        console.log('[Preview] opening PDF viewer', { url, fileName: p.fileName });
+                                        // If URL is the redirect endpoint, just use it (same-origin). Otherwise use as-is.
+                                        // Do not append query params to presigned URLs (breaks signature)
+                                        const isAbsolute = /^https?:\/\//i.test(url);
+                                        const src = isAbsolute ? url : `${url}${url.includes('?') ? '&' : '?'}nocache=${Date.now()}`;
+                                        setPdfViewer({ open: true, src, filename: p.fileName || 'document.pdf' });
                                       } else {
+                                        console.log('[Preview] opening new tab (non-image/pdf)', { url });
                                         window.open(url, '_blank');
                                       }
                                     }
@@ -360,8 +379,10 @@ export function PrescriptionsTable() {
                                         const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName) || /(\.jpg|\.jpeg|\.png|\.gif|\.webp)(\?|$)/i.test(url);
                                         console.debug('[Preview] JSON /file resolved', { url, fileName, isImage });
                                         if (isImage) {
+                                          console.log('[Preview] opening image viewer via /file JSON fallback', { url, fileName });
                                           setViewer({ open: true, src: url, filename: fileName || 'prescription' });
                                         } else {
+                                          console.log('[Preview] opening new tab via /file JSON fallback', { url, fileName });
                                           window.open(url, '_blank');
                                         }
                                       } else {

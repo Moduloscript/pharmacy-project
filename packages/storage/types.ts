@@ -25,3 +25,13 @@ export type DeleteObjectHandler = (
 	path: string,
 	options: { bucket: string },
 ) => Promise<void>;
+
+export type GetObjectMetadataHandler = (
+	path: string,
+	options: { bucket: string },
+) => Promise<{
+	exists: boolean;
+	contentType: string | null;
+	size: number | null;
+	lastModified: Date | null;
+}>;

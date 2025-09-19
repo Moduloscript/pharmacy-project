@@ -64,6 +64,7 @@
 		"react-dom": "19.0.0",
 		"react-dropzone": "^14.3.8",
 		"react-hook-form": "^7.54.2",
+		"react-pdf": "^10.1.0",
 		"server-only": "^0.0.1",
 		"sharp": "^0.33.5",
 		"slugify": "^1.6.6",
@@ -108,6 +109,7 @@
 	"scripts": {
 		"build": "next build",
 		"dev": "next dev",
+		"postinstall": "node scripts/setup-pdfjs.js",
 		"e2e": "pnpm exec playwright test --ui",
 		"e2e:ci": "pnpm exec playwright install && pnpm exec playwright test",
 		"lint": "next lint",

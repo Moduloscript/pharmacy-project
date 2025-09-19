@@ -1,5 +1,5 @@
 import { config } from "@repo/config";
-import { getSignedUrl } from "@repo/storage";
+import { getSignedUrl, getObjectMetadata } from "@repo/storage";
 
 // Stream the storage object inline so previews render in-place (no new tab download)
 // Also set cache headers for an hour to avoid repeated signed URL fetches during a session
@@ -25,10 +25,10 @@ function guessContentTypeFromKey(key: string): string {
   }
 }
 
-export const GET = async (
+export async function GET(
   req: Request,
   { params }: { params: Promise<{ path: string[] }> },
-) => {
+) {
   const { path } = await params;
 
   const [bucket, ...parts] = path ?? [];
@@ -92,7 +92,7 @@ export const GET = async (
         pipeline = pipeline.jpeg({ quality, mozjpeg: true });
         contentType = "image/jpeg";
       }
-const output = await pipeline.toBuffer();
+      const output = await pipeline.toBuffer();
 
       const headers = new Headers();
       headers.set("Content-Type", contentType);
@@ -114,7 +114,8 @@ const output = await pipeline.toBuffer();
     headers.set("Content-Disposition", "inline");
     if (contentLength) headers.set("Content-Length", contentLength);
     if (contentRange) headers.set("Content-Range", contentRange);
-    if (acceptRanges) headers.set("Accept-Ranges", acceptRanges);
+    // Always advertise range support so PDF.js behaves reliably, even if upstream omits it
+    headers.set("Accept-Ranges", acceptRanges || "bytes");
 
     return new Response(upstream.body, {
       status: upstream.status, // 200 or 206 if ranged
@@ -123,4 +124,61 @@ const output = await pipeline.toBuffer();
   } catch (e) {
     return new Response("Error generating preview", { status: 500 });
   }
-};
+}
+
+// Support HEAD so clients like PDF.js can probe for length/range support.
+export async function HEAD(
+  req: Request,
+  { params }: { params: Promise<{ path: string[] }> },
+) {
+  const { path } = await params;
+  const [bucket, ...parts] = path ?? [];
+  const key = parts.join("/");
+  if (!(bucket && key)) return new Response("Invalid path", { status: 400 });
+
+  const allowedBuckets = [
+    config.storage.bucketNames.avatars,
+    config.storage.bucketNames.documents,
+    config.storage.bucketNames.productImages,
+    config.storage.bucketNames.prescriptions,
+  ];
+  if (!allowedBuckets.includes(bucket)) return new Response("Not found", { status: 404 });
+
+  try {
+    // Use provider metadata API instead of presigned GET URL for HEAD.
+    // Some S3-compatible backends (including Supabase S3 gateway) require a
+    // method-specific signature, so issuing HEAD against a GET-signed URL can 403.
+    const meta = await getObjectMetadata(key, { bucket });
+    if (!meta.exists) {
+      return new Response("Not found", { status: 404 });
+    }
+
+    const headers = new Headers();
+    const contentType = meta.contentType || guessContentTypeFromKey(key);
+    headers.set('Content-Type', contentType);
+    headers.set('Cache-Control', 'public, max-age=3600, s-maxage=3600');
+    headers.set('Content-Disposition', 'inline');
+    if (typeof meta.size === 'number') headers.set('Content-Length', String(meta.size));
+    // We explicitly advertise range support so PDF.js can perform range requests.
+    headers.set('Accept-Ranges', 'bytes');
+    if (meta.lastModified) headers.set('Last-Modified', meta.lastModified.toUTCString());
+
+    // Explicit 200 to avoid default 204
+    return new Response(null, { status: 200, headers });
+  } catch (e) {
+    console.error('[image-proxy HEAD] Error:', e);
+    return new Response('Error probing object', { status: 500 });
+  }
+}
+
+// Also export OPTIONS for CORS preflight
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Range',
+    },
+  });
+}

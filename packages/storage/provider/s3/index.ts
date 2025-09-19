@@ -2,6 +2,7 @@ import {
 	GetObjectCommand,
 	PutObjectCommand,
 	DeleteObjectCommand,
+	HeadObjectCommand,
 	S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl as getS3SignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -10,6 +11,7 @@ import type {
 	GetSignedUploadUrlHandler,
 	GetSignedUrlHander,
 	DeleteObjectHandler,
+	GetObjectMetadataHandler,
 } from "../../types";
 
 let s3Client: S3Client | null = null;
@@ -99,5 +101,30 @@ export const getSignedUrl: GetSignedUrlHander = async (
 	} catch (e) {
 		logger.error(e);
 		throw new Error("Could not get signed url");
+	}
+};
+
+export const getObjectMetadata: GetObjectMetadataHandler = async (
+	path,
+	{ bucket },
+) => {
+	const s3Client = getS3Client();
+	try {
+		const res = await s3Client.send(
+			new HeadObjectCommand({ Bucket: bucket, Key: path }),
+		);
+		return {
+			exists: true,
+			contentType: res.ContentType ?? null,
+			size: typeof res.ContentLength === 'number' ? res.ContentLength : (res.ContentLength ? Number(res.ContentLength) : null),
+			lastModified: res.LastModified ?? null,
+		};
+	} catch (e: any) {
+		// Not found
+		if (e?.$metadata?.httpStatusCode === 404 || e?.name === 'NotFound') {
+			return { exists: false, contentType: null, size: null, lastModified: null };
+		}
+		logger.error(e);
+		return { exists: false, contentType: null, size: null, lastModified: null };
 	}
 };

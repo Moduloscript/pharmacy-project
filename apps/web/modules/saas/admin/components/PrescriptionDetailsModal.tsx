@@ -153,14 +153,23 @@ export function PrescriptionDetailsModal({
       console.debug('[Details Preview] /files status', res.status);
       if (res.ok) {
         const json = await res.json();
-        const file = json?.data?.files?.[0];
-        const url = file?.url || previewUrl || prescription?.fileUrl;
+        const file = json?.data?.files?.[0] as { url?: string; key?: string | null; kind?: 'image' | 'pdf' | 'other'; contentType?: string } | undefined;
+        let url = file?.url || previewUrl || prescription?.fileUrl;
         const fileName = prescription?.fileName || '';
-        console.debug('[Details Preview] resolved url', url, { contentType: file?.contentType });
+        console.debug('[Details Preview] resolved url', url, { contentType: file?.contentType, key: file?.key, kind: file?.kind });
         if (url) {
-          const isPdf = (file?.contentType === 'application/pdf') || /\.(pdf)(\?|$)/i.test(fileName) || /(\.pdf)(\?|$)/i.test(url);
+          const isPdf = (file?.kind === 'pdf') || (file?.contentType === 'application/pdf') || /\.(pdf)(\?|$)/i.test(fileName) || /(\.pdf)(\?|$)/i.test(url);
           if (isPdf) {
-            setPdfViewer({ open: true, src: url, filename: fileName || 'document.pdf' });
+            // Prefer direct signed URL when available to avoid any proxy interop issues
+            if (file?.url) {
+              url = file.url;
+            } else if (file?.key) {
+              url = `/image-proxy/prescriptions/${encodeURIComponent(file.key)}`;
+            }
+            // IMPORTANT: Do not append query params to presigned URLs (breaks signature)
+            const isAbsolute = /^https?:\/\//i.test(url);
+            const finalUrl = isAbsolute ? url : `${url}${url.includes('?') ? '&' : '?'}nocache=${Date.now()}`;
+            setPdfViewer({ open: true, src: finalUrl, filename: fileName || 'document.pdf' });
           } else {
             window.open(url, '_blank');
           }
@@ -291,7 +300,11 @@ export function PrescriptionDetailsModal({
                         <p className="text-sm text-muted-foreground mb-4">
                           Click the button below to preview the PDF
                         </p>
-                        <Button variant="outline" onClick={() => setPdfViewer({ open: true, src: previewUrl, filename: prescription?.fileName || 'document.pdf' })} className="gap-2">
+                        <Button variant="outline" onClick={() => {
+                          const isAbsolute = /^https?:\/\//i.test(previewUrl || '');
+                          const src = isAbsolute ? (previewUrl || '') : `${previewUrl}${(previewUrl || '').includes('?') ? '&' : '?'}nocache=${Date.now()}`;
+                          setPdfViewer({ open: true, src, filename: prescription?.fileName || 'document.pdf' });
+                        }} className="gap-2">
                           <Eye className="h-4 w-4" />
                           Preview PDF
                         </Button>

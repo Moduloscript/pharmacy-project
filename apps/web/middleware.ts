@@ -15,6 +15,16 @@ const intlMiddleware = createMiddleware(routing);
 export default async function middleware(req: NextRequest) {
 	const { pathname, origin } = req.nextUrl;
 
+	// Bypass i18n and auth logic for specific routes
+	if (
+		pathname.startsWith('/pdf.worker') ||
+		pathname.startsWith('/image-proxy') ||
+		pathname.startsWith('/test-head') ||
+		pathname.startsWith('/api')
+	) {
+		return NextResponse.next();
+	}
+
 	if (pathname.startsWith("/app")) {
 		const response = NextResponse.next();
 
@@ -220,6 +230,6 @@ export default async function middleware(req: NextRequest) {
 
 export const config = {
 	matcher: [
-		"/((?!api|image-proxy|images|fonts|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+		"/((?!api|image-proxy|images|fonts|pdf\\.worker\\.min\\.mjs|pdf\\.worker\\.min\\.js|pdf\\.worker|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
 	],
 };
