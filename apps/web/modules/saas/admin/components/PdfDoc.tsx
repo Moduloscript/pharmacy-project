@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -34,6 +34,12 @@ export default function PdfDoc({ fileUrl }: PdfDocProps) {
   const [rotation, setRotation] = useState<number>(0);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Track container and page intrinsic size to compute fit scales
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [basePageWidth, setBasePageWidth] = useState<number | null>(null);
+  const [basePageHeight, setBasePageHeight] = useState<number | null>(null);
+  const [fitMode, setFitMode] = useState<'none' | 'width' | 'page'>('none');
+
   useEffect(() => {
     configurePdfWorker();
     // Helpful diagnostic
@@ -53,59 +59,145 @@ export default function PdfDoc({ fileUrl }: PdfDocProps) {
     setLoadError(null);
   }
 
-  const fileDescriptor = useMemo(() => {
-    // Avoid credentials for cross-origin signed URLs (Supabase returns ACAO: *)
-    // PDF.js maps withCredentials=false to credentials:'same-origin'
+  const fileDescriptor = useMemo(() => ({
+    url: fileUrl,
+    withCredentials: false,
+    // Reduce HEADs & chunking issues
+    // @ts-ignore
+    disableRange: true,
+    // @ts-ignore
+    disableStream: true,
+    // @ts-ignore
+    disableWorker: false,
+    // @ts-ignore  
+    isEvalSupported: false,
+    // @ts-ignore
+    rangeChunkSize: 0,
+    // @ts-ignore
+    disableAutoFetch: true,
+    // @ts-ignore
+    length: 0,
+  }) as const, [fileUrl]);
+
+  // Compute effective base dimensions given rotation
+  const effectiveBase = useMemo(() => {
+    if (basePageWidth == null || basePageHeight == null) return null;
+    const rot = ((rotation % 360) + 360) % 360;
+    const swapped = rot === 90 || rot === 270;
     return {
-      url: fileUrl,
-      withCredentials: false,
-      // Disable ALL range/stream features to avoid HEAD requests entirely
-      disableRange: true,
-      disableStream: true,
-      // Force binary string loading (old method, but avoids HEAD)
-      // @ts-ignore
-      disableWorker: false,
-      // @ts-ignore  
-      isEvalSupported: false,
-      // @ts-ignore - Force rangeChunkSize to 0 to prevent any range requests
-      rangeChunkSize: 0,
-      // @ts-ignore - Disable auto-fetch to prevent HEAD
-      disableAutoFetch: true,
-      // @ts-ignore - Force length to 0 to prevent length check
-      length: 0,
-    } as const;
-  }, [fileUrl]);
+      width: swapped ? basePageHeight : basePageWidth,
+      height: swapped ? basePageWidth : basePageHeight,
+    };
+  }, [basePageWidth, basePageHeight, rotation]);
+
+  const applyFitWidth = () => {
+    if (!containerRef.current || !effectiveBase) return;
+    const cw = containerRef.current.clientWidth;
+    const newScale = Math.max(0.1, Math.min(8, cw / effectiveBase.width));
+    setScale(newScale);
+    setFitMode('width');
+  };
+
+  const applyFitPage = () => {
+    if (!containerRef.current || !effectiveBase) return;
+    const cw = containerRef.current.clientWidth;
+    const ch = containerRef.current.clientHeight;
+    const sw = cw / effectiveBase.width;
+    const sh = ch / effectiveBase.height;
+    const newScale = Math.max(0.1, Math.min(8, Math.min(sw, sh)));
+    setScale(newScale);
+    setFitMode('page');
+  };
+
+  // Keep fit mode on resize / rotation
+  useEffect(() => {
+    const onResize = () => {
+      if (fitMode === 'width') applyFitWidth();
+      if (fitMode === 'page') applyFitPage();
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fitMode, effectiveBase]);
+
+  useEffect(() => {
+    if (fitMode === 'width') applyFitWidth();
+    if (fitMode === 'page') applyFitPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rotation]);
+
+  // Keyboard shortcuts: + / -, r, 0, w, p, arrows
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target && (e.target as HTMLElement).tagName === 'INPUT') return;
+      if (e.key === '+' || e.key === '=') {
+        e.preventDefault();
+        setScale((s) => Math.min(8, s + 0.1));
+        setFitMode('none');
+      } else if (e.key === '-') {
+        e.preventDefault();
+        setScale((s) => Math.max(0.1, s - 0.1));
+        setFitMode('none');
+      } else if (e.key.toLowerCase() === 'r') {
+        e.preventDefault();
+        setRotation((r) => (r + 90) % 360);
+      } else if (e.key === '0') {
+        e.preventDefault();
+        setScale(1);
+        setFitMode('none');
+      } else if (e.key.toLowerCase() === 'w') {
+        e.preventDefault();
+        applyFitWidth();
+      } else if (e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        applyFitPage();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setPageNumber((p) => Math.max(1, p - 1));
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setPageNumber((p) => Math.min((numPages || 1), p + 1));
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [numPages, applyFitWidth, applyFitPage]);
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <button onClick={() => setScale((s) => Math.max(0.25, s - 0.1))} className="px-2 py-1 border rounded">
-          -
-        </button>
-        <span className="text-sm">{Math.round(scale * 100)}%</span>
-        <button onClick={() => setScale((s) => Math.min(4, s + 0.1))} className="px-2 py-1 border rounded">
-          +
-        </button>
-        <button onClick={() => setRotation((r) => (r + 90) % 360)} className="px-2 py-1 border rounded">
-          Rotate
-        </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <button onClick={() => { setScale((s) => Math.max(0.25, s - 0.1)); setFitMode('none'); }} className="px-2 py-1 border rounded">-</button>
+        <span className="text-sm w-14 text-center">{Math.round(scale * 100)}%</span>
+        <button onClick={() => { setScale((s) => Math.min(4, s + 0.1)); setFitMode('none'); }} className="px-2 py-1 border rounded">+</button>
+        <button onClick={() => setRotation((r) => (r + 90) % 360)} className="px-2 py-1 border rounded">Rotate</button>
+        <button onClick={applyFitWidth} className="px-2 py-1 border rounded">Fit width</button>
+        <button onClick={applyFitPage} className="px-2 py-1 border rounded">Fit page</button>
         <div className="flex-1" />
         {numPages ? (
           <div className="flex items-center gap-2">
-            <button onClick={() => setPageNumber((p) => Math.max(1, p - 1))} className="px-2 py-1 border rounded">
-              Prev
-            </button>
-            <span className="text-sm tabular-nums">
-              Page {pageNumber} of {numPages}
-            </span>
-            <button onClick={() => setPageNumber((p) => Math.min(numPages!, p + 1))} className="px-2 py-1 border rounded">
-              Next
-            </button>
+            <button onClick={() => setPageNumber((p) => Math.max(1, p - 1))} className="px-2 py-1 border rounded">Prev</button>
+            <span className="text-sm tabular-nums">Page</span>
+            <input
+              type="number"
+              min={1}
+              max={numPages}
+              value={pageNumber}
+              onChange={(e) => setPageNumber(() => {
+                const v = Number(e.target.value);
+                if (Number.isFinite(v)) {
+                  return Math.min(Math.max(1, v), numPages!);
+                }
+                return 1;
+              })}
+              className="w-16 px-1 py-1 border rounded text-sm text-center"
+            />
+            <span className="text-sm tabular-nums">of {numPages}</span>
+            <button onClick={() => setPageNumber((p) => Math.min(numPages!, p + 1))} className="px-2 py-1 border rounded">Next</button>
           </div>
         ) : null}
       </div>
 
-      <div className="w-full h-[70vh] overflow-auto flex items-center justify-center bg-black/5">
+      <div ref={containerRef} className="w-full h-[70vh] overflow-auto flex items-center justify-center bg-black/5">
         <Document
           key={fileUrl}
           file={fileDescriptor}
@@ -123,7 +215,20 @@ export default function PdfDoc({ fileUrl }: PdfDocProps) {
           loading={<p>Loading PDF...</p>}
           error={<p className="text-sm text-red-500">{loadError ? `Failed to load PDF: ${loadError}` : 'Failed to load PDF'}</p>}
         >
-          <Page pageNumber={pageNumber} scale={scale} rotate={rotation} renderTextLayer renderAnnotationLayer />
+          <Page
+            pageNumber={pageNumber}
+            scale={scale}
+            rotate={rotation}
+            renderTextLayer
+            renderAnnotationLayer
+            onLoadSuccess={(page) => {
+              try {
+                const v = page.getViewport({ scale: 1, rotation });
+                setBasePageWidth(v.width);
+                setBasePageHeight(v.height);
+              } catch {}
+            }}
+          />
         </Document>
       </div>
     </div>

@@ -277,6 +277,7 @@ model Product {
   images                 Json?
   cartItems              CartItem[]
   inventoryMovements     InventoryMovement[]
+  batches                ProductBatch[]
   orderItems             OrderItem[]
 
   @@index([category])
@@ -436,8 +437,26 @@ model PaymentRetryLog {
   @@map("payment_retry_log")
 }
 
+model ProductBatch {
+  id          String    @id @default(cuid())
+  productId   String    @map("product_id")
+  batchNumber String    @map("batch_number")
+  qty         Int       @default(0)
+  costPrice   Decimal?  @db.Decimal(10, 2) @map("cost_price")
+  expiryDate  DateTime? @map("expiry_date")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  product     Product   @relation(fields: [productId], references: [id])
+  movements   InventoryMovement[]
+
+  @@unique([productId, batchNumber])
+  @@index([productId])
+  @@index([expiryDate], map: "idx_product_batch_expiry")
+  @@map("product_batch")
+}
+
 model InventoryMovement {
-  id            String    @id @default(cuid())
+  id            String       @id @default(cuid())
   productId     String
   type          String
   quantity      Int
@@ -447,13 +466,16 @@ model InventoryMovement {
   newStock      Int
   batchNumber   String?
   expiryDate    DateTime?
+  batchId       String?   @map("batch_id")
   userId        String?
   notes         String?
-  createdAt     DateTime  @default(now())
-  product       Product   @relation(fields: [productId], references: [id])
+  createdAt     DateTime     @default(now())
+  product       Product      @relation(fields: [productId], references: [id])
+  batch         ProductBatch? @relation(fields: [batchId], references: [id])
 
   @@index([createdAt])
   @@index([productId])
+  @@index([batchId])
   @@map("inventory_movement")
 }
 

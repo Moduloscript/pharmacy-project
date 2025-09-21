@@ -1,0 +1,6 @@
+# Normalize line endings to LF for source code; keep Windows endings for scripts where necessary
+* text=auto eol=lf
+
+# Keep CRLF for Windows PowerShell and batch scripts
+*.ps1 eol=crlf
+*.bat eol=crlf

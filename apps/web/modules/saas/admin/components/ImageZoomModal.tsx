@@ -12,23 +12,26 @@ interface ImageZoomModalProps {
   onClose: () => void;
 }
 
+const DEFAULT_IMAGE_SCALE = 0.79; // 79%
+
 export function ImageZoomModal({ open, src, filename, onClose }: ImageZoomModalProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useState(DEFAULT_IMAGE_SCALE);
   const [rotation, setRotation] = useState(0);
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
-  const [fit, setFit] = useState(true);
+  const [fit, setFit] = useState(false);
   const [imgNatural, setImgNatural] = useState<{ w: number; h: number } | null>(null);
 
   useEffect(() => {
     // Reset state when opened
     if (open) {
-      setScale(1);
+      setScale(DEFAULT_IMAGE_SCALE);
       setRotation(0);
       setTx(0);
       setTy(0);
-      setFit(true);
+      // Start not fitted so the default zoom is respected
+      setFit(false);
     }
   }, [open]);
 
@@ -179,7 +182,7 @@ export function ImageZoomModal({ open, src, filename, onClose }: ImageZoomModalP
               onLoad={(e) => {
                 const el = e.currentTarget
                 setImgNatural({ w: el.naturalWidth, h: el.naturalHeight })
-                setFit(true)
+                // Do not auto-fit here; respect DEFAULT_IMAGE_SCALE unless user toggles fit
               }}
             />
           </div>

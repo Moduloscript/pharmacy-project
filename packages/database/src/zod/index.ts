@@ -116,7 +116,9 @@ export const PaymentRetryConfigScalarFieldEnumSchema = z.enum(['id','payment_met
 
 export const PaymentRetryLogScalarFieldEnumSchema = z.enum(['id','payment_id','retry_attempt','retry_scheduled_at','retry_executed_at','retry_result','error_message','gateway_response','created_at']);
 
-export const InventoryMovementScalarFieldEnumSchema = z.enum(['id','productId','type','quantity','reason','reference','previousStock','newStock','batchNumber','expiryDate','userId','notes','createdAt']);
+export const ProductBatchScalarFieldEnumSchema = z.enum(['id','productId','batchNumber','qty','costPrice','expiryDate','createdAt','updatedAt']);
+
+export const InventoryMovementScalarFieldEnumSchema = z.enum(['id','productId','type','quantity','reason','reference','previousStock','newStock','batchNumber','expiryDate','batchId','userId','notes','createdAt']);
 
 export const NotificationScalarFieldEnumSchema = z.enum(['id','customerId','orderId','recipient','subject','message','gatewayResponse','retryCount','maxRetries','createdAt','sentAt','deliveredAt','idempotencyKey','externalMessageId','prescriptionId','recipientId','recipientEmail','recipientPhone','body','scheduledAt','scheduledFor','failedAt','errorMessage','metadata','expiresAt','type','channel','status','priority']);
 
@@ -628,6 +630,23 @@ export const PaymentRetryLogSchema = z.object({
 export type PaymentRetryLog = z.infer<typeof PaymentRetryLogSchema>
 
 /////////////////////////////////////////
+// PRODUCT BATCH SCHEMA
+/////////////////////////////////////////
+
+export const ProductBatchSchema = z.object({
+  id: z.string().cuid(),
+  productId: z.string(),
+  batchNumber: z.string(),
+  qty: z.number().int(),
+  costPrice: z.instanceof(Prisma.Decimal, { message: "Field 'costPrice' must be a Decimal. Location: ['Models', 'ProductBatch']"}).nullable(),
+  expiryDate: z.coerce.date().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type ProductBatch = z.infer<typeof ProductBatchSchema>
+
+/////////////////////////////////////////
 // INVENTORY MOVEMENT SCHEMA
 /////////////////////////////////////////
 
@@ -642,6 +661,7 @@ export const InventoryMovementSchema = z.object({
   newStock: z.number().int(),
   batchNumber: z.string().nullable(),
   expiryDate: z.coerce.date().nullable(),
+  batchId: z.string().nullable(),
   userId: z.string().nullable(),
   notes: z.string().nullable(),
   createdAt: z.coerce.date(),

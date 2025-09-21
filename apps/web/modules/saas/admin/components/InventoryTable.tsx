@@ -29,7 +29,6 @@ import {
   XCircleIcon,
   PackageIcon,
   PlusIcon,
-  CalendarIcon,
   TrendingDownIcon,
   TrendingUpIcon
 } from 'lucide-react';
@@ -50,11 +49,11 @@ interface Product {
   stockQuantity: number;
   minOrderQty: number;
   isPrescriptionRequired: boolean;
-  nafdacRegNumber?: string;
-  expiryDate?: string;
-  batchNumber?: string;
-  supplier?: string;
-  reorderPoint?: number;
+  nafdacNumber?: string;
+  nafdacRegNumber?: string; // temporary alias support
+  // Optional fields that may come from server as we evolve
+  lowStockThreshold?: number;
+  stockStatus?: 'out_of_stock' | 'low_stock' | 'in_stock';
   createdAt: string;
   updatedAt: string;
 }
@@ -63,7 +62,6 @@ interface InventoryFilters {
   search: string;
   category: string;
   stockStatus: string;
-  expiryStatus: string;
   showFilters: boolean;
 }
 
@@ -72,7 +70,6 @@ const inventoryFiltersAtom = atomWithStorage<InventoryFilters>('admin-inventory-
   search: '',
   category: 'all',
   stockStatus: 'all',
-  expiryStatus: 'all',
   showFilters: false,
 });
 
@@ -181,7 +178,6 @@ export function InventoryTable({ className }: InventoryTableProps) {
   // Calculate inventory stats and filter products
   const { filteredProducts, inventoryStats } = useMemo(() => {
     let filtered = products;
-    const now = new Date();
 
     // Apply search filter
     if (filters.search.trim()) {
@@ -191,7 +187,7 @@ export function InventoryTable({ className }: InventoryTableProps) {
         product.genericName?.toLowerCase().includes(term) ||
         product.brandName?.toLowerCase().includes(term) ||
         product.category.toLowerCase().includes(term) ||
-        product.nafdacRegNumber?.toLowerCase().includes(term)
+        (product.nafdacNumber || product.nafdacRegNumber)?.toLowerCase().includes(term)
       );
     }
 
@@ -200,69 +196,40 @@ export function InventoryTable({ className }: InventoryTableProps) {
       filtered = filtered.filter(product => product.category.toLowerCase() === filters.category);
     }
 
-    // Apply stock status filter
+    // Apply stock status filter (prefer server-provided stockStatus)
     if (filters.stockStatus !== 'all') {
       switch (filters.stockStatus) {
         case 'out_of_stock':
-          filtered = filtered.filter(product => product.stockQuantity === 0);
+          filtered = filtered.filter(product =>
+            product.stockStatus ? product.stockStatus === 'out_of_stock' : product.stockQuantity === 0
+          );
           break;
         case 'low_stock':
-          filtered = filtered.filter(product => 
-            product.stockQuantity > 0 && product.stockQuantity <= (product.reorderPoint || 10)
-          );
+          filtered = filtered.filter(product => {
+            if (product.stockStatus) return product.stockStatus === 'low_stock';
+            const threshold = product.lowStockThreshold ?? 10;
+            return product.stockQuantity > 0 && product.stockQuantity <= threshold;
+          });
           break;
         case 'in_stock':
-          filtered = filtered.filter(product => 
-            product.stockQuantity > (product.reorderPoint || 10)
-          );
+          filtered = filtered.filter(product => {
+            if (product.stockStatus) return product.stockStatus === 'in_stock';
+            const threshold = product.lowStockThreshold ?? 10;
+            return product.stockQuantity > threshold;
+          });
           break;
       }
     }
 
-    // Apply expiry status filter
-    if (filters.expiryStatus !== 'all') {
-      const thirtyDaysFromNow = new Date();
-      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-
-      switch (filters.expiryStatus) {
-        case 'expired':
-          filtered = filtered.filter(product => 
-            product.expiryDate && new Date(product.expiryDate) < now
-          );
-          break;
-        case 'expiring_soon':
-          filtered = filtered.filter(product => 
-            product.expiryDate && 
-            new Date(product.expiryDate) > now && 
-            new Date(product.expiryDate) <= thirtyDaysFromNow
-          );
-          break;
-        case 'fresh':
-          filtered = filtered.filter(product => 
-            !product.expiryDate || new Date(product.expiryDate) > thirtyDaysFromNow
-          );
-          break;
-      }
-    }
-
-    // Calculate stats
+    // Calculate stats (expiry-related stats removed until server provides data)
     const stats = {
       totalProducts: products.length,
       outOfStock: products.filter(p => p.stockQuantity === 0).length,
-      lowStock: products.filter(p => 
-        p.stockQuantity > 0 && p.stockQuantity <= (p.reorderPoint || 10)
-      ).length,
-      expired: products.filter(p => 
-        p.expiryDate && new Date(p.expiryDate) < now
-      ).length,
-      expiringSoon: products.filter(p => {
-        if (!p.expiryDate) return false;
-        const expiryDate = new Date(p.expiryDate);
-        const thirtyDays = new Date();
-        thirtyDays.setDate(thirtyDays.getDate() + 30);
-        return expiryDate > now && expiryDate <= thirtyDays;
+      lowStock: products.filter(p => {
+        const threshold = p.lowStockThreshold ?? 10;
+        return p.stockQuantity > 0 && p.stockQuantity <= threshold;
       }).length,
-      totalValue: products.reduce((sum, p) => sum + (p.stockQuantity * p.retailPrice), 0),
+      totalValue: products.reduce((sum, p) => sum + (p.stockQuantity * p.wholesalePrice), 0),
     };
 
     return { filteredProducts: filtered, inventoryStats: stats };
@@ -294,9 +261,17 @@ export function InventoryTable({ className }: InventoryTableProps) {
 
   // Utility functions
   const getStockStatusColor = (product: Product) => {
+    if (product.stockStatus) {
+      return product.stockStatus === 'out_of_stock'
+        ? 'bg-red-100 text-red-800'
+        : product.stockStatus === 'low_stock'
+        ? 'bg-yellow-100 text-yellow-800'
+        : 'bg-green-100 text-green-800';
+    }
+    const threshold = product.lowStockThreshold ?? 10;
     if (product.stockQuantity === 0) {
       return 'bg-red-100 text-red-800';
-    } else if (product.stockQuantity <= (product.reorderPoint || 10)) {
+    } else if (product.stockQuantity <= threshold) {
       return 'bg-yellow-100 text-yellow-800';
     } else {
       return 'bg-green-100 text-green-800';
@@ -304,9 +279,17 @@ export function InventoryTable({ className }: InventoryTableProps) {
   };
 
   const getStockStatus = (product: Product) => {
+    if (product.stockStatus) {
+      return product.stockStatus === 'out_of_stock'
+        ? 'Out of Stock'
+        : product.stockStatus === 'low_stock'
+        ? 'Low Stock'
+        : 'In Stock';
+    }
+    const threshold = product.lowStockThreshold ?? 10;
     if (product.stockQuantity === 0) {
       return 'Out of Stock';
-    } else if (product.stockQuantity <= (product.reorderPoint || 10)) {
+    } else if (product.stockQuantity <= threshold) {
       return 'Low Stock';
     } else {
       return 'In Stock';
@@ -358,7 +341,7 @@ export function InventoryTable({ className }: InventoryTableProps) {
   return (
     <div className={cn('space-y-6', className)}>
       {/* Inventory Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card className="p-6">
           <div className="flex items-center space-x-3">
             <PackageIcon className="size-8 text-blue-600" />
@@ -385,16 +368,6 @@ export function InventoryTable({ className }: InventoryTableProps) {
             <div>
               <p className="text-sm font-medium text-gray-600">Low Stock</p>
               <p className="text-2xl font-bold text-yellow-600">{inventoryStats.lowStock}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center space-x-3">
-            <CalendarIcon className="size-8 text-orange-600" />
-            <div>
-              <p className="text-sm font-medium text-gray-600">Expiring Soon</p>
-              <p className="text-2xl font-bold text-orange-600">{inventoryStats.expiringSoon}</p>
             </div>
           </div>
         </Card>
@@ -440,7 +413,7 @@ export function InventoryTable({ className }: InventoryTableProps) {
 
         {/* Advanced Filters */}
         {filters.showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t">
             <div>
               <Label>Category</Label>
               <Select value={filters.category} onValueChange={(value) => updateFilter('category', value)}>
@@ -469,21 +442,6 @@ export function InventoryTable({ className }: InventoryTableProps) {
                   <SelectItem value="in_stock">In Stock</SelectItem>
                   <SelectItem value="low_stock">Low Stock</SelectItem>
                   <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Expiry Status</Label>
-              <Select value={filters.expiryStatus} onValueChange={(value) => updateFilter('expiryStatus', value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Products</SelectItem>
-                  <SelectItem value="fresh">Fresh</SelectItem>
-                  <SelectItem value="expiring_soon">Expiring Soon</SelectItem>
-                  <SelectItem value="expired">Expired</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -547,24 +505,11 @@ export function InventoryTable({ className }: InventoryTableProps) {
                 <TableHead>Stock</TableHead>
                 <TableHead>Prices</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Expiry</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredProducts.map((product) => {
-                const expiryStatus = getExpiryStatus(product.expiryDate);
-                
-                // Debug logging for products without images
-                if (!product.imageUrl) {
-                  console.log('❌ InventoryTable - Product missing imageUrl:', {
-                    name: product.name,
-                    id: product.id,
-                    imageUrl: product.imageUrl,
-                    hasImageUrl: !!product.imageUrl
-                  });
-                }
-                
                 return (
                   <TableRow key={product.id}>
                     <TableCell>
@@ -576,18 +521,6 @@ export function InventoryTable({ className }: InventoryTableProps) {
                           className="object-cover rounded-md"
                           sizes="64px"
                           fallbackIcon={<PackageIcon className="w-8 h-8 text-gray-400" />}
-                          onError={(e) => {
-                            console.error('🖼️ InventoryTable - Image failed to load:', {
-                              productName: product.name,
-                              imageUrl: product.imageUrl,
-                              productId: product.id
-                            });
-                          }}
-                          onLoad={() => {
-                            console.log('✅ InventoryTable - Image loaded successfully:', {
-                              productName: product.name
-                            });
-                          }}
                         />
                       </div>
                     </TableCell>
@@ -597,8 +530,8 @@ export function InventoryTable({ className }: InventoryTableProps) {
                         {product.genericName && (
                           <p className="text-sm text-gray-600">{product.genericName}</p>
                         )}
-                        {product.nafdacRegNumber && (
-                          <p className="text-xs text-gray-500">NAFDAC: {product.nafdacRegNumber}</p>
+                        {(product.nafdacNumber || product.nafdacRegNumber) && (
+                          <p className="text-xs text-gray-500">NAFDAC: {product.nafdacNumber || product.nafdacRegNumber}</p>
                         )}
                       </div>
                     </TableCell>
@@ -643,21 +576,6 @@ export function InventoryTable({ className }: InventoryTableProps) {
                     </TableCell>
                     
                     <TableCell>
-                      {expiryStatus ? (
-                        <div>
-                          <Badge className={expiryStatus.color}>
-                            {expiryStatus.status}
-                          </Badge>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {new Date(product.expiryDate!).toLocaleDateString()}
-                          </p>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 text-sm">No expiry</span>
-                      )}
-                    </TableCell>
-                    
-                    <TableCell>
                       <div className="flex items-center space-x-1">
                         <Link href={`/app/admin/products/${product.id}`}>
                           <Button variant="outline" size="sm">
@@ -668,6 +586,17 @@ export function InventoryTable({ className }: InventoryTableProps) {
                         <Link href={`/app/admin/products/${product.id}/edit`}>
                           <Button variant="outline" size="sm">
                             <EditIcon className="size-4" />
+                          </Button>
+                        </Link>
+
+                        <Link href={`/app/admin/products/${product.id}/movements`}>
+                          <Button variant="outline" size="sm">
+                            Movements
+                          </Button>
+                        </Link>
+                        <Link href={`/app/admin/products/${product.id}/movements#adjust`}>
+                          <Button variant="outline" size="sm">
+                            Adjust
                           </Button>
                         </Link>
                       </div>

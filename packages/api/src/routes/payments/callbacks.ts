@@ -448,12 +448,24 @@ async function persistPaymentData(verificationResult: any, reference: string, ga
       customerEmail: customer.businessEmail || customer.userId
     });
 
-    return { 
-      success: true, 
-      orderId: result.order.id, 
-      paymentId: result.payment.id,
-      orderNumber: result.order.orderNumber
-    };
+      // After creating order and payment, deduct stock and create movements
+      try {
+        const { inventoryService } = await import('../../services/inventory');
+        await inventoryService.createOutMovementsForOrder(result.order.id);
+      } catch (e) {
+        logger.error('Inventory movement creation failed after payment persistence', {
+          reference,
+          orderId: result.order.id,
+          error: (e as Error)?.message,
+        });
+      }
+
+      return { 
+        success: true, 
+        orderId: result.order.id, 
+        paymentId: result.payment.id,
+        orderNumber: result.order.orderNumber
+      };
 
   } catch (error) {
     logger.error('Payment persistence failed', {
@@ -909,6 +921,18 @@ async function finalizeOpayPayment(reference: string, verification: any) {
           gatewayFee: 0,
           appFee: 0,
         },
+      });
+    }
+
+    // After marking payment complete, deduct stock and create movements
+    try {
+      const { inventoryService } = await import('../../services/inventory');
+      await inventoryService.createOutMovementsForOrder(existingOrder.id);
+    } catch (e) {
+      logger.error('Inventory movement creation failed in OPay callback finalize', {
+        reference,
+        orderId: existingOrder.id,
+        error: (e as Error)?.message,
       });
     }
 

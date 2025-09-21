@@ -829,6 +829,38 @@ async function updateOrderStatus(reference: string, status: string, paymentData:
           notes: `Payment completed via ${paymentData.gateway} - ${reference}`,
         }
       });
+
+      // Deduct stock and create inventory OUT movements per order item (idempotent)
+      try {
+        const { inventoryService } = await import('../../services/inventory');
+        await inventoryService.createOutMovementsForOrder(existingOrder.id);
+      } catch (e) {
+        logger.error('Failed to create inventory movements for order after payment', {
+          reference,
+          orderId: existingOrder.id,
+          error: (e as Error)?.message,
+        });
+        // Do not fail webhook processing if inventory movement fails; ops can reconcile
+      }
+    }
+
+    // On refund or cancellation, roll back inventory movements (idempotent)
+    if (dbStatus === 'REFUNDED' || dbStatus === 'CANCELLED') {
+      try {
+        const { inventoryService } = await import('../../services/inventory');
+        await inventoryService.rollbackOutMovementsForOrder(
+          existingOrder.id,
+          dbStatus === 'REFUNDED' ? 'REFUND' : 'CANCELLED'
+        );
+      } catch (e) {
+        logger.error('Failed to roll back inventory movements after refund/cancellation', {
+          reference,
+          orderId: existingOrder.id,
+          newStatus: dbStatus,
+          error: (e as Error)?.message,
+        });
+        // Do not fail webhook processing on rollback errors
+      }
     }
 
     logger.info('Order status updated successfully', {
@@ -859,6 +891,8 @@ function mapStatusToDbEnum(status: string): 'PENDING' | 'PROCESSING' | 'COMPLETE
     case 'FAILED': return 'FAILED';
     case 'PENDING': return 'PENDING';
     case 'ABANDONED': return 'CANCELLED';
+    case 'REFUNDED': return 'REFUNDED';
+    case 'CANCELLED': return 'CANCELLED';
     default: return 'PENDING';
   }
 }

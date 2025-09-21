@@ -33,6 +33,14 @@ import Link from 'next/link';
 import { ProductImageManager } from './ProductImageManager';
 
 // Validation schema
+// Note: react-hook-form returns NaN for empty number inputs when valueAsNumber is used.
+// We preprocess optional numeric fields to undefined when blank/NaN so validation doesn’t block.
+const toUndefinedIfBlankOrNaN = (v: unknown) => {
+  if (v === '' || v === null || v === undefined) return undefined;
+  if (typeof v === 'number' && Number.isNaN(v)) return undefined;
+  return v;
+};
+
 const productSchema = z.object({
   name: z.string().min(2, 'Product name must be at least 2 characters'),
   genericName: z.string().optional(),
@@ -44,17 +52,25 @@ const productSchema = z.object({
   strength: z.string().optional(),
   dosageForm: z.string().optional(),
   activeIngredient: z.string().optional(),
-  retailPrice: z.number().positive('Retail price must be positive'),
-  wholesalePrice: z.number().positive('Wholesale price must be positive').optional(),
-  cost: z.number().positive('Cost must be positive').optional(),
+  // Allow 0 and above for prices; preprocess optional numbers
+  retailPrice: z
+    .preprocess((v) => (typeof v === 'number' && Number.isNaN(v) ? 0 : v), z.number().min(0, 'Retail price must be 0 or more')),
+  wholesalePrice: z
+    .preprocess(toUndefinedIfBlankOrNaN, z.number().min(0, 'Wholesale price must be 0 or more'))
+    .optional(),
+  cost: z
+    .preprocess(toUndefinedIfBlankOrNaN, z.number().min(0, 'Cost must be 0 or more'))
+    .optional(),
   sku: z.string().min(1, 'SKU is required'),
   barcode: z.string().optional(),
   stockQuantity: z.number().int().min(0, 'Stock quantity must be non-negative'),
   minStockLevel: z.number().int().min(0, 'Minimum stock level must be non-negative'),
-  maxStockLevel: z.number().int().positive('Maximum stock level must be positive').optional(),
+  maxStockLevel: z
+    .preprocess(toUndefinedIfBlankOrNaN, z.number().int().positive('Maximum stock level must be positive'))
+    .optional(),
   packSize: z.string().optional(),
   unit: z.string().min(1, 'Unit is required'),
-  weight: z.number().positive('Weight must be positive').optional(),
+  weight: z.preprocess(toUndefinedIfBlankOrNaN, z.number().positive('Weight must be positive')).optional(),
   dimensions: z.string().optional(),
   isActive: z.boolean(),
   isPrescriptionRequired: z.boolean(),
@@ -62,7 +78,9 @@ const productSchema = z.object({
   isControlled: z.boolean(),
   tags: z.string().optional(),
   hasExpiry: z.boolean(),
-  shelfLifeMonths: z.number().int().positive('Shelf life must be positive').optional(),
+  shelfLifeMonths: z
+    .preprocess(toUndefinedIfBlankOrNaN, z.number().int().positive('Shelf life must be positive'))
+    .optional(),
   minOrderQuantity: z.number().int().positive('Minimum order quantity must be positive'),
   bulkPricing: z.string().optional(),
 });
@@ -115,11 +133,13 @@ interface ProductEditFormProps {
 
 // API functions
 const updateProduct = async (id: string, data: Partial<ProductFormData>) => {
+  console.log('updateProduct called with id:', id, 'data:', data);
   const response = await fetch(`/api/admin/products/${id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
     },
+    credentials: 'include', // Include credentials for authentication
     body: JSON.stringify(data),
   });
 
@@ -132,7 +152,9 @@ const updateProduct = async (id: string, data: Partial<ProductFormData>) => {
 };
 
 const fetchProductImages = async (productId: string) => {
-  const response = await fetch(`/api/products/${productId}/images`);
+  const response = await fetch(`/api/products/${productId}/images`, {
+    credentials: 'include', // Include credentials for authentication
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch product images');
   }
@@ -181,12 +203,14 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
   const {
     register,
     handleSubmit,
-    formState: { errors, isDirty },
+    formState: { errors, isDirty, isValid },
     setValue,
     watch,
     reset,
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
     defaultValues: {
       name: product.name,
       genericName: product.genericName || '',
@@ -307,6 +331,7 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
 
   // Form submission
   const onSubmit = async (data: ProductFormData) => {
+    console.log('Form submitted with data:', data);
     updateMutation.mutate(data);
   };
 
@@ -316,11 +341,14 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
   };
 
   // Format currency for display
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | undefined | null) => {
+    if (amount == null || isNaN(Number(amount))) {
+      return '';
+    }
     return new Intl.NumberFormat('en-NG', {
       style: 'currency',
       currency: 'NGN',
-    }).format(amount);
+    }).format(Number(amount));
   };
 
   return (
@@ -365,8 +393,12 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
           )}
           
           <Button
-            onClick={handleSubmit(onSubmit)}
-            disabled={!isDirty || isSaving}
+            onClick={() => {
+              console.log('Save button clicked, isDirty:', isDirty, 'isSaving:', isSaving, 'isValid:', isValid);
+              console.log('Form errors:', errors);
+              handleSubmit(onSubmit)();
+            }}
+            disabled={!isDirty || isSaving || !isValid}
             className="min-w-[120px]"
           >
             {isSaving ? (
@@ -734,7 +766,7 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
                   {errors.retailPrice && (
                     <p className="text-sm text-red-600 mt-1">{errors.retailPrice.message}</p>
                   )}
-                  {watch('retailPrice') && (
+                  {watch('retailPrice') != null && !isNaN(Number(watch('retailPrice'))) && (
                     <p className="text-xs text-gray-600 mt-1">
                       {formatCurrency(watch('retailPrice'))}
                     </p>
@@ -751,7 +783,10 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
                     min="0"
                     {...register('wholesalePrice', { valueAsNumber: true })}
                   />
-                  {watch('wholesalePrice') && (
+                  {errors.wholesalePrice && (
+                    <p className="text-sm text-red-600 mt-1">{errors.wholesalePrice.message}</p>
+                  )}
+                  {watch('wholesalePrice') != null && !isNaN(Number(watch('wholesalePrice'))) && (
                     <p className="text-xs text-gray-600 mt-1">
                       {formatCurrency(watch('wholesalePrice'))}
                     </p>
@@ -768,7 +803,10 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
                     min="0"
                     {...register('cost', { valueAsNumber: true })}
                   />
-                  {watch('cost') && (
+                  {errors.cost && (
+                    <p className="text-sm text-red-600 mt-1">{errors.cost.message}</p>
+                  )}
+                  {watch('cost') != null && !isNaN(Number(watch('cost'))) && (
                     <p className="text-xs text-gray-600 mt-1">
                       {formatCurrency(watch('cost'))}
                     </p>
@@ -792,7 +830,7 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
                 <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                   <h4 className="font-medium mb-2">Pricing Summary</h4>
                   <div className="space-y-2 text-sm">
-                    {watch('cost') && watch('retailPrice') && (
+                    {watch('cost') && watch('cost') > 0 && watch('retailPrice') && watch('retailPrice') > 0 && (
                       <div className="flex justify-between">
                         <span>Retail Margin:</span>
                         <span className="font-medium text-green-600">
@@ -800,7 +838,7 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
                         </span>
                       </div>
                     )}
-                    {watch('cost') && watch('wholesalePrice') && (
+                    {watch('cost') && watch('cost') > 0 && watch('wholesalePrice') && watch('wholesalePrice') > 0 && (
                       <div className="flex justify-between">
                         <span>Wholesale Margin:</span>
                         <span className="font-medium text-blue-600">

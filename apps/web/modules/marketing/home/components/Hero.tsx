@@ -23,7 +23,7 @@ export function Hero() {
 					</div>
 				</div>
 
-				<h1 className="mx-auto max-w-3xl text-balance font-bold text-5xl lg:text-7xl">
+				<h1 className="mx-auto max-w-3xl text-balance font-bold text-5xl lg:text-7xl text-foreground drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)] dark:drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
 					Your revolutionary Next.js SaaS
 				</h1>
 
@@ -159,18 +159,21 @@ export function Hero() {
 				</div>
 
 				<div className="mx-auto mt-16 max-w-5xl rounded-2xl border bg-card/50 p-2 shadow-lg dark:shadow-foreground/10">
-					<Image
-						src={heroImage}
-						alt="Our application"
-						className="block rounded-xl dark:hidden"
-						priority
-					/>
-					<Image
-						src={heroImageDark}
-						alt="Our application"
-						className="hidden rounded-xl dark:block"
-						priority
-					/>
+					<div className="relative overflow-hidden rounded-xl">
+						<Image
+							src={heroImage}
+							alt="Our application"
+							className="block w-full rounded-xl dark:hidden transition-all duration-300 contrast-[1.1] saturate-[1.1]"
+							priority
+						/>
+						<Image
+							src={heroImageDark}
+							alt="Our application"
+							className="hidden w-full rounded-xl dark:block transition-all duration-300 brightness-[0.9] contrast-[1.1] saturate-[1.1]"
+							priority
+						/>
+						<div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/0 via-white/10 to-white/40 dark:from-black/10 dark:via-black/30 dark:to-black/60" />
+					</div>
 				</div>
 			</div>
 		</div>

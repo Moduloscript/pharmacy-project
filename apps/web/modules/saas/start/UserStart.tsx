@@ -89,7 +89,7 @@ export default function UserStart() {
 									</span>
 								</div>
 								
-								<h1 className="mb-3 text-4xl font-bold tracking-tight">
+								<h1 className="mb-3 text-4xl font-bold tracking-tight drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]">
 									Welcome to BenPharm
 								</h1>
 								<p className="max-w-lg text-lg text-blue-100">

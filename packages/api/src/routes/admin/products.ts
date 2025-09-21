@@ -4,6 +4,15 @@ import { z } from 'zod';
 import { db } from '@repo/database';
 import { authMiddleware } from '../../middleware/auth';
 import { ProductImageService } from '../../services/productImageService';
+import { mapProductToAdminInventoryDTO } from '../../utils/dto/productInventory';
+import {
+  ListBatchesQueryDTO,
+  ListMovementsQueryDTO,
+  CreateProductBatchDTO,
+  CreateAdjustmentDTO,
+} from '../../utils/dto';
+import { inventoryService } from '../../services/inventory';
+import { logger } from '@repo/logs';
 
 import type { AppBindings } from '../../types/context';
 const productsRouter = new Hono<AppBindings>();
@@ -62,12 +71,20 @@ const productsQuerySchema = z.object({
 const updateStockSchema = z.object({
   stockQuantity: z.number().int().min(0),
   adjustmentReason: z.string().optional(),
+  notes: z.string().optional(), // optional free-text notes for audit trail
+  adjustmentNotes: z.string().optional(), // legacy/alias support
+  batchNumber: z.string().optional(),
+  expiryDate: z.string().optional(), // ISO date string (optional)
 });
 
 const bulkUpdateSchema = z.object({
   updates: z.array(z.object({
     id: z.string(),
     stockQuantity: z.number().int().min(0),
+    reason: z.string().optional(),
+    notes: z.string().optional(),
+    batchNumber: z.string().optional(),
+    expiryDate: z.string().optional(), // ISO date string (optional)
   }))
 });
 
@@ -82,9 +99,9 @@ const updateProductSchema = z.object({
   strength: z.string().optional(),
   dosageForm: z.string().optional(),
   activeIngredient: z.string().optional(),
-  retailPrice: z.number().positive().optional(),
-  wholesalePrice: z.number().positive().optional(),
-  cost: z.number().positive().optional(),
+  retailPrice: z.number().min(0).optional(),
+  wholesalePrice: z.number().min(0).optional(),
+  cost: z.number().min(0).optional(),
   sku: z.string().min(1).optional(),
   barcode: z.string().optional(),
   stockQuantity: z.number().int().min(0).optional(),
@@ -117,24 +134,12 @@ productsRouter.get('/', zValidator('query', productsQuerySchema), async (c) => {
     const where: any = {};
     
     if (category) {
-      where.category = { equals: category, mode: 'insensitive' };
+      // category is an enum; use direct equality (no mode)
+      where.category = { equals: category };
     }
     
-    // Stock status filtering
-    switch (stockStatus) {
-      case 'out-of-stock':
-        where.stockQuantity = { equals: 0 };
-        break;
-      case 'low-stock':
-        where.AND = [
-          { stockQuantity: { gt: 0 } },
-          { stockQuantity: { lte: 10 } }
-        ];
-        break;
-      case 'in-stock':
-        where.stockQuantity = { gt: 10 };
-        break;
-    }
+    // Note: Do not filter by stockStatus at the DB level, because per-product
+    // thresholds (minStockLevel) vary. We will filter after mapping to DTOs.
     
     // Add search functionality
     if (search) {
@@ -160,10 +165,12 @@ productsRouter.get('/', zValidator('query', productsQuerySchema), async (c) => {
         category: true,
         description: true,
         images: true,
+        imageUrl: true,
         wholesalePrice: true,
         retailPrice: true,
         stockQuantity: true,
         minOrderQuantity: true,
+        minStockLevel: true,
         isPrescriptionRequired: true,
         nafdacNumber: true,
         createdAt: true,
@@ -174,33 +181,21 @@ productsRouter.get('/', zValidator('query', productsQuerySchema), async (c) => {
       take: limit,
     });
     
-    // Format products for frontend (matching expected format)
-    const formattedProducts = products.map(product => ({
-      id: product.id,
-      name: product.name,
-      genericName: product.genericName,
-      brandName: product.brandName,
-      category: product.category,
-      description: product.description,
-      imageUrl: product.images ? (() => {
-        try {
-          // images is already parsed from JSONB, no need for JSON.parse
-          const images = product.images as any;
-          return Array.isArray(images) && images.length > 0 ? images[0]?.url : null;
-        } catch (error) {
-          console.error('Error extracting imageUrl:', error, product.images);
-          return null;
-        }
-      })() : null,
-      wholesalePrice: Number(product.wholesalePrice),
-      retailPrice: Number(product.retailPrice),
-      stockQuantity: product.stockQuantity,
-      minOrderQty: product.minOrderQuantity,
-      isPrescriptionRequired: product.isPrescriptionRequired,
-      nafdacRegNumber: product.nafdacNumber,
-      createdAt: product.createdAt.toISOString(),
-      updatedAt: product.updatedAt.toISOString(),
-    }));
+    // Map to DTOs
+    let formattedProducts = products.map(mapProductToAdminInventoryDTO);
+
+    // Apply stockStatus filter using server-computed status based on minStockLevel
+    if (stockStatus && stockStatus !== 'all') {
+      const statusMap: Record<string, 'out_of_stock' | 'low_stock' | 'in_stock'> = {
+        'out-of-stock': 'out_of_stock',
+        'low-stock': 'low_stock',
+        'in-stock': 'in_stock',
+      };
+      const desired = statusMap[stockStatus];
+      if (desired) {
+        formattedProducts = formattedProducts.filter(p => p.stockStatus === desired);
+      }
+    }
     
     return c.json(formattedProducts);
   } catch (error) {
@@ -208,7 +203,6 @@ productsRouter.get('/', zValidator('query', productsQuerySchema), async (c) => {
     return c.json({ error: 'Failed to fetch products' }, 500);
   }
 });
-
 /**
  * GET /admin/products/:id
  * Get single product details
@@ -225,64 +219,37 @@ productsRouter.get('/:id', async (c) => {
       return c.json({ error: 'Product not found' }, 404);
     }
     
-    // Format product for frontend - include all fields that ProductEditForm expects
-    const formattedProduct = {
-      id: product.id,
-      name: product.name,
-      genericName: product.genericName,
-      brandName: product.brandName,
-      category: product.category,
-      description: product.description,
+    // Map to DTO-like shape for admin consumers (but include full product fields for edit forms)
+    const dto = mapProductToAdminInventoryDTO(product);
+
+    // Include additional fields needed by edit forms without breaking InventoryTable
+    const full = {
+      ...dto,
       manufacturer: product.manufacturer,
       nafdacNumber: product.nafdacNumber,
       strength: product.strength,
       dosageForm: product.dosageForm,
       activeIngredient: product.activeIngredient,
-      retailPrice: Number(product.retailPrice),
-      wholesalePrice: product.wholesalePrice ? Number(product.wholesalePrice) : undefined,
-      cost: product.cost ? Number(product.cost) : undefined,
       sku: product.sku,
       barcode: product.barcode,
-      stockQuantity: product.stockQuantity,
       minStockLevel: product.minStockLevel,
       maxStockLevel: product.maxStockLevel,
       packSize: product.packSize,
       unit: product.unit,
-      weight: product.weight ? Number(product.weight) : undefined,
-      dimensions: product.dimensions,
+      weight: product.weight,
       isActive: product.isActive,
-      isPrescriptionRequired: product.isPrescriptionRequired,
       isRefrigerated: product.isRefrigerated,
       isControlled: product.isControlled,
       slug: product.slug,
-      images: product.images ? (() => {
-        try {
-          // images is already parsed from JSONB, no need for JSON.parse
-          const images = product.images as any;
-          return Array.isArray(images) ? images : [];
-        } catch {
-          return [];
-        }
-      })() : [],
-      imageUrl: product.images ? (() => {
-        try {
-          // images is already parsed from JSONB, no need for JSON.parse
-          const images = product.images as any;
-          return Array.isArray(images) && images.length > 0 ? images[0]?.url : null;
-        } catch {
-          return null;
-        }
-      })() : null,
+      images: product.images,
       tags: product.tags,
       hasExpiry: product.hasExpiry,
       shelfLifeMonths: product.shelfLifeMonths,
       minOrderQuantity: product.minOrderQuantity,
       bulkPricing: product.bulkPricing,
-      createdAt: product.createdAt.toISOString(),
-      updatedAt: product.updatedAt.toISOString(),
     };
     
-    return c.json(formattedProduct);
+    return c.json(full);
   } catch (error) {
     console.error('Error fetching product:', error);
     return c.json({ error: 'Failed to fetch product' }, 500);
@@ -400,7 +367,8 @@ productsRouter.put('/:id', zValidator('json', updateProductSchema), async (c) =>
 productsRouter.put('/:id/stock', zValidator('json', updateStockSchema), async (c) => {
   try {
     const productId = c.req.param('id');
-    const { stockQuantity, adjustmentReason } = c.req.valid('json');
+const { stockQuantity, adjustmentReason, notes, adjustmentNotes, batchNumber, expiryDate } = c.req.valid('json');
+    const user = c.get('user');
     
     const product = await db.product.findUnique({
       where: { id: productId },
@@ -418,6 +386,35 @@ productsRouter.put('/:id/stock', zValidator('json', updateStockSchema), async (c
       },
     });
     
+    // Create inventory movement audit log
+    const delta = updatedProduct.stockQuantity - product.stockQuantity;
+    try {
+      await db.inventoryMovement.create({
+        data: {
+          productId: productId,
+          type: 'ADJUSTMENT',
+          quantity: delta,
+          reason: adjustmentReason || null,
+          previousStock: product.stockQuantity,
+          newStock: updatedProduct.stockQuantity,
+          userId: user?.id || null,
+          notes: (notes || adjustmentNotes) ?? null,
+          batchNumber: batchNumber ?? null,
+          expiryDate: expiryDate ? new Date(expiryDate) : null,
+        }
+      });
+    } catch (logErr) {
+      console.error('Failed to log inventory movement:', logErr);
+      // do not fail the request if logging fails
+    }
+    
+    // Compute normalized helpers based on minStockLevel
+    const lowStockThreshold = (typeof product.minStockLevel === 'number' ? product.minStockLevel : undefined) ?? 10;
+    let stockStatus: 'out_of_stock' | 'low_stock' | 'in_stock';
+    if (updatedProduct.stockQuantity === 0) stockStatus = 'out_of_stock';
+    else if (updatedProduct.stockQuantity <= lowStockThreshold) stockStatus = 'low_stock';
+    else stockStatus = 'in_stock';
+
     // Format for frontend
     const formattedProduct = {
       id: updatedProduct.id,
@@ -440,9 +437,14 @@ productsRouter.put('/:id/stock', zValidator('json', updateStockSchema), async (c
       stockQuantity: updatedProduct.stockQuantity,
       minOrderQty: updatedProduct.minOrderQuantity,
       isPrescriptionRequired: updatedProduct.isPrescriptionRequired,
+      // Normalized + alias
+      nafdacNumber: updatedProduct.nafdacNumber,
       nafdacRegNumber: updatedProduct.nafdacNumber,
       createdAt: updatedProduct.createdAt.toISOString(),
       updatedAt: updatedProduct.updatedAt.toISOString(),
+      // normalized helpers
+      lowStockThreshold,
+      stockStatus,
     };
     
     return c.json(formattedProduct);
@@ -459,29 +461,46 @@ productsRouter.put('/:id/stock', zValidator('json', updateStockSchema), async (c
 productsRouter.put('/bulk-update', zValidator('json', bulkUpdateSchema), async (c) => {
   try {
     const { updates } = c.req.valid('json');
+    const user = c.get('user');
     
-    // Validate all products exist
+    // Validate all products exist and fetch current stock
     const productIds = updates.map(u => u.id);
     const existingProducts = await db.product.findMany({
       where: { id: { in: productIds } },
-      select: { id: true }
+      select: { id: true, stockQuantity: true, minStockLevel: true }
     });
     
     if (existingProducts.length !== productIds.length) {
       return c.json({ error: 'One or more products not found' }, 404);
     }
+
+    const existingMap = new Map(existingProducts.map(p => [p.id, p]));
     
-    // Perform bulk updates
-    const updatePromises = updates.map(update => 
-      db.product.update({
-        where: { id: update.id },
-        data: {
-          stockQuantity: update.stockQuantity,
-        }
-      })
-    );
-    
-    await Promise.all(updatePromises);
+    // Perform bulk updates and movement logging inside a transaction for consistency
+    await db.$transaction(async (tx) => {
+      for (const update of updates) {
+        const prev = existingMap.get(update.id)!;
+        const updated = await tx.product.update({
+          where: { id: update.id },
+          data: { stockQuantity: update.stockQuantity },
+        });
+        const delta = updated.stockQuantity - prev.stockQuantity;
+        await tx.inventoryMovement.create({
+          data: {
+            productId: update.id,
+            type: 'BULK_ADJUSTMENT',
+            quantity: delta,
+            reason: update.reason || null,
+            previousStock: prev.stockQuantity,
+            newStock: updated.stockQuantity,
+            userId: user?.id || null,
+            notes: update.notes ?? null,
+            batchNumber: update.batchNumber ?? null,
+            expiryDate: update.expiryDate ? new Date(update.expiryDate) : null,
+          }
+        });
+      }
+    });
     
     return c.json({ 
       message: `Successfully updated ${updates.length} products`,
@@ -563,5 +582,137 @@ productsRouter.get('/categories', async (c) => {
     return c.json({ error: 'Failed to fetch categories' }, 500);
   }
 });
+
+// GET /admin/products/:id/movements - list movements with filters and pagination
+productsRouter.get('/:id/movements', zValidator('query', ListMovementsQueryDTO), async (c) => {
+  try {
+    const productId = c.req.param('id');
+    const { page, pageSize, type, dateFrom, dateTo, createdBy } = c.req.valid('query');
+
+    const result = await inventoryService.listMovements(productId, {
+      page,
+      pageSize,
+      type,
+      dateFrom: dateFrom ? new Date(dateFrom as any) : undefined,
+      dateTo: dateTo ? new Date(dateTo as any) : undefined,
+      createdBy,
+    });
+
+    return c.json(result);
+  } catch (error: any) {
+    const errInfo = {
+      message: error?.message,
+      code: error?.code,
+      meta: error?.meta,
+      stack: error?.stack,
+    };
+    console.error('Error fetching inventory movements (debug):', errInfo);
+    if (process.env.NODE_ENV !== 'production') {
+      return c.json({ error: 'Failed to fetch inventory movements', details: errInfo }, 500);
+    }
+    return c.json({ error: 'Failed to fetch inventory movements' }, 500);
+  }
+});
+
+// GET /admin/products/:id/batches - list product batches from normalized table with pagination/filters
+productsRouter.get('/:id/batches', zValidator('query', ListBatchesQueryDTO), async (c) => {
+  try {
+    const productId = c.req.param('id');
+    const { page, pageSize, expiryAfter, expiryBefore, search } = c.req.valid('query');
+
+    const result = await inventoryService.listBatches(productId, {
+      page,
+      pageSize,
+      expiryAfter: expiryAfter ? new Date(expiryAfter as any) : undefined,
+      expiryBefore: expiryBefore ? new Date(expiryBefore as any) : undefined,
+      search,
+    });
+
+    return c.json(result);
+  } catch (error) {
+    console.error('Error listing batches:', error);
+    return c.json({ error: 'Failed to list batches' }, 500);
+  }
+});
+
+// POST /admin/products/:id/batches - create a new batch
+productsRouter.post(
+  '/:id/batches',
+  zValidator('json', CreateProductBatchDTO.partial({ productId: true })),
+  async (c) => {
+    try {
+      const productId = c.req.param('id');
+      const body = c.req.valid('json');
+      const created = await inventoryService.createBatch(productId, {
+        batchNumber: body.batchNumber,
+        qty: body.qty,
+        costPrice: body.costPrice as any,
+        expiryDate: body.expiryDate ? new Date(body.expiryDate as any) : undefined,
+      });
+      return c.json(created, 201);
+    } catch (error: any) {
+      if (error?.code === 'P2002') {
+        return c.json({ error: 'Batch with this number already exists for this product' }, 409);
+      }
+      console.error('Error creating batch:', error);
+      return c.json({ error: 'Failed to create batch' }, 500);
+    }
+  }
+);
+
+// POST /admin/products/:id/adjustments - create an inventory adjustment (IN/OUT/ADJUSTMENT)
+productsRouter.post(
+  '/:id/adjustments',
+  zValidator('json', CreateAdjustmentDTO.partial({ productId: true })),
+  async (c) => {
+    try {
+      const productId = c.req.param('id');
+      const body = c.req.valid('json');
+      const user = c.get('user');
+
+      logger.info('admin.products.adjustments.request', {
+        productId,
+        type: body.type,
+        qty: body.qty,
+        batchId: body.batchId,
+        batchNumber: body.batchNumber,
+        idempotencyKey: body.idempotencyKey,
+        userId: user?.id,
+        referenceId: body.referenceId,
+        referenceType: body.referenceType,
+      });
+
+      const created = await inventoryService.createAdjustment(productId, {
+        type: body.type,
+        qty: body.qty,
+        reason: body.reason,
+        batchId: body.batchId,
+        batchNumber: body.batchNumber,
+        idempotencyKey: body.idempotencyKey,
+        createdBy: user?.id,
+        referenceId: body.referenceId,
+        referenceType: body.referenceType,
+      });
+
+      logger.info('admin.products.adjustments.success', {
+        productId,
+        movementId: created.id,
+        newStock: created.newStock,
+        batchId: created.batchId,
+      });
+
+      return c.json(created, 201);
+    } catch (error: any) {
+      const msg = (error?.message as string) || 'Failed to create adjustment';
+      const code = msg.includes('Insufficient') ? 400 : 500;
+      logger.error('admin.products.adjustments.error', {
+        message: msg,
+        code,
+        details: error?.stack || String(error),
+      });
+      return c.json({ error: msg }, code);
+    }
+  }
+);
 
 export { productsRouter };

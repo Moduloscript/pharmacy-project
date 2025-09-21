@@ -2,6 +2,7 @@ export { PrismaClient, PrescriptionStatus, PrescriptionAuditAction } from "@pris
 export * from "./src/client";
 export { db } from "./src/client";
 export * from "./src/zod/index";
+export * from "./src/schemas/inventory";
 
 declare global {
 	namespace PrismaJson {

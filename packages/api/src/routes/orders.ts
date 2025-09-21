@@ -917,7 +917,7 @@ app.post('/:orderId/cancel', async (c) => {
       }, 400)
     }
     
-    // Cancel order and restore stock
+    // Cancel order and roll back any inventory movements (if any)
     await db.$transaction(async (prisma) => {
       await prisma.order.update({
         where: { id: orderId },
@@ -932,21 +932,15 @@ app.post('/:orderId/cancel', async (c) => {
           updatedBy: user.id
         }
       })
-      
-      // Restore product stock
-      await Promise.all(
-        order.orderItems.map(item => 
-          prisma.product.update({
-            where: { id: item.productId },
-            data: {
-              stockQuantity: {
-                increment: item.quantity
-              }
-            }
-          })
-        )
-      )
     })
+
+    // Perform inventory rollback outside the inner transaction (service manages its own transaction and idempotency)
+    try {
+      const { inventoryService } = await import('../services/inventory')
+      await inventoryService.rollbackOutMovementsForOrder(orderId, 'CANCELLED')
+    } catch (e) {
+      console.warn('Order cancelled but inventory rollback failed or not needed:', (e as Error)?.message)
+    }
     
     return c.json({
       success: true,
