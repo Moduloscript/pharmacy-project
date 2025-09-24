@@ -35,8 +35,9 @@
 	},
 	"main": "./index.ts",
 	"name": "@repo/api",
-	"scripts": {
-		"type-check": "tsc --noEmit"
+"scripts": {
+		"type-check": "tsc --noEmit",
+		"test": "vitest run"
 	},
 	"version": "0.0.0"
 }

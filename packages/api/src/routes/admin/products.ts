@@ -119,7 +119,6 @@ const updateProductSchema = z.object({
   hasExpiry: z.boolean().optional(),
   shelfLifeMonths: z.number().int().positive().optional(),
   minOrderQuantity: z.number().int().positive().optional(),
-  bulkPricing: z.string().optional(),
 });
 
 /**
@@ -175,6 +174,7 @@ productsRouter.get('/', zValidator('query', productsQuerySchema), async (c) => {
         nafdacNumber: true,
         createdAt: true,
         updatedAt: true,
+        _count: { select: { bulkPriceRules: true } },
       },
       orderBy: { updatedAt: 'desc' },
       skip,
@@ -213,6 +213,7 @@ productsRouter.get('/:id', async (c) => {
     
     const product = await db.product.findUnique({
       where: { id: productId },
+      include: { _count: { select: { bulkPriceRules: true } } }
     });
     
     if (!product) {
@@ -246,7 +247,7 @@ productsRouter.get('/:id', async (c) => {
       hasExpiry: product.hasExpiry,
       shelfLifeMonths: product.shelfLifeMonths,
       minOrderQuantity: product.minOrderQuantity,
-      bulkPricing: product.bulkPricing,
+      hasBulkRules: !!(product._count?.bulkPriceRules > 0),
     };
     
     return c.json(full);
@@ -313,8 +314,8 @@ productsRouter.put('/:id', zValidator('json', updateProductSchema), async (c) =>
       dosageForm: updatedProduct.dosageForm,
       activeIngredient: updatedProduct.activeIngredient,
       retailPrice: Number(updatedProduct.retailPrice),
-      wholesalePrice: updatedProduct.wholesalePrice ? Number(updatedProduct.wholesalePrice) : undefined,
-      cost: updatedProduct.cost ? Number(updatedProduct.cost) : undefined,
+      wholesalePrice: updatedProduct.wholesalePrice == null ? undefined : Number(updatedProduct.wholesalePrice),
+      cost: updatedProduct.cost == null ? undefined : Number(updatedProduct.cost),
       sku: updatedProduct.sku,
       barcode: updatedProduct.barcode,
       stockQuantity: updatedProduct.stockQuantity,
@@ -322,7 +323,7 @@ productsRouter.put('/:id', zValidator('json', updateProductSchema), async (c) =>
       maxStockLevel: updatedProduct.maxStockLevel,
       packSize: updatedProduct.packSize,
       unit: updatedProduct.unit,
-      weight: updatedProduct.weight ? Number(updatedProduct.weight) : undefined,
+      weight: updatedProduct.weight == null ? undefined : Number(updatedProduct.weight),
       dimensions: updatedProduct.dimensions,
       isActive: updatedProduct.isActive,
       isPrescriptionRequired: updatedProduct.isPrescriptionRequired,
@@ -714,5 +715,87 @@ productsRouter.post(
     }
   }
 );
+
+// ==========================
+// Bulk Pricing Rules (normalized)
+// ==========================
+
+const BulkRuleSchema = z
+  .object({
+    minQty: z.number().int().positive(),
+    discountPercent: z.number().min(0).max(100).optional(),
+    unitPrice: z.number().positive().optional(),
+  })
+  .refine((v) => ((v.discountPercent ? 1 : 0) + (v.unitPrice ? 1 : 0)) === 1, {
+    message: 'Provide either discountPercent or unitPrice (but not both)',
+    path: ['discountPercent'],
+  });
+
+const BulkRulesBodySchema = z.object({ rules: z.array(BulkRuleSchema) });
+
+// GET /admin/products/:id/bulk-pricing - list normalized rules only
+productsRouter.get('/:id/bulk-pricing', async (c) => {
+  try {
+    const productId = c.req.param('id');
+
+    const rows = await db.productBulkPriceRule.findMany({
+      where: { productId },
+      orderBy: { minQty: 'asc' },
+      select: { minQty: true, discountPercent: true, unitPrice: true },
+    });
+    const rules = rows.map((r) => ({
+      minQty: r.minQty,
+      discountPercent: r.discountPercent != null ? Number(r.discountPercent) : undefined,
+      unitPrice: r.unitPrice != null ? Number(r.unitPrice) : undefined,
+    }));
+    return c.json({ rules });
+  } catch (error) {
+    console.error('Error fetching bulk pricing rules:', error);
+    return c.json({ error: 'Failed to fetch bulk pricing rules' }, 500);
+  }
+});
+
+// PUT /admin/products/:id/bulk-pricing - replace rules transactionally
+productsRouter.put('/:id/bulk-pricing', zValidator('json', BulkRulesBodySchema), async (c) => {
+  try {
+    const productId = c.req.param('id');
+    const { rules } = c.req.valid('json');
+
+    // Ensure product exists (optional)
+    const exists = await db.product.findUnique({ where: { id: productId }, select: { id: true } });
+    if (!exists) return c.json({ error: 'Product not found' }, 404);
+
+    await db.$transaction(async (tx) => {
+      await tx.productBulkPriceRule.deleteMany({ where: { productId } });
+      if (rules.length > 0) {
+        await tx.productBulkPriceRule.createMany({
+          data: rules.map((r) => ({
+            productId,
+            minQty: r.minQty,
+            discountPercent: r.discountPercent ?? null,
+            unitPrice: r.unitPrice ?? null,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    });
+
+    const rows = await db.productBulkPriceRule.findMany({
+      where: { productId },
+      orderBy: { minQty: 'asc' },
+      select: { minQty: true, discountPercent: true, unitPrice: true },
+    });
+    const saved = rows.map((r) => ({
+      minQty: r.minQty,
+      discountPercent: r.discountPercent != null ? Number(r.discountPercent) : undefined,
+      unitPrice: r.unitPrice != null ? Number(r.unitPrice) : undefined,
+    }));
+    return c.json({ rules: saved });
+  } catch (error: any) {
+    const errInfo = { message: error?.message, code: error?.code, meta: (error as any)?.meta };
+    console.error('Error saving bulk pricing rules:', errInfo);
+    return c.json({ error: 'Failed to save bulk pricing rules' }, 500);
+  }
+});
 
 export { productsRouter };

@@ -6,6 +6,7 @@ import { useAtom, useAtomValue } from 'jotai';
 import { Input } from '@ui/components/input';
 import { Button } from '@ui/components/button';
 import { Badge } from '@ui/components/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@ui/components/tooltip';
 import { Card } from '@ui/components/card';
 import { cn } from '@ui/lib';
 import { Product } from '../lib/api';
@@ -19,6 +20,44 @@ interface ProductSearchProps {
   className?: string;
   showResults?: boolean;
   autoFocus?: boolean;
+}
+
+function BulkTiersInline({ productId }: { productId: string }) {
+  const [tooltip, setTooltip] = React.useState('');
+  const [fetched, setFetched] = React.useState(false);
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="text-[11px] text-primary hover:underline"
+            onMouseEnter={async () => {
+              if (fetched) return;
+              try {
+                const res = await fetch(`/api/products/${productId}/bulk-pricing`);
+                const data = await res.json();
+                if (Array.isArray(data?.rules)) {
+                  const s = data.rules
+                    .slice()
+                    .sort((a: any, b: any) => a.minQty - b.minQty)
+                    .map((r: any) => `${r.minQty}+ → ${r.unitPrice ? `₦${Number(r.unitPrice).toLocaleString()}/u` : `${r.discountPercent}% off`}`)
+                    .join(' | ');
+                  setTooltip(s);
+                }
+              } catch {}
+              setFetched(true);
+            }}
+          >
+            Bulk tiers
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs break-words">
+          {tooltip || 'No tiers found'}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
 
 export function ProductSearch({ 
@@ -210,6 +249,12 @@ export function ProductSearch({
                         )}>
                           {product.stock_quantity > 0 ? 'In Stock' : 'Out of Stock'}
                         </p>
+                        <div className="mt-1">
+                          {(product as any)._count?.bulkPriceRules > 0 || (product as any).hasBulkRules ? (
+                            <BulkTiersInline productId={product.id} />
+                          ) : null
+                          }
+                        </div>
                       </div>
                     </div>
                   </div>

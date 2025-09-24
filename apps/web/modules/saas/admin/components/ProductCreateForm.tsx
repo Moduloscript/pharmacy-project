@@ -39,6 +39,7 @@ import {
   type ImageUploadProgress,
 } from '../lib/admin-store';
 import { useDropzone } from 'react-dropzone';
+import { BulkPricingEditor } from './BulkPricingEditor';
 
 // Validation schema
 const productSchema = z.object({
@@ -72,7 +73,6 @@ const productSchema = z.object({
   hasExpiry: z.boolean(),
   shelfLifeMonths: z.number().int().positive('Shelf life must be positive').optional(),
   minOrderQuantity: z.number().int().positive('Minimum order quantity must be positive'),
-  bulkPricing: z.string().optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -249,7 +249,6 @@ export function ProductCreateForm() {
       hasExpiry: true,
       shelfLifeMonths: undefined,
       minOrderQuantity: 1,
-      bulkPricing: '',
     },
   });
 
@@ -298,6 +297,26 @@ export function ProductCreateForm() {
     }
   };
 
+  // Save bulk pricing rules after product creation (from editor JSON)
+  const [bulkRulesJson, setBulkRulesJson] = useState<string>('[]');
+
+  const uploadBulkPricingAfterCreation = async (productId: string) => {
+    try {
+      const raw = bulkRulesJson;
+      if (!raw) return;
+      const rules = JSON.parse(raw);
+      if (!Array.isArray(rules)) return;
+      await fetch(`/api/admin/products/${productId}/bulk-pricing`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ rules }),
+      });
+    } catch {
+      // ignore errors; admin can edit later
+    }
+  };
+
   // Create mutation
   const createMutation = useMutation({
     mutationFn: createProduct,
@@ -319,6 +338,9 @@ export function ProductCreateForm() {
       if (selectedImages.length > 0) {
         await uploadImagesAfterCreation(data.product.id);
       }
+
+      // Upload bulk pricing rules if provided in editor
+      await uploadBulkPricingAfterCreation(data.product.id);
       
       // Redirect to edit page after 2 seconds
       setTimeout(() => {
@@ -825,11 +847,9 @@ export function ProductCreateForm() {
           {/* Bulk Pricing */}
           <div className="mt-6">
             <Label htmlFor="bulkPricing">Bulk Pricing Rules</Label>
-            <Textarea
-              id="bulkPricing"
-              {...register('bulkPricing')}
-              rows={3}
-              placeholder="e.g., 10+ units: 10% discount, 50+ units: 15% discount"
+            <BulkPricingEditor
+              value={bulkRulesJson}
+              onChange={(json) => setBulkRulesJson(json)}
             />
           </div>
 

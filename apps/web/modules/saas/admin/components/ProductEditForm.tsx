@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { ProductImageManager } from './ProductImageManager';
+import { BulkPricingEditor } from './BulkPricingEditor';
 
 // Validation schema
 // Note: react-hook-form returns NaN for empty number inputs when valueAsNumber is used.
@@ -82,7 +83,6 @@ const productSchema = z.object({
     .preprocess(toUndefinedIfBlankOrNaN, z.number().int().positive('Shelf life must be positive'))
     .optional(),
   minOrderQuantity: z.number().int().positive('Minimum order quantity must be positive'),
-  bulkPricing: z.string().optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -242,7 +242,6 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
       hasExpiry: product.hasExpiry,
       shelfLifeMonths: product.shelfLifeMonths || undefined,
       minOrderQuantity: product.minOrderQuantity,
-      bulkPricing: product.bulkPricing || '',
     },
   });
 
@@ -309,7 +308,6 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
         hasExpiry: updatedProduct.hasExpiry,
         shelfLifeMonths: updatedProduct.shelfLifeMonths || undefined,
         minOrderQuantity: updatedProduct.minOrderQuantity,
-        bulkPricing: updatedProduct.bulkPricing || '',
       }, { keepValues: false });
       
       setTimeout(() => setSaveStatus('idle'), 3000);
@@ -339,6 +337,29 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
   const handleImagesUpdate = (newImages: any[]) => {
     refetchImages();
   };
+
+  // Local state for bulk rules JSON for the editor
+  const [bulkRulesJson, setBulkRulesJson] = useState<string>('[]');
+
+  // Load bulk pricing rules from normalized API and feed editor
+  useEffect(() => {
+    let cancelled = false;
+    const loadRules = async () => {
+      try {
+        const res = await fetch(`/api/admin/products/${product.id}/bulk-pricing`, { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const json = JSON.stringify(data?.rules ?? []);
+        if (!cancelled) setBulkRulesJson(json);
+      } catch (e) {
+        // non-fatal
+      }
+    };
+    loadRules();
+    return () => {
+      cancelled = true;
+    };
+  }, [product.id]);
 
   // Format currency for display
   const formatCurrency = (amount: number | undefined | null) => {
@@ -817,11 +838,23 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
               {/* Bulk Pricing */}
               <div className="mt-6">
                 <Label htmlFor="bulkPricing">Bulk Pricing Rules</Label>
-                <Textarea
-                  id="bulkPricing"
-                  {...register('bulkPricing')}
-                  rows={3}
-                  placeholder="e.g., 10+ units: 10% discount, 50+ units: 15% discount"
+                <BulkPricingEditor
+                  value={bulkRulesJson}
+                  onChange={async (json) => {
+                    setBulkRulesJson(json);
+                    // Persist to normalized API
+                    try {
+                      const rules = JSON.parse(json || '[]');
+                      await fetch(`/api/admin/products/${product.id}/bulk-pricing`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ rules }),
+                      });
+                    } catch (e) {
+                      // swallow errors; UI remains updated locally
+                    }
+                  }}
                 />
               </div>
 

@@ -44,7 +44,6 @@ const createProductSchema = z.object({
   hasExpiry: z.boolean().default(true),
   shelfLifeMonths: z.number().int().positive().optional(),
   minOrderQuantity: z.number().int().positive().default(1),
-  bulkPricing: z.string().optional(),
 });
 
 const updateProductSchema = createProductSchema.partial();
@@ -144,7 +143,8 @@ productsRouter.get('/', zValidator('query', productsQuerySchema), async (c) => {
           isPrescriptionRequired: true,
           nafdacNumber: true,
           createdAt: true,
-          updatedAt: true
+          updatedAt: true,
+          _count: { select: { bulkPriceRules: true } },
         }
       }),
       db.product.count({ where })
@@ -207,6 +207,7 @@ productsRouter.get('/', zValidator('query', productsQuerySchema), async (c) => {
         imageUrl,
         image_url: imageUrl, // Add snake_case version for frontend compatibility
         images: refreshedImages || product.images, // Use refreshed images if available
+        hasBulkRules: !!(product._count?.bulkPriceRules > 0),
       };
     }));
 
@@ -231,7 +232,8 @@ productsRouter.get('/:id', async (c) => {
   
   try {
     const product = await db.product.findUnique({
-      where: { id }
+      where: { id },
+      include: { _count: { select: { bulkPriceRules: true } } }
     });
     
     if (!product) {
@@ -294,12 +296,61 @@ productsRouter.get('/:id', async (c) => {
       imageUrl, // Add the extracted primary image URL
       image_url: imageUrl, // Also add snake_case version for compatibility
       images: refreshedImages || product.images, // Use refreshed images if available
+      hasBulkRules: !!(product._count?.bulkPriceRules > 0),
     };
     
-    return c.json({ product: formattedProduct });
+  return c.json({ product: formattedProduct });
   } catch (error) {
     console.error('Error fetching product:', error);
     return c.json({ error: 'Failed to fetch product' }, 500);
+  }
+});
+
+// Public: get bulk pricing rules for a product (normalized only)
+productsRouter.get('/:id/bulk-pricing', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const rows = await db.productBulkPriceRule.findMany({
+      where: { productId: id },
+      orderBy: { minQty: 'asc' },
+      select: { minQty: true, discountPercent: true, unitPrice: true },
+    });
+    const rules = rows.map((r) => ({
+      minQty: r.minQty,
+      discountPercent: r.discountPercent != null ? Number(r.discountPercent) : undefined,
+      unitPrice: r.unitPrice != null ? Number(r.unitPrice) : undefined,
+    }));
+    return c.json({ rules });
+  } catch (error) {
+    console.error('Error fetching bulk pricing rules (public):', error);
+    return c.json({ error: 'Failed to fetch bulk pricing rules' }, 500);
+  }
+});
+
+// Batch fetch bulk pricing rules for multiple products
+productsRouter.post('/bulk-pricing/batch', zValidator('json', z.object({
+  productIds: z.array(z.string()).min(1).max(200)
+})), async (c) => {
+  try {
+    const { productIds } = c.req.valid('json');
+    const rows = await db.productBulkPriceRule.findMany({
+      where: { productId: { in: productIds } },
+      orderBy: [{ productId: 'asc' }, { minQty: 'asc' }],
+      select: { productId: true, minQty: true, discountPercent: true, unitPrice: true },
+    });
+    const rulesByProduct: Record<string, { minQty: number; discountPercent?: number; unitPrice?: number }[]> = {};
+    for (const r of rows) {
+      const list = rulesByProduct[r.productId] || (rulesByProduct[r.productId] = []);
+      list.push({
+        minQty: r.minQty,
+        discountPercent: r.discountPercent != null ? Number(r.discountPercent) : undefined,
+        unitPrice: r.unitPrice != null ? Number(r.unitPrice) : undefined,
+      });
+    }
+    return c.json({ rulesByProduct });
+  } catch (error) {
+    console.error('Error fetching bulk pricing rules batch (public):', error);
+    return c.json({ error: 'Failed to fetch bulk pricing rules' }, 500);
   }
 });
 
@@ -335,7 +386,8 @@ productsRouter.get('/search', zValidator('query', z.object({
         retailPrice: true,
         stockQuantity: true,
         isPrescriptionRequired: true,
-        nafdacNumber: true
+        nafdacNumber: true,
+        _count: { select: { bulkPriceRules: true } },
       }
     });
     
@@ -415,7 +467,6 @@ productsRouter.post('/', authMiddleware, zValidator('json', createProductSchema)
         hasExpiry: data.hasExpiry,
         shelfLifeMonths: data.shelfLifeMonths,
         minOrderQuantity: data.minOrderQuantity,
-        bulkPricing: data.bulkPricing,
         slug: uniqueSlug, // Use the unique slug
       },
       select: {

@@ -8,6 +8,7 @@ import { Label } from '@ui/components/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui/components/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@ui/components/table';
 import { Badge } from '@ui/components/badge';
+import { DatePicker } from '@ui/components/date-picker';
 
 export interface InventoryMovement {
   id: string;
@@ -34,6 +35,7 @@ export function ProductMovementsList({ productId }: { productId: string }) {
   const [to, setTo] = useState<string>('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(0);
 
   const fetchData = async () => {
     setLoading(true);
@@ -43,8 +45,16 @@ export function ProductMovementsList({ productId }: { productId: string }) {
       params.set('page', String(page));
       params.set('pageSize', String(pageSize));
       if (typeFilter !== 'all') params.append('type', typeFilter);
-      if (from) params.set('dateFrom', new Date(from).toISOString());
-      if (to) params.set('dateTo', new Date(to).toISOString());
+      if (from) {
+        const start = new Date(from);
+        start.setHours(0, 0, 0, 0);
+        params.set('dateFrom', start.toISOString());
+      }
+      if (to) {
+        const end = new Date(to);
+        end.setHours(23, 59, 59, 999);
+        params.set('dateTo', end.toISOString());
+      }
 
       const res = await fetch(`/api/admin/products/${productId}/movements?${params.toString()}`, {
         credentials: 'include',
@@ -55,6 +65,8 @@ export function ProductMovementsList({ productId }: { productId: string }) {
       const data = await res.json();
       const list = Array.isArray(data?.data) ? data.data : [];
       setItems(list);
+      const meta = data?.meta;
+      setTotal(typeof meta?.total === 'number' ? meta.total : (page - 1) * pageSize + list.length);
     } catch (e: any) {
       setError(e.message || 'Failed to load movements');
     } finally {
@@ -81,6 +93,10 @@ export function ProductMovementsList({ productId }: { productId: string }) {
     return { net };
   }, [items]);
 
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize]);
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = total === 0 ? 0 : Math.min(total, page * pageSize);
+
   return (
     <div className="space-y-4">
       <Card className="p-4">
@@ -102,17 +118,37 @@ export function ProductMovementsList({ productId }: { productId: string }) {
 
           <div>
             <Label>From</Label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <DatePicker
+              value={from ? new Date(from) : undefined}
+              onChange={(d) => setFrom(d ? d.toISOString().slice(0, 10) : '')}
+              placeholder="Select start date"
+              className="h-9 w-full"
+            />
           </div>
 
           <div>
             <Label>To</Label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            <DatePicker
+              value={to ? new Date(to) : undefined}
+              onChange={(d) => setTo(d ? d.toISOString().slice(0, 10) : '')}
+              placeholder="Select end date"
+              className="h-9 w-full"
+            />
           </div>
 
           <div>
             <Label>Page size</Label>
-            <Input type="number" min={5} max={100} value={pageSize} onChange={(e) => setPageSize(parseInt(e.target.value) || 20)} />
+            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(parseInt(v)); setPage(1); }}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex gap-2">
@@ -124,9 +160,16 @@ export function ProductMovementsList({ productId }: { productId: string }) {
             </Button>
           </div>
 
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Prev</Button>
-            <Button variant="outline" onClick={() => setPage((p) => p + 1)}>Next</Button>
+          <div className="flex flex-col items-end gap-2">
+            <div className="text-xs text-muted-foreground">
+              Page {page} of {totalPages} • Showing {rangeStart}–{rangeEnd} of {total}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setPage(1)} disabled={page <= 1}>First</Button>
+              <Button variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>Prev</Button>
+              <Button variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>Next</Button>
+              <Button variant="outline" onClick={() => setPage(totalPages)} disabled={page >= totalPages}>Last</Button>
+            </div>
           </div>
         </div>
       </Card>

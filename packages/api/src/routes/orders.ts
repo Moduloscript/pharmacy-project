@@ -589,8 +589,38 @@ app.post('/', zValidator('json', createOrderSchema), async (c) => {
     // Note: If prescriptions are required, continue order creation and
     // create a pending prescription record linked to the order. Do not block here.
     
+    // Calculate effective unit prices on server (protect integrity)
+    const isWholesaleCustomer = customer.customerType === 'WHOLESALE'
+
+    // Load all bulk rules for products (map by productId)
+    const rulesByProduct = new Map<string, { minQty: number; discountPercent: number | null; unitPrice: number | null }[]>()
+    if (isWholesaleCustomer) {
+      const allRules = await db.productBulkPriceRule.findMany({
+        where: { productId: { in: productIds } },
+        orderBy: { minQty: 'asc' },
+        select: { productId: true, minQty: true, discountPercent: true, unitPrice: true },
+      })
+      for (const r of allRules) {
+        const arr = rulesByProduct.get(r.productId) || []
+        arr.push({ minQty: r.minQty, discountPercent: r.discountPercent ? Number(r.discountPercent) : null, unitPrice: r.unitPrice ? Number(r.unitPrice) : null })
+        rulesByProduct.set(r.productId, arr)
+      }
+    }
+
+    // Build server-enforced items with computed unitPrice
+    const { computeEffectiveUnitPrice } = await import('../utils/bulk-pricing')
+    const serverItems = data.items.map((item) => {
+      const product = products.find(p => p.id === item.productId)!
+      const base = isWholesaleCustomer
+        ? Number(product.wholesalePrice ?? product.retailPrice)
+        : Number(product.retailPrice)
+      const rules = isWholesaleCustomer ? rulesByProduct.get(item.productId) : undefined
+      const unitPrice = computeEffectiveUnitPrice(base, item.quantity, rules as any)
+      return { ...item, unitPrice }
+    })
+
     // Calculate order totals
-    const subtotal = data.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0)
+    const subtotal = serverItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0)
     const deliveryFee = data.deliveryMethod === 'EXPRESS' ? 1000 : 
                         data.deliveryMethod === 'STANDARD' ? 500 : 0
     const discount = 0 // TODO: Apply discounts based on customer type/loyalty
@@ -638,7 +668,7 @@ app.post('/', zValidator('json', createOrderSchema), async (c) => {
       
       // Create order items
       const orderItems = await Promise.all(
-        data.items.map(async (item) => {
+        serverItems.map(async (item) => {
           const product = products.find(p => p.id === item.productId)!
           
           return prisma.orderItem.create({

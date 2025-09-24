@@ -26,12 +26,34 @@ export interface AdminProductDTO {
   // New normalized helpers
   lowStockThreshold: number
   stockStatus: StockStatus
+  // Bulk pricing presence flag
+  hasBulkRules?: boolean
 }
 
 function toNumber(n: any, fallback = 0): number {
   if (n === null || n === undefined) return fallback
-  const v = typeof n === 'string' ? parseFloat(n) : n
-  return Number.isFinite(v) ? Number(v) : fallback
+
+  // Handle Prisma Decimal / decimal.js-like objects
+  if (typeof n === 'object') {
+    try {
+      const maybeDecimal = n as any
+      if (maybeDecimal && typeof maybeDecimal.toNumber === 'function') {
+        const v = maybeDecimal.toNumber()
+        return Number.isFinite(v) ? v : fallback
+      }
+    } catch {}
+  }
+
+  if (typeof n === 'string') {
+    const v = parseFloat(n)
+    return Number.isFinite(v) ? v : fallback
+  }
+
+  if (typeof n === 'number') {
+    return Number.isFinite(n) ? n : fallback
+  }
+
+  return fallback
 }
 
 function extractPrimaryImage(images: any): string | null {
@@ -81,5 +103,6 @@ export function mapProductToAdminInventoryDTO(p: any): AdminProductDTO {
     // normalized helpers
     lowStockThreshold,
     stockStatus,
+    hasBulkRules: !!(p._count?.bulkPriceRules > 0),
   }
 }

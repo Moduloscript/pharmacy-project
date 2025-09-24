@@ -251,21 +251,76 @@ export const cartSummaryAtom = atom((get) => {
   }
 
   const total = subtotal - bulkDiscount + deliveryFee;
+ 
+   return {
+     items,
+     subtotal,
+     bulkDiscount,
+     deliveryFee,
+     total,
+     totalQuantity,
+     selectedDelivery,
+     isEmpty: items.length === 0 || !isActive,
+     requiresPrescription: items.some(item => item.product.is_prescription_required || item.product.isPrescriptionRequired),
+     session,
+     isActive
+   };
+ });
 
-  return {
-    items,
-    subtotal,
-    bulkDiscount,
-    deliveryFee,
-    total,
-    totalQuantity,
-    selectedDelivery,
-    isEmpty: items.length === 0 || !isActive,
-    requiresPrescription: items.some(item => item.product.is_prescription_required || item.product.isPrescriptionRequired),
-    session,
-    isActive
-  };
-});
+// ============================
+// Bulk pricing helpers (client)
+// ============================
+
+type BulkRule = { minQty: number; discountPercent?: number; unitPrice?: number };
+
+// Simple in-memory cache for rules (per-tab)
+const bulkRulesCache: Map<string, BulkRule[]> = new Map();
+
+async function fetchBulkRules(productId: string): Promise<BulkRule[]> {
+  if (bulkRulesCache.has(productId)) return bulkRulesCache.get(productId)!;
+  try {
+    const res = await fetch(`/api/products/${productId}/bulk-pricing`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const rules = Array.isArray(data?.rules) ? (data.rules as BulkRule[]) : [];
+    bulkRulesCache.set(productId, rules);
+    return rules;
+  } catch {
+    return [];
+  }
+}
+
+async function prefetchBulkRules(productIds: string[]) {
+  const toFetch = Array.from(new Set(productIds.filter(id => !bulkRulesCache.has(id))));
+  if (toFetch.length === 0) return;
+  try {
+    const res = await fetch('/api/products/bulk-pricing/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productIds: toFetch }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const map: Record<string, BulkRule[]> = data?.rulesByProduct || {};
+    for (const id of Object.keys(map)) bulkRulesCache.set(id, map[id]);
+  } catch {}
+}
+
+function computeEffectiveUnitPrice(basePrice: number, quantity: number, rules: BulkRule[]): number {
+  if (!Array.isArray(rules) || rules.length === 0) return basePrice;
+  const eligible = rules.filter((r) => typeof r.minQty === 'number' && r.minQty > 0 && r.minQty <= quantity);
+  if (eligible.length === 0) return basePrice;
+  // Pick the rule with the highest minQty
+  const rule = eligible.sort((a, b) => b.minQty - a.minQty)[0];
+  if (rule.unitPrice != null && Number.isFinite(rule.unitPrice)) {
+    return Math.max(0, Number(rule.unitPrice));
+  }
+  if (rule.discountPercent != null && Number.isFinite(rule.discountPercent)) {
+    const factor = 1 - Number(rule.discountPercent) / 100;
+    return Math.max(0, Number(basePrice) * factor);
+  }
+  return basePrice;
+}
 
 // Cart action atoms
 export const addToCartAtom = atom(
@@ -320,6 +375,22 @@ export const addToCartAtom = atom(
       };
       
       set(sessionAwareCartAtom, updatedItems);
+
+      // Recompute unit price using bulk rules (wholesale only)
+      if (isWholesalePrice) {
+        (async () => {
+          await prefetchBulkRules([product.id]);
+          const rules = await fetchBulkRules(product.id);
+          const effective = computeEffectiveUnitPrice(unitPrice, validatedQuantity, rules);
+          const itemsNow = get(sessionAwareCartAtom);
+          const idxNow = itemsNow.findIndex(i => i.product.id === product.id && i.isWholesalePrice === true);
+          if (idxNow >= 0 && Math.abs(itemsNow[idxNow].unitPrice - effective) > 1e-6) {
+            const next = [...itemsNow];
+            next[idxNow] = { ...next[idxNow], unitPrice: effective };
+            set(sessionAwareCartAtom, next);
+          }
+        })();
+      }
     } else {
       // Add new item to cart
       const validatedQuantity = Math.min(
@@ -337,6 +408,22 @@ export const addToCartAtom = atom(
       };
       
       set(sessionAwareCartAtom, [...currentItems, newItem]);
+
+      // Recompute unit price using bulk rules (wholesale only)
+      if (isWholesalePrice) {
+        (async () => {
+          await prefetchBulkRules([product.id]);
+          const rules = await fetchBulkRules(product.id);
+          const effective = computeEffectiveUnitPrice(unitPrice, validatedQuantity, rules);
+          const itemsNow = get(sessionAwareCartAtom);
+          const idxNow = itemsNow.findIndex(i => i.id === newItem.id);
+          if (idxNow >= 0 && Math.abs(itemsNow[idxNow].unitPrice - effective) > 1e-6) {
+            const next = [...itemsNow];
+            next[idxNow] = { ...next[idxNow], unitPrice: effective };
+            set(sessionAwareCartAtom, next);
+          }
+        })();
+      }
     }
   }
 );
@@ -363,6 +450,30 @@ export const updateCartItemQuantityAtom = atom(
     });
     
     set(cartItemsAtom, updatedItems);
+
+    // Recompute unit price for the updated item if wholesale
+    const after = updatedItems.find(i => i.id === itemId);
+    if (after && after.isWholesalePrice) {
+      (async () => {
+        const base = (() => {
+          const p: any = after.product as any;
+          if (typeof p.wholesalePrice === 'number') return p.wholesalePrice;
+          if (typeof p.wholesale_price === 'number') return p.wholesale_price;
+          if (typeof p.wholesalePrice === 'string') return parseFloat(p.wholesalePrice) || 0;
+          if (typeof p.wholesale_price === 'string') return parseFloat(p.wholesale_price) || 0;
+          return 0;
+        })();
+        const rules = await fetchBulkRules(after.product.id);
+        const effective = computeEffectiveUnitPrice(base, after.quantity, rules);
+        const current = get(cartItemsAtom);
+        const idx = current.findIndex(ci => ci.id === itemId);
+        if (idx >= 0 && Math.abs(current[idx].unitPrice - effective) > 1e-6) {
+          const next = [...current];
+          next[idx] = { ...next[idx], unitPrice: effective };
+          set(cartItemsAtom, next);
+        }
+      })();
+    }
   }
 );
 
@@ -422,6 +533,10 @@ export const addBulkOrderAtom = atom(
         isWholesalePrice: true 
       });
     });
+
+    // Prefetch bulk rules in background to improve subsequent pricing adjustments
+    const ids = Array.from(new Set(items.map(({ product }) => product.id)));
+    (async () => { await prefetchBulkRules(ids); })();
   }
 );
 

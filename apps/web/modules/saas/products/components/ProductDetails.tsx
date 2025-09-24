@@ -56,7 +56,7 @@ export function ProductDetails({
   const { data: reviews } = useProductReviews(productId);
   
   // Use Jotai for state management
-  const pricingPrefs = useAtomValue(pricingPreferencesAtom);
+  const [pricingPrefs, setPricingPrefs] = useAtom(pricingPreferencesAtom);
   const [bulkOrder, setBulkOrder] = useAtom(bulkOrderAtom);
   const [, updateBulkOrder] = useAtom(updateBulkOrderAtom);
   
@@ -108,12 +108,44 @@ export function ProductDetails({
   const handleAddToBulkOrder = useCallback(() => {
     if (!product) return;
     
+    const base = pricingPrefs.showWholesalePrice ? (product.wholesalePrice || product.wholesale_price) : (product.retailPrice || product.retail_price);
+    const unitPrice = pricingPrefs.showWholesalePrice ? computeEffectiveUnitPrice(parsePrice(base), quantity) : parsePrice(base);
+
     updateBulkOrder({
       productId: product.id,
       quantity,
-      unitPrice: pricingPrefs.showWholesalePrice ? (product.wholesalePrice || product.wholesale_price) : (product.retailPrice || product.retail_price)
+      unitPrice
     });
-  }, [product, quantity, pricingPrefs.showWholesalePrice, updateBulkOrder]);
+  }, [product, quantity, pricingPrefs.showWholesalePrice, updateBulkOrder, bulkRules]);
+
+  // Fetch bulk rules once product is available
+  React.useEffect(() => {
+    if (!product) return;
+    const hasBulk = (product as any).hasBulkRules;
+    if (hasBulk === false) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/products/${product.id}/bulk-pricing`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data?.rules)) setBulkRules(data.rules);
+      } catch {}
+    })();
+  }, [product?.id]);
+
+  // Default wholesale view for wholesale customers
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/customers/profile', { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.customerType === 'WHOLESALE' && !pricingPrefs.showWholesalePrice) {
+          setPricingPrefs({ ...pricingPrefs, showWholesalePrice: true });
+        }
+      } catch {}
+    })();
+  }, []);
 
   // Early returns after all hooks are called
   if (isLoading) {
@@ -177,11 +209,25 @@ export function ProductDetails({
   const wholesalePriceValue = parsePrice(product.wholesalePrice || product.wholesale_price);
   const stockQuantity = product.stockQuantity || product.stock_quantity || 0;
 
-  const currentPrice = pricingPrefs.showWholesalePrice ? wholesalePriceValue : retailPriceValue;
+  // Bulk pricing rules (apply when viewing wholesale price)
+  const [bulkRules, setBulkRules] = useState<Array<{ minQty: number; discountPercent?: number; unitPrice?: number }>>([]);
+  const computeEffectiveUnitPrice = (base: number, qty: number) => {
+    if (!Array.isArray(bulkRules) || bulkRules.length === 0) return base;
+    const eligible = bulkRules.filter(r => r.minQty > 0 && r.minQty <= qty);
+    if (eligible.length === 0) return base;
+    const rule = eligible.sort((a, b) => b.minQty - a.minQty)[0];
+    if (rule.unitPrice != null && isFinite(Number(rule.unitPrice))) return Math.max(0, Number(rule.unitPrice));
+    if (rule.discountPercent != null && isFinite(Number(rule.discountPercent))) return Math.max(0, base * (1 - Number(rule.discountPercent) / 100));
+    return base;
+  };
+
+  const baseCurrentPrice = pricingPrefs.showWholesalePrice ? wholesalePriceValue : retailPriceValue;
+  const effectiveCurrentPrice = pricingPrefs.showWholesalePrice ? computeEffectiveUnitPrice(wholesalePriceValue, quantity) : baseCurrentPrice;
+
   const wholesalePrice = wholesalePriceValue;
   const retailPrice = retailPriceValue;
   const savings = retailPrice - wholesalePrice;
-  const discountPercent = Math.round((savings / retailPrice) * 100);
+  const discountPercent = retailPrice > 0 ? Math.round((savings / retailPrice) * 100) : 0;
 
   return (
     <div className={cn('space-y-6', className)}>
@@ -273,8 +319,13 @@ export function ProductDetails({
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Price</p>
                 <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-green-600 dark:from-blue-400 dark:to-green-400 bg-clip-text text-transparent">
-                  ₦{currentPrice.toLocaleString()}
+                  ₦{effectiveCurrentPrice.toLocaleString()}
                 </span>
+                {pricingPrefs.showWholesalePrice && effectiveCurrentPrice < baseCurrentPrice && (
+                  <div className="text-xs text-green-700 dark:text-green-400 mt-1">
+                    Bulk price applied (was ₦{baseCurrentPrice.toLocaleString()})
+                  </div>
+                )}
               </div>
               
               {pricingPrefs.showWholesalePrice && retailPrice > wholesalePrice && (
@@ -297,6 +348,34 @@ export function ProductDetails({
                   Sold per <span className="font-medium">{product.unit}</span>
                   {product.pack_size && ` • Pack contains ${product.pack_size} units`}
                 </p>
+              </div>
+            )}
+
+            {/* Bulk tiers ladder */}
+            {pricingPrefs.showWholesalePrice && bulkRules.length > 0 && (
+              <div className="mt-3 text-xs text-gray-600 dark:text-gray-400">
+                <div className="font-medium mb-1">Bulk tiers:</div>
+                <div className="flex flex-wrap gap-2">
+                  {bulkRules
+                    .slice()
+                    .sort((a, b) => a.minQty - b.minQty)
+                    .map((r, i) => (
+                      <span key={i} className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                        {r.minQty}+ → {r.unitPrice ? `₦${Number(r.unitPrice).toLocaleString()}/unit` : `${r.discountPercent}% off`}
+                      </span>
+                    ))}
+                </div>
+                {(() => {
+                  const higher = bulkRules.filter(r => r.minQty > quantity).sort((a, b) => a.minQty - b.minQty)[0];
+                  if (!higher) return null;
+                  const targetPrice = higher.unitPrice ? Number(higher.unitPrice) : wholesalePriceValue * (1 - (Number(higher.discountPercent) || 0) / 100);
+                  return (
+                    <div className="mt-1">
+                      Next tier at <span className="font-medium">{higher.minQty}</span> units →
+                      <span className="ml-1">₦{targetPrice.toLocaleString()}/unit</span>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -418,7 +497,7 @@ export function ProductDetails({
               <div className="text-right">
                 <p className="text-xs text-gray-500 dark:text-gray-500">Total Price</p>
                 <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                  ₦{(currentPrice * quantity).toLocaleString()}
+                  ₦{(effectiveCurrentPrice * quantity).toLocaleString()}
                 </span>
               </div>
             </div>

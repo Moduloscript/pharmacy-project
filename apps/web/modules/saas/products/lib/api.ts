@@ -3,6 +3,7 @@
 export interface Product {
   id: string;
   name: string;
+  hasBulkRules?: boolean;
   generic_name?: string;
   genericName?: string; // Add camelCase version
   brand_name?: string;

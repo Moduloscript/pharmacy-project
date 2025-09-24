@@ -100,7 +100,7 @@ export const AiChatScalarFieldEnumSchema = z.enum(['id','organizationId','userId
 
 export const CustomerScalarFieldEnumSchema = z.enum(['id','userId','customerType','phone','address','city','state','lga','country','businessName','businessAddress','pharmacyLicense','taxId','businessPhone','businessEmail','verificationStatus','verificationDocuments','creditLimit','creditTermDays','createdAt','updatedAt','rejectionReason','verifiedAt']);
 
-export const ProductScalarFieldEnumSchema = z.enum(['id','name','description','category','genericName','brandName','manufacturer','ndcNumber','nafdacNumber','strength','dosageForm','activeIngredient','retailPrice','wholesalePrice','cost','sku','barcode','stockQuantity','minStockLevel','maxStockLevel','packSize','unit','weight','dimensions','isActive','isPrescriptionRequired','isRefrigerated','isControlled','slug','tags','hasExpiry','shelfLifeMonths','minOrderQuantity','bulkPricing','createdAt','updatedAt','imageUrl','images']);
+export const ProductScalarFieldEnumSchema = z.enum(['id','name','description','category','genericName','brandName','manufacturer','ndcNumber','nafdacNumber','strength','dosageForm','activeIngredient','retailPrice','wholesalePrice','cost','sku','barcode','stockQuantity','minStockLevel','maxStockLevel','packSize','unit','weight','dimensions','isActive','isPrescriptionRequired','isRefrigerated','isControlled','slug','tags','hasExpiry','shelfLifeMonths','minOrderQuantity','createdAt','updatedAt','imageUrl','images']);
 
 export const CartItemScalarFieldEnumSchema = z.enum(['id','customerId','productId','quantity','unitPrice','createdAt','updatedAt']);
 
@@ -119,6 +119,8 @@ export const PaymentRetryLogScalarFieldEnumSchema = z.enum(['id','payment_id','r
 export const ProductBatchScalarFieldEnumSchema = z.enum(['id','productId','batchNumber','qty','costPrice','expiryDate','createdAt','updatedAt']);
 
 export const InventoryMovementScalarFieldEnumSchema = z.enum(['id','productId','type','quantity','reason','reference','previousStock','newStock','batchNumber','expiryDate','batchId','userId','notes','createdAt']);
+
+export const ProductBulkPriceRuleScalarFieldEnumSchema = z.enum(['id','productId','minQty','discountPercent','unitPrice','createdAt','updatedAt']);
 
 export const NotificationScalarFieldEnumSchema = z.enum(['id','customerId','orderId','recipient','subject','message','gatewayResponse','retryCount','maxRetries','createdAt','sentAt','deliveredAt','idempotencyKey','externalMessageId','prescriptionId','recipientId','recipientEmail','recipientPhone','body','scheduledAt','scheduledFor','failedAt','errorMessage','metadata','expiresAt','type','channel','status','priority']);
 
@@ -467,7 +469,6 @@ export const ProductSchema = z.object({
   hasExpiry: z.boolean(),
   shelfLifeMonths: z.number().int().nullable(),
   minOrderQuantity: z.number().int(),
-  bulkPricing: z.string().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   imageUrl: z.string().nullable(),
@@ -668,6 +669,22 @@ export const InventoryMovementSchema = z.object({
 })
 
 export type InventoryMovement = z.infer<typeof InventoryMovementSchema>
+
+/////////////////////////////////////////
+// PRODUCT BULK PRICE RULE SCHEMA
+/////////////////////////////////////////
+
+export const ProductBulkPriceRuleSchema = z.object({
+  id: z.bigint(),
+  productId: z.string(),
+  minQty: z.number().int(),
+  discountPercent: z.instanceof(Prisma.Decimal, { message: "Field 'discountPercent' must be a Decimal. Location: ['Models', 'ProductBulkPriceRule']"}).nullable(),
+  unitPrice: z.instanceof(Prisma.Decimal, { message: "Field 'unitPrice' must be a Decimal. Location: ['Models', 'ProductBulkPriceRule']"}).nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type ProductBulkPriceRule = z.infer<typeof ProductBulkPriceRuleSchema>
 
 /////////////////////////////////////////
 // NOTIFICATION SCHEMA

@@ -7,6 +7,7 @@ import { Badge } from '@ui/components/badge';
 import { Button } from '@ui/components/button';
 import { Card } from '@ui/components/card';
 import { cn } from '@ui/lib';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@ui/components/tooltip';
 import { 
   Product, 
   formatPrice, 
@@ -37,6 +38,10 @@ export function ProductCard({
   onAddToCart,
   className 
 }: ProductCardProps) {
+  const [bulkRules, setBulkRules] = React.useState<Array<{ minQty: number; discountPercent?: number; unitPrice?: number }> | null>(null);
+  const [bulkTooltip, setBulkTooltip] = React.useState<string>('');
+  const [hasFetchedRules, setHasFetchedRules] = React.useState(false);
+
   // Normalize fields (support snake_case and camelCase)
   const stockQuantity = product?.stockQuantity ?? product?.stock_quantity ?? 0;
   const stockStatus = getStockStatus(stockQuantity);
@@ -146,6 +151,40 @@ export function ProductCard({
               <p className="text-xs text-foreground/70 font-medium">
                 {priceLabel} Price
               </p>
+            {showWholesalePrice && product.hasBulkRules && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="mt-1 text-[11px] text-primary hover:underline"
+                        onMouseEnter={async () => {
+                          if (hasFetchedRules) return;
+                          try {
+                            const res = await fetch(`/api/products/${product.id}/bulk-pricing`);
+                            const data = await res.json();
+                            if (Array.isArray(data?.rules)) {
+                              setBulkRules(data.rules);
+                              const s = data.rules
+                                .slice()
+                                .sort((a: any, b: any) => a.minQty - b.minQty)
+                                .map((r: any) => `${r.minQty}+ → ${r.unitPrice ? `₦${Number(r.unitPrice).toLocaleString()}/u` : `${r.discountPercent}% off`}`)
+                                .join(' | ');
+                              setBulkTooltip(s);
+                            }
+                          } catch {}
+                          setHasFetchedRules(true);
+                        }}
+                      >
+                        Bulk tiers
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs break-words">
+                      {bulkTooltip || 'No tiers found'}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
             {showWholesalePrice && wholesalePrice < retailPrice && (
               <div className="text-right">

@@ -270,7 +270,6 @@ model Product {
   hasExpiry              Boolean             @default(true)
   shelfLifeMonths        Int?
   minOrderQuantity       Int                 @default(1)
-  bulkPricing            String?
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
   imageUrl               String?
@@ -279,6 +278,7 @@ model Product {
   inventoryMovements     InventoryMovement[]
   batches                ProductBatch[]
   orderItems             OrderItem[]
+  bulkPriceRules         ProductBulkPriceRule[]
 
   @@index([category])
   @@index([isActive])
@@ -477,6 +477,21 @@ model InventoryMovement {
   @@index([productId])
   @@index([batchId])
   @@map("inventory_movement")
+}
+
+model ProductBulkPriceRule {
+  id               BigInt    @id @default(autoincrement())
+  productId        String    @map("product_id")
+  minQty           Int       @map("min_qty")
+  discountPercent  Decimal?  @db.Decimal(5, 2) @map("discount_percent")
+  unitPrice        Decimal?  @db.Decimal(10, 2) @map("unit_price")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @default(now()) @map("updated_at")
+  product          Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, minQty])
+  @@index([productId])
+  @@map("product_bulk_price_rule")
 }
 
 model Notification {

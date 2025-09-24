@@ -21,12 +21,51 @@ import {
   removeFromCartAtom
 } from '../lib/cart-store';
 import { CartUtils } from '../lib/api';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@ui/components/tooltip';
 
 interface CartItemProps {
   item: CartItemType;
   className?: string;
   showCategory?: boolean;
   compact?: boolean;
+}
+
+function BulkTiersHover({ productId }: { productId: string }) {
+  const [tooltip, setTooltip] = useState('');
+  const [fetched, setFetched] = useState(false);
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="text-[11px] text-primary hover:underline"
+            onMouseEnter={async () => {
+              if (fetched) return;
+              try {
+                const res = await fetch(`/api/products/${productId}/bulk-pricing`);
+                const data = await res.json();
+                if (Array.isArray(data?.rules)) {
+                  const s = data.rules
+                    .slice()
+                    .sort((a: any, b: any) => a.minQty - b.minQty)
+                    .map((r: any) => `${r.minQty}+ → ${r.unitPrice ? `₦${Number(r.unitPrice).toLocaleString()}/u` : `${r.discountPercent}% off`}`)
+                    .join(' | ');
+                  setTooltip(s);
+                }
+              } catch {}
+              setFetched(true);
+            }}
+          >
+            View tiers
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs break-words">
+          {tooltip || 'No tiers found'}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
 
 export function CartItem({ 
@@ -184,6 +223,31 @@ export function CartItem({
                 </span>
                 <span className="text-sm text-muted-foreground">per {item.product.unit}</span>
               </div>
+
+              {/* Bulk pricing indicator */}
+              {(() => {
+                if (!item.isWholesalePrice) return null;
+                const p: any = item.product as any;
+                const baseWholesale = typeof p.wholesalePrice === 'number' ? p.wholesalePrice
+                  : typeof p.wholesale_price === 'number' ? p.wholesale_price
+                  : typeof p.wholesalePrice === 'string' ? parseFloat(p.wholesalePrice) || 0
+                  : typeof p.wholesale_price === 'string' ? parseFloat(p.wholesale_price) || 0
+                  : 0;
+                const applied = item.unitPrice < baseWholesale - 0.005;
+                if (!applied || baseWholesale <= 0) return null;
+                const diff = baseWholesale - item.unitPrice;
+                const pct = Math.round((diff / baseWholesale) * 100);
+                return (
+                  <div className="mt-1 text-xs text-success flex items-center gap-2">
+                    <span>
+                      <span className="font-medium">Bulk price applied</span>
+                      <span className="text-muted-foreground"> (was {CartUtils.formatPrice(baseWholesale)})</span>
+                      {pct > 0 && <span className="ml-1">• {pct}% off</span>}
+                    </span>
+                    <BulkTiersHover productId={item.product.id} />
+                  </div>
+                );
+              })()}
               
               {/* Stock Status */}
               <div className="flex items-center space-x-2 mt-1">

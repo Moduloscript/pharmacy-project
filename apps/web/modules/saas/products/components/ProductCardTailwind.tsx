@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@ui/lib';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@ui/components/tooltip';
 import { StarIcon } from '@heroicons/react/20/solid';
 import { 
   Product, 
@@ -29,6 +30,10 @@ export function ProductCardTailwind({
   onAddToCart,
   className 
 }: ProductCardProps) {
+  const [bulkRules, setBulkRules] = React.useState<Array<{ minQty: number; discountPercent?: number; unitPrice?: number }> | null>(null);
+  const [bulkTooltip, setBulkTooltip] = React.useState<string>('');
+  const [hasFetchedRules, setHasFetchedRules] = React.useState(false);
+
   const stockQuantity = product?.stock_quantity ?? 0;
   const stockStatus = getStockStatus(stockQuantity);
   
@@ -133,6 +138,40 @@ export function ProductCardTailwind({
             <span className="ml-2 text-sm text-gray-500 line-through">
               {formatPrice(retailPrice)}
             </span>
+          )}
+          {showWholesalePrice && (product as any).hasBulkRules && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="ml-2 text-[11px] text-blue-600 hover:underline"
+                    onMouseEnter={async () => {
+                      if (hasFetchedRules) return;
+                      try {
+                        const res = await fetch(`/api/products/${product.id}/bulk-pricing`);
+                        const data = await res.json();
+                        if (Array.isArray(data?.rules)) {
+                          setBulkRules(data.rules);
+                          const s = data.rules
+                            .slice()
+                            .sort((a: any, b: any) => a.minQty - b.minQty)
+                            .map((r: any) => `${r.minQty}+ → ${r.unitPrice ? `₦${Number(r.unitPrice).toLocaleString()}/u` : `${r.discountPercent}% off`}`)
+                            .join(' | ');
+                          setBulkTooltip(s);
+                        }
+                      } catch {}
+                      setHasFetchedRules(true);
+                    }}
+                  >
+                    Bulk tiers
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs break-words">
+                  {bulkTooltip || 'No tiers found'}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
         </p>
         

@@ -52,7 +52,19 @@ export const ListBatchesQuerySchema = PaginationSchema.extend({
 export type ListBatchesQuery = z.infer<typeof ListBatchesQuerySchema>;
 
 export const ListMovementsQuerySchema = PaginationSchema.extend({
-  type: z.array(MovementTypeSchema).optional(),
+  // Accept type as either a single value (e.g. ?type=IN) or an array (?type=IN&type=OUT)
+  type: z
+    .preprocess((v) => {
+      if (v == null) return undefined;
+      if (Array.isArray(v)) return v;
+      if (typeof v === 'string') {
+        // Support comma-separated as well
+        const parts = v.split(',').map((s) => s.trim()).filter(Boolean);
+        return parts.length > 0 ? parts : undefined;
+      }
+      return v;
+    }, z.array(MovementTypeSchema))
+    .optional(),
   dateFrom: z.union([z.string().datetime({ offset: true }), z.coerce.date()]).optional(),
   dateTo: z.union([z.string().datetime({ offset: true }), z.coerce.date()]).optional(),
   createdBy: z.string().optional(),
