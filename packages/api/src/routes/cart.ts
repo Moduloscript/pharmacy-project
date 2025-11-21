@@ -126,7 +126,7 @@ app.get('/', async (c) => {
             name: item.product.name,
             brandName: item.product.brandName,
             genericName: item.product.genericName,
-            images: item.product.images ? JSON.parse(item.product.images) : [],
+            images: item.product.images ? JSON.parse(item.product.images as string) : [],
             wholesalePrice: Number(item.product.wholesalePrice || 0),
             retailPrice: Number(item.product.retailPrice),
             stockQuantity: item.product.stockQuantity,
@@ -307,14 +307,25 @@ app.put('/items/:itemId', zValidator('json', updateCartItemSchema), async (c) =>
   const data = c.req.valid('json')
   
   try {
-    // Verify cart item belongs to user
+    // Get customer profile first
+    const customer = await db.customer.findUnique({
+      where: { userId: user.id }
+    })
+    
+    if (!customer) {
+      return c.json({ 
+        error: { 
+          code: 'CUSTOMER_NOT_FOUND', 
+          message: 'Customer profile not found' 
+        } 
+      }, 404)
+    }
+    
+    // Verify cart item belongs to customer
     const cartItem = await db.cartItem.findFirst({
       where: {
         id: itemId,
-        cart: {
-          userId: user.id,
-          status: 'ACTIVE'
-        }
+        customerId: customer.id
       },
       include: { product: true }
     })
@@ -348,11 +359,11 @@ app.put('/items/:itemId', zValidator('json', updateCartItemSchema), async (c) =>
     }
     
     // Check minimum order quantity for wholesale
-    if (user.customerType !== 'RETAIL' && data.quantity < cartItem.product.minOrderQty) {
+    if (customer.customerType !== 'RETAIL' && data.quantity < cartItem.product.minOrderQuantity) {
       return c.json({ 
         error: { 
           code: 'MIN_ORDER_QTY', 
-          message: `Minimum order quantity is ${cartItem.product.minOrderQty}` 
+          message: `Minimum order quantity is ${cartItem.product.minOrderQuantity}` 
         } 
       }, 400)
     }
@@ -385,14 +396,25 @@ app.delete('/items/:itemId', async (c) => {
   const itemId = c.req.param('itemId')
   
   try {
-    // Verify cart item belongs to user
+    // Get customer profile
+    const customer = await db.customer.findUnique({
+      where: { userId: user.id }
+    })
+    
+    if (!customer) {
+      return c.json({ 
+        error: { 
+          code: 'CUSTOMER_NOT_FOUND', 
+          message: 'Customer profile not found' 
+        } 
+      }, 404)
+    }
+    
+    // Verify cart item belongs to customer
     const cartItem = await db.cartItem.findFirst({
       where: {
         id: itemId,
-        cart: {
-          userId: user.id,
-          status: 'ACTIVE'
-        }
+        customerId: customer.id
       }
     })
     
@@ -426,19 +448,22 @@ app.delete('/', async (c) => {
   const user = c.get('user')
   
   try {
-    const cart = await db.cart.findFirst({
-      where: {
-        userId: user.id,
-        status: 'ACTIVE'
-      }
+    // Get customer profile
+    const customer = await db.customer.findUnique({
+      where: { userId: user.id }
     })
     
-    if (!cart) {
-      return c.json({ message: 'Cart already empty' })
+    if (!customer) {
+      return c.json({ 
+        error: { 
+          code: 'CUSTOMER_NOT_FOUND', 
+          message: 'Customer profile not found' 
+        } 
+      }, 404)
     }
     
     await db.cartItem.deleteMany({
-      where: { cartId: cart.id }
+      where: { customerId: customer.id }
     })
     
     return c.json({ message: 'Cart cleared successfully' })
@@ -459,30 +484,28 @@ app.post('/delivery', zValidator('json', deliveryOptionsSchema), async (c) => {
   const data = c.req.valid('json')
   
   try {
-    const cart = await db.cart.findFirst({
-      where: {
-        userId: user.id,
-        status: 'ACTIVE'
-      }
+    // Get customer profile
+    const customer = await db.customer.findUnique({
+      where: { userId: user.id }
     })
     
-    if (!cart) {
+    if (!customer) {
       return c.json({ 
         error: { 
-          code: 'CART_NOT_FOUND', 
-          message: 'Cart not found' 
+          code: 'CUSTOMER_NOT_FOUND', 
+          message: 'Customer profile not found' 
         } 
       }, 404)
     }
     
-    const updatedCart = await db.cart.update({
-      where: { id: cart.id },
+    // Update customer delivery preferences
+    await db.customer.update({
+      where: { id: customer.id },
       data: {
-        deliveryType: data.type,
-        deliveryAddress: data.address,
+        address: data.address,
         state: data.state,
         lga: data.lga,
-        phoneNumber: data.phoneNumber
+        phone: data.phoneNumber
       }
     })
     
@@ -491,7 +514,7 @@ app.post('/delivery', zValidator('json', deliveryOptionsSchema), async (c) => {
                        data.type === 'STANDARD' ? 500 : 0
     
     return c.json({ 
-      deliveryType: updatedCart.deliveryType,
+      deliveryType: data.type,
       deliveryFee,
       message: 'Delivery options updated' 
     })
@@ -510,32 +533,38 @@ app.post('/delivery', zValidator('json', deliveryOptionsSchema), async (c) => {
 app.post('/apply-discount', async (c) => {
   const user = c.get('user')
   
-  // Only for wholesale customers
-  if (user.customerType === 'RETAIL') {
-    return c.json({ 
-      error: { 
-        code: 'NOT_ELIGIBLE', 
-        message: 'Bulk discounts only available for wholesale customers' 
-      } 
-    }, 400)
-  }
-  
   try {
-    const cart = await db.cart.findFirst({
-      where: {
-        userId: user.id,
-        status: 'ACTIVE'
-      },
-      include: {
-        items: {
-          include: {
-            product: true
-          }
-        }
-      }
+    // Get customer profile
+    const customer = await db.customer.findUnique({
+      where: { userId: user.id }
     })
     
-    if (!cart || cart.items.length === 0) {
+    if (!customer) {
+      return c.json({ 
+        error: { 
+          code: 'CUSTOMER_NOT_FOUND', 
+          message: 'Customer profile not found' 
+        } 
+      }, 404)
+    }
+    
+    // Only for wholesale customers
+    if (customer.customerType === 'RETAIL') {
+      return c.json({ 
+        error: { 
+          code: 'NOT_ELIGIBLE', 
+          message: 'Bulk discounts only available for wholesale customers' 
+        } 
+      }, 400)
+    }
+    
+    // Get cart items
+    const cartItems = await db.cartItem.findMany({
+      where: { customerId: customer.id },
+      include: { product: true }
+    })
+    
+    if (cartItems.length === 0) {
       return c.json({ 
         error: { 
           code: 'CART_EMPTY', 
@@ -545,7 +574,7 @@ app.post('/apply-discount', async (c) => {
     }
     
     // Calculate total quantity and apply tiered discounts
-    const totalQuantity = cart.items.reduce((sum, item) => sum + item.quantity, 0)
+    const totalQuantity = cartItems.reduce((sum: number, item) => sum + item.quantity, 0)
     let discountPercentage = 0
     
     if (totalQuantity >= 500) {
@@ -556,8 +585,9 @@ app.post('/apply-discount', async (c) => {
       discountPercentage = 5 // 5% discount for 100+ items
     }
     
-    const subtotal = cart.items.reduce((sum, item) => {
-      return sum + (item.product.wholesalePrice * item.quantity)
+    const subtotal = cartItems.reduce((sum: number, item) => {
+      const price = Number(item.product.wholesalePrice || item.product.retailPrice)
+      return sum + (price * item.quantity)
     }, 0)
     
     const discountAmount = (subtotal * discountPercentage) / 100

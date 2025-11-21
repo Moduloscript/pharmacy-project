@@ -543,7 +543,7 @@ app.post('/', zValidator('json', createOrderSchema), async (c) => {
     }
     
     // Validate all products exist and have sufficient stock
-    const productIds = data.items.map(item => item.productId)
+    const productIds = data.items.map((item: typeof data.items[number]) => item.productId)
     const products = await db.product.findMany({
       where: {
         id: { in: productIds }
@@ -609,7 +609,7 @@ app.post('/', zValidator('json', createOrderSchema), async (c) => {
 
     // Build server-enforced items with computed unitPrice
     const { computeEffectiveUnitPrice } = await import('../utils/bulk-pricing')
-    const serverItems = data.items.map((item) => {
+    const serverItems = data.items.map((item: typeof data.items[number]) => {
       const product = products.find(p => p.id === item.productId)!
       const base = isWholesaleCustomer
         ? Number(product.wholesalePrice ?? product.retailPrice)
@@ -620,7 +620,7 @@ app.post('/', zValidator('json', createOrderSchema), async (c) => {
     })
 
     // Calculate order totals
-    const subtotal = serverItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0)
+    const subtotal = serverItems.reduce((sum: number, item: typeof serverItems[number]) => sum + (item.quantity * item.unitPrice), 0)
     const deliveryFee = data.deliveryMethod === 'EXPRESS' ? 1000 : 
                         data.deliveryMethod === 'STANDARD' ? 500 : 0
     const discount = 0 // TODO: Apply discounts based on customer type/loyalty
@@ -668,7 +668,7 @@ app.post('/', zValidator('json', createOrderSchema), async (c) => {
       
       // Create order items
       const orderItems = await Promise.all(
-        serverItems.map(async (item) => {
+        serverItems.map(async (item: typeof serverItems[number]) => {
           const product = products.find(p => p.id === item.productId)!
           
           return prisma.orderItem.create({
@@ -697,7 +697,7 @@ app.post('/', zValidator('json', createOrderSchema), async (c) => {
       })
       
       // Create prescription requirement if needed
-      const prescriptionItems = orderItems.filter((item, index) => {
+      const prescriptionItems = orderItems.filter((item: typeof orderItems[number], index: number) => {
         const validation = prescriptionValidation.itemValidations[index]
         return validation && validation.requiresPrescription
       })
@@ -707,7 +707,7 @@ app.post('/', zValidator('json', createOrderSchema), async (c) => {
         await PrescriptionValidationService.createPrescriptionRequirement(
           newOrder.id,
           customer.id,
-          prescriptionItems.map(item => {
+          prescriptionItems.map((item: typeof prescriptionItems[number]) => {
             const product = products.find(p => p.id === item.productId)!
             return {
               productId: item.productId,
@@ -730,7 +730,7 @@ app.post('/', zValidator('json', createOrderSchema), async (c) => {
       
       // Update product stock quantities
       await Promise.all(
-        data.items.map(item => 
+        data.items.map((item: typeof data.items[number]) => 
           prisma.product.update({
             where: { id: item.productId },
             data: {
@@ -761,7 +761,7 @@ app.post('/', zValidator('json', createOrderSchema), async (c) => {
     
     // Send prescription notification if required (non-blocking after transaction)
     try {
-      const prescriptionItems = order.orderItems.filter((item, index) => {
+      const prescriptionItems = order.orderItems.filter((item: typeof order.orderItems[number], index: number) => {
         const validation = prescriptionValidation.itemValidations[index]
         return validation && validation.requiresPrescription
       })
@@ -772,7 +772,7 @@ app.post('/', zValidator('json', createOrderSchema), async (c) => {
           order.id,
           customer.id,
           order.orderNumber,
-          prescriptionItems.map(item => ({
+          prescriptionItems.map((item: typeof prescriptionItems[number]) => ({
             productId: item.productId,
             productName: item.productName
           }))

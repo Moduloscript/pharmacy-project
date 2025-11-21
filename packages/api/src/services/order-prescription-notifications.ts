@@ -83,7 +83,7 @@ The BenPharmacy Team`
         recipient: customer.user.email,
         recipientId: customer.userId,
         recipientEmail: customer.user.email,
-        recipientPhone: customer.user.phone || undefined,
+        recipientPhone: customer.phone || undefined,
         subject,
         body: emailMessage,
         message: emailMessage, // For backward compatibility
@@ -108,13 +108,13 @@ The BenPharmacy Team`
     })
 
     // Send SMS if enabled and phone number exists
-    if (preferences?.smsEnabled && customer.user.phone) {
+    if (preferences?.smsEnabled && customer.phone) {
       await db.notification.create({
         data: {
           type: NotificationType.PRESCRIPTION_REQUIRED,
-          recipient: customer.user.phone,
+          recipient: customer.phone,
           recipientId: customer.userId,
-          recipientPhone: customer.user.phone,
+          recipientPhone: customer.phone,
           subject: 'Prescription Required',
           body: smsMessage,
           message: smsMessage, // For backward compatibility
@@ -220,15 +220,21 @@ export async function cancelPrescriptionReminder(orderId: string) {
     // Find and cancel any scheduled reminders for this order
     await db.notification.updateMany({
       where: {
-        metadata: {
-          path: ['orderId'],
-          equals: orderId
-        },
         status: 'SCHEDULED',
-        metadata: {
-          path: ['isReminder'],
-          equals: true
-        }
+        AND: [
+          {
+            metadata: {
+              path: ['orderId'],
+              equals: orderId
+            }
+          },
+          {
+            metadata: {
+              path: ['isReminder'],
+              equals: true
+            }
+          }
+        ]
       },
       data: {
         status: 'CANCELLED',

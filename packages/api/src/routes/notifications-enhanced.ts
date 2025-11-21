@@ -52,7 +52,7 @@ const updatePreferencesSchema = z.object({
   preferences: z.object({
     sms: z.boolean().optional(),
     whatsapp: z.boolean().optional(),
-    email: true,
+    email: z.boolean().optional(),
     marketingNotifications: z.boolean().optional(),
     orderNotifications: z.boolean().optional(),
     promotionalNotifications: z.boolean().optional(),
@@ -82,9 +82,8 @@ async function checkOptOutStatus(recipient: string, channel: string): Promise<bo
   try {
     const optOut = await db.notificationOptOut.findFirst({
       where: {
-        recipient,
-        channel,
-        active: true
+        customerId: recipient, // recipient is actually customerId in the schema
+        channel: channel as any, // Type cast needed due to Prisma enum filter complexity
       }
     });
     return !!optOut;
@@ -202,7 +201,7 @@ export const notificationsEnhancedRouter = new Hono<AppBindings>()
             return c.json({
               success: false,
               error: 'Invalid idempotency key format',
-              details: error.message
+              details: error instanceof Error ? error.message : 'Unknown error'
             }, 400);
           }
         }
@@ -325,13 +324,12 @@ const jobData: NotificationJobData = {
                 recipient: notificationData.recipient,
                 channel: notificationData.channel,
                 type: notificationData.type,
-                template: notificationData.template,
-                data: notificationData.data || {},
+                body: notificationData.message || '',
+                message: notificationData.message || '',
+                metadata: notificationData.data || {},
                 status: 'PENDING',
                 priority: notificationData.priority,
                 scheduledAt: notificationData.scheduledAt,
-                attempts: 0,
-                maxAttempts: 3,
               }
             });
             
@@ -633,16 +631,16 @@ const jobData: NotificationJobData = {
   // User preferences routes
   .get('/preferences/:userId', async (c) => {
     try {
-      const userId = c.req.param('userId');
+      const customerId = c.req.param('userId'); // Route param is userId but maps to customerId
       
       const preferences = await db.notificationPreferences.findUnique({
-        where: { userId }
+        where: { customerId }
       });
       
       return c.json({
         success: true,
         data: preferences || {
-          userId,
+          customerId,
           sms: true,
           whatsapp: true,
           email: true,
@@ -670,10 +668,10 @@ const jobData: NotificationJobData = {
         const { userId, preferences } = c.req.valid('json');
         
         const updatedPreferences = await db.notificationPreferences.upsert({
-          where: { userId },
+          where: { customerId: userId }, // userId from request maps to customerId in schema
           update: preferences,
           create: {
-            userId,
+            customerId: userId,
             ...preferences
           }
         });

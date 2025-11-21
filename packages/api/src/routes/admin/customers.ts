@@ -116,8 +116,7 @@ customersRouter.get('/', zValidator('query', customersQuerySchema), async (c) =>
       businessEmail: customer.businessEmail,
       pharmacyLicense: customer.pharmacyLicense,
       taxId: customer.taxId,
-      establishedYear: customer.establishedYear,
-      description: customer.description,
+
       // Verification details
       verificationStatus: customer.verificationStatus,
       verificationDocuments: customer.verificationDocuments,

@@ -1,8 +1,10 @@
 export * from "./stripe";
 export * from "./flutterwave";
+export * from "./paystack";
 
 // Nigerian Payment Providers
 export { FlutterwaveProvider, createFlutterwaveProvider } from "./flutterwave";
+export { PaystackProvider, createPaystackProvider } from "./paystack";
 
 // Payment Orchestrator
 export { PaymentOrchestrator, getPaymentOrchestrator, resetPaymentOrchestrator } from "../src/lib/payment-orchestrator";

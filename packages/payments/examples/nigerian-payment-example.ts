@@ -6,6 +6,8 @@
 import {
   FlutterwaveProvider,
   createFlutterwaveProvider,
+  PaystackProvider,
+  createPaystackProvider,
   PaymentOrchestrator,
   getPaymentOrchestrator,
   validateNigerianPhone,
@@ -45,11 +47,20 @@ export class BenPharmPaymentSystem {
       environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox',
     });
 
+    // Create Paystack provider (tertiary)
+    const paystackProvider = createPaystackProvider({
+      environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox',
+    });
+
     // Register providers with orchestrator
     this.orchestrator.registerProvider(flutterwaveProvider);
+    this.orchestrator.registerProvider(paystackProvider);
 
     console.log('✅ Nigerian payment providers initialized');
     console.log('🔄 Flutterwave registered as primary gateway');
+    console.log('🔄 Paystack registered as tertiary gateway');
+
+    // Note: OPay should be added when OPay provider is implemented
   }
 
   /**
@@ -194,15 +205,21 @@ export class BenPharmPaymentSystem {
    */
   calculatePaymentFees(amount: number) {
     const flutterwaveFee = calculateGatewayFee(amount, 'FLUTTERWAVE');
-    
+    const paystackFee = calculateGatewayFee(amount, 'PAYSTACK');
+
     return {
       amount: formatNaira(amount),
       flutterwaveFee: formatNaira(flutterwaveFee),
-      total: formatNaira(amount + flutterwaveFee),
+      paystackFee: formatNaira(paystackFee),
+      minimumFee: formatNaira(Math.min(flutterwaveFee, paystackFee)),
       breakdown: {
         subtotal: amount,
-        gatewayFee: flutterwaveFee,
-        total: amount + flutterwaveFee,
+        flutterwaveFee,
+        paystackFee,
+        minGatewayFee: Math.min(flutterwaveFee, paystackFee),
+        totalWithFlutterwave: amount + flutterwaveFee,
+        totalWithPaystack: amount + paystackFee,
+        minTotal: amount + Math.min(flutterwaveFee, paystackFee),
       }
     };
   }
@@ -230,9 +247,9 @@ export class BenPharmPaymentSystem {
    * Get recommended payment method for customer
    */
   getRecommendedPaymentMethod(customerState?: string, customerCity?: string) {
-    const gateway = this.orchestrator.getRecommendedGateway({ 
-      state: customerState || 'Lagos', 
-      city: customerCity || 'Lagos' 
+    const gateway = this.orchestrator.getRecommendedGateway({
+      state: customerState || 'Lagos',
+      city: customerCity || 'Lagos'
     });
 
     const recommendations = {
@@ -242,6 +259,13 @@ export class BenPharmPaymentSystem {
         description: 'Fast and secure payments with all major Nigerian banks',
         estimatedTime: 'Instant to 5 minutes',
         fee: '1.4% + ₦50',
+      },
+      PAYSTACK: {
+        name: 'Paystack',
+        methods: ['💳 Debit/Credit Card', '🏦 Bank Transfer', '📱 USSD', '📲 Mobile Money'],
+        description: 'Reliable payment processing with Nigerian bank support',
+        estimatedTime: 'Instant to 3 minutes',
+        fee: '1.5% + ₦100',
       }
     };
 

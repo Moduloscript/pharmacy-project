@@ -343,7 +343,6 @@ productsRouter.put('/:id', zValidator('json', updateProductSchema), async (c) =>
       hasExpiry: updatedProduct.hasExpiry,
       shelfLifeMonths: updatedProduct.shelfLifeMonths,
       minOrderQuantity: updatedProduct.minOrderQuantity,
-      bulkPricing: updatedProduct.bulkPricing,
       createdAt: updatedProduct.createdAt.toISOString(),
       updatedAt: updatedProduct.updatedAt.toISOString(),
     };
@@ -353,7 +352,7 @@ productsRouter.put('/:id', zValidator('json', updateProductSchema), async (c) =>
     console.error('Error updating product:', error);
     
     // Handle Prisma constraint errors
-    if (error.code === 'P2002') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       return c.json({ error: 'Duplicate value for unique field' }, 400);
     }
     
@@ -465,7 +464,7 @@ productsRouter.put('/bulk-update', zValidator('json', bulkUpdateSchema), async (
     const user = c.get('user');
     
     // Validate all products exist and fetch current stock
-    const productIds = updates.map(u => u.id);
+    const productIds = updates.map((u: { id: string }) => u.id);
     const existingProducts = await db.product.findMany({
       where: { id: { in: productIds } },
       select: { id: true, stockQuantity: true, minStockLevel: true }
@@ -535,7 +534,7 @@ productsRouter.post('/:id/refresh-images', async (c) => {
     }
     
     try {
-      const images = JSON.parse(product.images);
+      const images = product.images ? JSON.parse(product.images as string) : [];
       const refreshedImages = await refreshImageUrlsIfNeeded(images);
       
       // Update product with refreshed URLs
@@ -769,7 +768,7 @@ productsRouter.put('/:id/bulk-pricing', zValidator('json', BulkRulesBodySchema),
       await tx.productBulkPriceRule.deleteMany({ where: { productId } });
       if (rules.length > 0) {
         await tx.productBulkPriceRule.createMany({
-          data: rules.map((r) => ({
+          data: rules.map((r: { minQty: number; discountPercent?: number; unitPrice?: number }) => ({
             productId,
             minQty: r.minQty,
             discountPercent: r.discountPercent ?? null,

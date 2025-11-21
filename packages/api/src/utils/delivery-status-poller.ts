@@ -1,4 +1,4 @@
-import { db } from '@repo/database';
+import { db, NotificationChannelType } from '@repo/database';
 
 /**
  * Delivery Status Polling Utilities
@@ -173,13 +173,13 @@ export async function pollPendingNotificationStatuses(options: {
   provider?: string;
   batchSize?: number;
   maxAge?: number; // Max age in hours
-  onlyChannels?: string[];
+  onlyChannels?: NotificationChannelType[];
 } = {}) {
   const {
     provider = 'termii',
     batchSize = 50,
     maxAge = 24, // 24 hours
-    onlyChannels = ['sms'],
+    onlyChannels = ['SMS']
   } = options;
 
   console.log(
@@ -197,7 +197,7 @@ export async function pollPendingNotificationStatuses(options: {
           in: onlyChannels,
         },
         status: {
-          in: ['PENDING', 'PROCESSING', 'SENT'],
+          in: ['PENDING', 'SENT'],
         },
         createdAt: {
           gte: maxAgeDate,

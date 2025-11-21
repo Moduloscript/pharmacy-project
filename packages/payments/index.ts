@@ -8,6 +8,7 @@ export * from "./src/lib/payment-orchestrator";
 
 // Nigerian Payment Providers
 export { FlutterwaveProvider, createFlutterwaveProvider } from "./provider/flutterwave";
+export { PaystackProvider, createPaystackProvider } from "./provider/paystack";
 
 // Main orchestrator for easy use
 export { getPaymentOrchestrator, resetPaymentOrchestrator } from "./src/lib/payment-orchestrator";

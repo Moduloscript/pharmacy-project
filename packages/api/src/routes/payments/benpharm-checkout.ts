@@ -4,6 +4,8 @@ import { zValidator } from '@hono/zod-validator';
 import { logger } from '@repo/logs';
 import { authMiddleware } from '../../middleware/auth';
 import { validateNigerianPhone, normalizeNigerianPhone } from '@repo/utils/nigerian-utils';
+import { createPaystackProvider } from '@repo/payments';
+import type { NigerianOrder } from '@repo/payments';
 
 import type { AppBindings } from '../../types/context';
 const app = new Hono<AppBindings>();
@@ -175,13 +177,13 @@ app.post('/benpharm-checkout', authMiddleware, zValidator('json', benpharmiCheck
     
     // CRITICAL SECURITY: Validate prescriptions before allowing payment
     // Check if any items have productId for prescription validation
-    const itemsWithProductId = data.items.filter(item => item.productId);
+    const itemsWithProductId = data.items.filter((item: BenpharmiCheckoutRequest['items'][number]) => item.productId);
     
     if (itemsWithProductId.length > 0 && customer) {
       // Validate prescriptions for the order items
       const prescriptionValidation = await PrescriptionValidationService.validateOrderPrescriptions(
         customer.id,
-        itemsWithProductId.map(item => ({
+        itemsWithProductId.map((item: BenpharmiCheckoutRequest['items'][number]) => ({
           productId: item.productId!,
           quantity: item.quantity
         }))
@@ -294,8 +296,8 @@ app.post('/benpharm-checkout', authMiddleware, zValidator('json', benpharmiCheck
     // Pre-create order items for better UX (no stock updates here)
     try {
       const itemsToCreate = (data.items || [])
-        .filter((it) => !!it.productId)
-        .map((it) => ({
+        .filter((it: BenpharmiCheckoutRequest['items'][number]) => !!it.productId)
+        .map((it: BenpharmiCheckoutRequest['items'][number]) => ({
           orderId: newOrder.id,
           productId: it.productId as string,
           quantity: it.quantity,
@@ -397,7 +399,30 @@ async function createBenpharmiPayment(data: BenpharmiCheckoutRequest, gateway: s
       case 'OPAY':
         return await createOpayPayment(data, reference, clientIp);
       case 'PAYSTACK':
-        return await createPaystackPayment(data, reference);
+      case 'PAYSTACK':
+        // return await createPaystackPayment(data, reference);
+        const paystackProvider = createPaystackProvider();
+        const nigerianOrder: NigerianOrder = {
+          id: data.productId,
+          orderNumber: reference,
+          totalAmount: data.totalAmount / 100, // Convert kobo to naira
+          currency: 'NGN',
+          customer: {
+            email: data.customer.email,
+            phone: data.customer.phone,
+            name: data.customer.name,
+            state: data.customer.state,
+            lga: data.customer.lga
+          },
+          items: data.items.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice / 100 // Convert kobo to naira
+          })),
+          deliveryAddress: data.deliveryAddress,
+          deliveryFee: (data.deliveryFee || 0) / 100 // Convert kobo to naira
+        };
+        return await paystackProvider.initializePayment(nigerianOrder);
       default:
         throw new Error(`Unsupported gateway: ${gateway}`);
     }
@@ -653,126 +678,8 @@ async function createOpayPayment(data: BenpharmiCheckoutRequest, reference: stri
   }
 }
 
-// Paystack implementation
-async function createPaystackPayment(data: BenpharmiCheckoutRequest, reference: string, clientIp?: string) {
-  const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
-  
-  if (!paystackSecretKey) {
-    logger.error('Paystack secret key not configured');
-    return {
-      success: false,
-      error: 'Paystack configuration missing'
-    };
-  }
-
-  const apiUrl = 'https://api.paystack.co/transaction/initialize';
-
-  try {
-    const payload = {
-      reference,
-      amount: data.totalAmount, // Paystack expects amount in kobo
-      currency: 'NGN',
-      email: data.customer.email,
-      callback_url: process.env.NEXT_PUBLIC_APP_URL 
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/callback/paystack` 
-        : 'https://benpharm.ng/api/payments/callback/paystack',
-      channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer'],
-      metadata: {
-        orderId: data.productId,
-        customer_name: data.customer.name,
-        customer_phone: data.customer.phone,
-        customer_state: data.customer.state,
-        customer_lga: data.customer.lga || '',
-        delivery_address: data.deliveryAddress || '',
-        delivery_fee: data.deliveryFee || 0,
-        items: JSON.stringify(data.items),
-        purchase_order_number: data.purchaseOrderNumber || '',
-        custom_fields: [
-          {
-            display_name: 'Customer Phone',
-            variable_name: 'customer_phone',
-            value: data.customer.phone,
-          },
-          {
-            display_name: 'Delivery Address',
-            variable_name: 'delivery_address', 
-            value: data.deliveryAddress || 'Not provided',
-          }
-        ]
-      },
-      custom_fields: [
-        {
-          display_name: 'Customer Phone',
-          variable_name: 'customer_phone',
-          value: data.customer.phone,
-        },
-        {
-          display_name: 'Customer State',
-          variable_name: 'customer_state',
-          value: data.customer.state,
-        }
-      ]
-    };
-
-    logger.info('Making Paystack API call', {
-      reference,
-      amount: payload.amount / 100, // Log in naira for readability
-      customer: payload.email
-    });
-
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${paystackSecretKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const result = await response.json();
-
-    if (response.ok && result.status === true) {
-      logger.info('Paystack payment created successfully', {
-        reference,
-        access_code: result.data?.access_code ? 'generated' : 'none',
-        authorization_url: result.data?.authorization_url ? 'generated' : 'none'
-      });
-
-      return {
-        success: true,
-        paymentUrl: result.data.authorization_url,
-        reference,
-        gateway: 'PAYSTACK',
-        meta: {
-          access_code: result.data.access_code,
-          paystackRef: result.data.reference
-        }
-      };
-    } else {
-      logger.error('Paystack API error', {
-        reference,
-        status: result.status,
-        message: result.message,
-        response: result
-      });
-
-      return {
-        success: false,
-        error: result.message || 'Paystack payment creation failed'
-      };
-    }
-  } catch (error) {
-    logger.error('Paystack API call failed', {
-      reference,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-
-    return {
-      success: false,
-      error: 'Network error connecting to Paystack'
-    };
-  }
-}
+// Paystack implementation replaced by provider usage
+// async function createPaystackPayment(data: BenpharmiCheckoutRequest, reference: string, clientIp?: string) { ... }
 
 // Handle gateway fallback
 async function handlePaymentFallback(data: BenpharmiCheckoutRequest, failedGateway: string, reference: string, clientIp?: string) {

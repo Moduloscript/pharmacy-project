@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { db } from '@repo/database';
+import { NotificationChannel, NotificationType, NotificationStatus } from '@prisma/client';
 
 /**
  * Notification Idempotency Utilities
@@ -74,7 +75,7 @@ export function normalizeClientIdempotencyKey(clientKey: string): string {
  */
 export async function checkIdempotency(idempotencyKey: string): Promise<IdempotencyCheckResult> {
   try {
-    const existingNotification = await db.notification.findUnique({
+    const existingNotification = await db.notification.findFirst({
       where: {
         idempotencyKey: idempotencyKey
       },
@@ -116,13 +117,14 @@ export async function checkIdempotency(idempotencyKey: string): Promise<Idempote
  */
 export async function createIdempotentNotification(notificationData: {
   recipient: string;
-  channel: string;
-  type: string;
-  message?: string;
+  channel: NotificationChannel;
+  type: NotificationType;
+  message: string;
+  body?: string;
   subject?: string;
   customerId?: string;
   orderId?: string;
-  status?: string;
+  status?: NotificationStatus;
   idempotencyKey: string;
 }) {
   try {
@@ -130,6 +132,7 @@ export async function createIdempotentNotification(notificationData: {
     const notification = await db.notification.create({
       data: {
         ...notificationData,
+        body: notificationData.body || notificationData.message,
         status: notificationData.status || 'PENDING',
         retryCount: 0,
         maxRetries: 3,
@@ -145,7 +148,7 @@ export async function createIdempotentNotification(notificationData: {
     // Check if this is a unique constraint violation on idempotencyKey
     if (error.code === 'P2002' && error.meta?.target?.includes('idempotencyKey')) {
       // Fetch the existing notification
-      const existingNotification = await db.notification.findUnique({
+      const existingNotification = await db.notification.findFirst({
         where: {
           idempotencyKey: notificationData.idempotencyKey
         }

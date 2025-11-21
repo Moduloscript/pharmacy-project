@@ -47,8 +47,8 @@ export const newsletterRouter = new Hono().basePath("/newsletter").post(
 
 			return c.body(null, 204);
 		} catch (error) {
-			logger.error(error);
-			return c.json({ error: "Could not send email" }, 500);
+			logger.error(error instanceof Error ? error.message : String(error));
+			return c.json({ error: error instanceof Error ? error.message : "Could not send email" }, 500);
 		}
 	},
 );

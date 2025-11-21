@@ -4,7 +4,7 @@
  */
 
 // Nigerian phone number validation regex
-const NIGERIAN_PHONE_REGEX = /^(\+234|0)[789][01]\d{8}$/;
+const NIGERIAN_PHONE_REGEX = /^(\+?234|0)[789][01]\d{8}$/;
 
 // NAFDAC registration number regex
 const NAFDAC_REGEX = /^[A-Z0-9]{2}-\d{4,6}$/;
@@ -228,6 +228,9 @@ export function calculateGatewayFee(
   amount: number,
   gateway: keyof typeof NIGERIAN_GATEWAY_FEES
 ): number {
+  if (amount < 0) {
+    throw new Error('Amount cannot be negative');
+  }
   const config = NIGERIAN_GATEWAY_FEES[gateway];
   const percentageFee = (amount * config.percentage) / 100;
   return Math.round(percentageFee + config.fixed);

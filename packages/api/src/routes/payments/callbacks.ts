@@ -131,8 +131,8 @@ app.get('/callback/flutterwave', async (c) => {
 
       const successUrl = new URL(`${getAppUrl()}/app/checkout/success`);
       successUrl.searchParams.set('reference', reference);
-      successUrl.searchParams.set('status', verificationResult.status);
-      successUrl.searchParams.set('amount', verificationResult.amount.toString());
+      successUrl.searchParams.set('status', verificationResult.status || '');
+      successUrl.searchParams.set('amount', (verificationResult.amount || 0).toString());
       successUrl.searchParams.set('gateway', 'FLUTTERWAVE');
       
       return c.redirect(successUrl.toString());
@@ -185,8 +185,8 @@ app.get('/callback/paystack', async (c) => {
 
       const successUrl = new URL(`${getAppUrl()}/app/checkout/success`);
       successUrl.searchParams.set('reference', paymentReference);
-      successUrl.searchParams.set('status', verificationResult.status);
-      successUrl.searchParams.set('amount', verificationResult.amount.toString());
+      successUrl.searchParams.set('status', verificationResult.status || '');
+      successUrl.searchParams.set('amount', (verificationResult.amount || 0).toString());
       successUrl.searchParams.set('gateway', 'PAYSTACK');
       
       return c.redirect(successUrl.toString());
@@ -373,7 +373,7 @@ async function persistPaymentData(verificationResult: any, reference: string, ga
           orderNumber: reference,
           customerId: customer.id,
           status: 'RECEIVED',
-          deliveryMethod: originalOrderData.deliveryMethod || 'STANDARD',
+          deliveryMethod: (originalOrderData.deliveryMethod as any) || 'STANDARD',
           deliveryAddress: originalOrderData.deliveryAddress || customer.address || 'Not specified',
           deliveryCity: originalOrderData.deliveryCity || customer.city || 'Not specified',
           deliveryState: originalOrderData.deliveryState || customer.state || 'Not specified',
@@ -501,6 +501,36 @@ async function getOriginalOrderData(reference: string, gateway: string, verifica
         deliveryFee: parseFloat(meta.deliveryFee) || 0,
         purchaseOrderNumber: meta.purchaseOrderNumber,
         items: meta.items ? JSON.parse(meta.items) : [{
+          name: 'Order Items',
+          quantity: 1,
+          unitPrice: verificationResult.amount,
+          productId: meta.orderId || 'unknown'
+        }]
+      };
+    }
+
+    // For Paystack
+    if (gateway === 'PAYSTACK' && verificationResult.gatewayResponse?.metadata) {
+      const meta = verificationResult.gatewayResponse.metadata;
+      return {
+        customer: {
+          email: verificationResult.gatewayResponse.customer?.email || 'unknown@example.com',
+          phone: meta.customerPhone || verificationResult.gatewayResponse.customer?.phone || 'N/A',
+          name: meta.customerName || 'Unknown Customer',
+          state: 'Unknown',
+          lga: null,
+        },
+        deliveryMethod: 'STANDARD',
+        deliveryAddress: meta.deliveryAddress,
+        deliveryCity: 'Not specified',
+        deliveryState: 'Unknown',
+        deliveryLGA: null,
+        deliveryPhone: meta.customerPhone,
+        deliveryNotes: null,
+        subtotal: verificationResult.amount,
+        deliveryFee: parseFloat(meta.deliveryFee) || 0,
+        purchaseOrderNumber: meta.orderNumber,
+        items: meta.items ? (typeof meta.items === 'string' ? JSON.parse(meta.items) : meta.items) : [{
           name: 'Order Items',
           quantity: 1,
           unitPrice: verificationResult.amount,
@@ -704,7 +734,8 @@ async function verifyPaystackPayment(reference: string) {
         amount: result.data.amount / 100, // Convert from kobo
         currency: result.data.currency,
         gateway: 'PAYSTACK',
-        gatewayReference: result.data.id
+        gatewayReference: result.data.id,
+        gatewayResponse: result.data // Include full response for metadata extraction
       };
     }
 

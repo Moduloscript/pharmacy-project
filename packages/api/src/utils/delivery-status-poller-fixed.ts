@@ -164,7 +164,7 @@ export async function pollPendingNotificationStatuses(options: {
     provider = 'termii',
     batchSize = 50,
     maxAge = 24, // 24 hours
-    onlyChannels = ['sms']
+    onlyChannels = ['SMS'] as const
   } = options;
   
   console.log(`🔍 Polling ${provider} for delivery status updates (batch size: ${batchSize})`);
@@ -180,7 +180,7 @@ export async function pollPendingNotificationStatuses(options: {
           in: onlyChannels
         },
         status: {
-          in: ['PENDING', 'PROCESSING', 'SENT']
+          in: ['PENDING', 'SENT']
         },
         createdAt: {
           gte: maxAgeDate

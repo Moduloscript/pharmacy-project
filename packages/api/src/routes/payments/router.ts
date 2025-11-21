@@ -162,7 +162,7 @@ export const paymentsRouter = new Hono<AppBindings>()
 
 				return c.json({ checkoutLink });
 			} catch (e) {
-				logger.error(e);
+				logger.error(e instanceof Error ? e.message : String(e));
 				throw new HTTPException(500);
 			}
 		},

@@ -491,8 +491,8 @@ productsRouter.post('/', authMiddleware, zValidator('json', createProductSchema)
   } catch (error) {
     console.error('Error creating product:', error);
     // Handle specific Prisma errors
-    if (error.code === 'P2002') {
-      const field = error.meta?.target?.[0] || 'field';
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      const field = (error as any).meta?.target?.[0] || 'field';
       return c.json({
         error: `Unique constraint violation: ${field}`,
         details: `The ${field} value already exists. Please use a unique value.`
@@ -537,7 +537,7 @@ productsRouter.put('/:id', authMiddleware, zValidator('json', updateProductSchem
     
     return c.json({ product });
   } catch (error) {
-    if (error.code === 'P2025') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
       return c.json({ error: 'Product not found' }, 404);
     }
     console.error('Error updating product:', error);
@@ -652,7 +652,7 @@ productsRouter.post('/:id/images', authMiddleware, async (c) => {
   } catch (error) {
     console.error('Error uploading product images:', error);
     return c.json({ 
-      error: error.message || 'Failed to upload images' 
+      error: error instanceof Error ? error.message : 'Failed to upload images' 
     }, 500);
   }
 });
@@ -715,7 +715,7 @@ productsRouter.post('/:id/image', authMiddleware, async (c) => {
     });
   } catch (error) {
     console.error('Error uploading product image:', error);
-    return c.json({ error: error.message || 'Failed to upload image' }, 500);
+    return c.json({ error: error instanceof Error ? error.message : 'Failed to upload image' }, 500);
   }
 });
 
@@ -870,7 +870,7 @@ productsRouter.put('/:id/images/reorder', authMiddleware, zValidator('json', z.o
     const images = product.images ? (Array.isArray(product.images) ? product.images : JSON.parse(product.images as string)) : [];
     
     // Reorder images based on provided order
-    const reorderedImages = imageOrder.map(key => images.find((img: any) => img.key === key)).filter(Boolean);
+    const reorderedImages = imageOrder.map((key: string) => images.find((img: any) => img.key === key)).filter(Boolean);
     
     // Add any images not in the order array to the end
     const remainingImages = images.filter((img: any) => !imageOrder.includes(img.key));
@@ -988,7 +988,7 @@ productsRouter.delete('/:id', authMiddleware, async (c) => {
     
     return c.json({ message: 'Product deleted successfully' });
   } catch (error) {
-    if (error.code === 'P2025') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
       return c.json({ error: 'Product not found' }, 404);
     }
     console.error('Error deleting product:', error);

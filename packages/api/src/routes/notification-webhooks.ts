@@ -92,7 +92,7 @@ async function findNotificationByTermiiData(messageId: string, receiver: string)
   const byExternalId = await db.notification.findFirst({
     where: {
       externalMessageId: messageId,
-      channel: 'sms'
+      channel: 'SMS'
     },
     orderBy: {
       createdAt: 'desc'
@@ -106,7 +106,7 @@ async function findNotificationByTermiiData(messageId: string, receiver: string)
   // Fallback: try to find by message ID in gateway response (for backwards compatibility)
   const byMessageId = await db.notification.findFirst({
     where: {
-      channel: 'sms',
+      channel: 'SMS',
       gatewayResponse: {
         contains: messageId
       }
@@ -125,14 +125,14 @@ async function findNotificationByTermiiData(messageId: string, receiver: string)
   const normalizedReceiver = receiver.replace(/^\+234/, '0').replace(/^\+/, '');
   const byPhoneNumber = await db.notification.findFirst({
     where: {
-      channel: 'sms',
+      channel: 'SMS',
       OR: [
         { recipient: { contains: receiver } },
         { recipient: { contains: normalizedReceiver } },
         { recipient: { contains: receiver.replace(/^0/, '+234') } }
       ],
       status: {
-        in: ['PENDING', 'PROCESSING', 'SENT']
+        in: ['PENDING', 'SENT']
       }
     },
     orderBy: {

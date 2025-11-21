@@ -21,6 +21,7 @@ import {
   auditSecurityEvent
 } from '../services/prescription-audit'
 import { PrescriptionAuditAction } from '@prisma/client'
+import type { AppBindings } from '../types/context'
 
 const app = new Hono<AppBindings>()
 
@@ -78,7 +79,7 @@ app.get('/', prescriptionViewRateLimit, zValidator('query', getPrescriptionsSche
     userId: user.id,
     userEmail: user.email,
     userName: user.name,
-    userRole: user.role,
+    userRole: user.role || undefined,
     action: 'VIEW_LIST',
     entityType: 'PRESCRIPTION',
     entityId: 'list',
@@ -344,11 +345,10 @@ app.patch('/:prescriptionId/document', csrfProtection(), prescriptionUpdateRateL
     
     // Create audit log
     await createPrescriptionAuditLog({
-      prescriptionId,
       userId: user.id,
       userEmail: user.email,
       userName: user.name,
-      userRole: user.role,
+      userRole: user.role || undefined,
       action: 'CREATE',
       entityType: 'PRESCRIPTION',
       entityId: prescriptionId,
@@ -1027,17 +1027,17 @@ app.post('/', csrfProtection(), prescriptionUpdateRateLimit, zValidator('json', 
     
     // Create audit log
     await createPrescriptionAuditLog({
-      prescriptionId: prescription.id,
       userId: user.id,
       userEmail: user.email,
       userName: user.name,
-      userRole: user.role,
+      userRole: user.role || undefined,
       action: 'CREATE',
       entityType: 'PRESCRIPTION',
       entityId: prescription.id,
-      newValues: prescription,
+      newState: prescription as any,
       ipAddress: c.req.header('x-forwarded-for') || c.req.header('x-real-ip'),
-      userAgent: c.req.header('user-agent')
+      userAgent: c.req.header('user-agent'),
+      timestamp: new Date()
     })
     
     // Notify pharmacists/admins of new prescription to review

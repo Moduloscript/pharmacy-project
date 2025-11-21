@@ -189,8 +189,8 @@ dashboardRouter.get('/metrics', zValidator('query', filtersSchema), async (c) =>
     });
 
     // Calculate average order value
-    const totalRevenue = revenueResult._sum.total || 0;
-    const totalOrders = ordersResult._count.id || 0;
+    const totalRevenue = Number(revenueResult._sum.total) || 0;
+    const totalOrders = Number(ordersResult._count.id) || 0;
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     // For growth calculations, get previous period data
@@ -228,8 +228,10 @@ dashboardRouter.get('/metrics', zValidator('query', filtersSchema), async (c) =>
     });
 
     // Calculate growth percentages
-    const revenueGrowth = previousRevenue._sum.total 
-      ? ((totalRevenue - (previousRevenue._sum.total || 0)) / (previousRevenue._sum.total || 1)) * 100
+
+    const previousTotalRevenue = Number(previousRevenue._sum.total) || 0;
+    const revenueGrowth = previousTotalRevenue
+      ? ((totalRevenue - previousTotalRevenue) / previousTotalRevenue) * 100
       : 0;
 
     const orderGrowth = previousOrders._count.id 
@@ -247,7 +249,7 @@ dashboardRouter.get('/metrics', zValidator('query', filtersSchema), async (c) =>
       lowStockProducts,
       outOfStockProducts,
       dailyOrders,
-      monthlyRevenue: monthlyRevenue._sum.total || 0,
+      monthlyRevenue: Number(monthlyRevenue._sum.total) || 0,
       monthlyNewCustomers: monthlyCustomers,
       averageOrderValue,
       revenueGrowth,
