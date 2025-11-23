@@ -3,35 +3,45 @@
 export interface Product {
   id: string;
   name: string;
-  hasBulkRules?: boolean;
   generic_name?: string;
-  genericName?: string; // Add camelCase version
+  genericName?: string;
   brand_name?: string;
-  brandName?: string; // Add camelCase version
+  brandName?: string;
   category: string;
   description?: string;
   image_url?: string;
-  imageUrl?: string; // Add camelCase version
+  imageUrl?: string;
   wholesale_price?: number;
-  wholesalePrice?: number; // Add camelCase version
+  wholesalePrice?: number;
   retail_price: number;
-  retailPrice?: number; // Add camelCase version
+  retailPrice?: number;
   stock_quantity: number;
-  stockQuantity?: number; // Add camelCase version
+  stockQuantity?: number;
   min_order_qty?: number;
-  minOrderQuantity?: number; // Add camelCase version
+  minOrderQuantity?: number;
   is_prescription_required?: boolean;
-  isPrescriptionRequired?: boolean; // Add camelCase version
+  isPrescriptionRequired?: boolean;
   nafdac_reg_number?: string;
-  nafdacNumber?: string; // Add camelCase version
+  nafdacNumber?: string;
   created_at?: string;
-  createdAt?: string; // Add camelCase version
+  createdAt?: string;
   updated_at?: string;
-  updatedAt?: string; // Add camelCase version
-  organization?: {
-    id: string;
-    name: string;
-  };
+  updatedAt?: string;
+  organization?: { id: string; name: string };
+  // Additional optional fields used in UI
+  images?: Array<string | { url?: string }>; // product images
+  requires_prescription?: boolean;
+  manufacturer?: string;
+  unit?: string;
+  pack_size?: number;
+  dosage_form?: string;
+  strength?: string;
+  therapeutic_class?: string;
+  storage_conditions?: string;
+  usage_instructions?: string;
+  side_effects?: string;
+  contraindications?: string;
+  hasBulkRules?: boolean;
 }
 
 export interface ProductsResponse {

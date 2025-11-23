@@ -14,22 +14,37 @@ async function startDevWithNgrok() {
   console.log('🚀 Starting BenPharm development server with ngrok...\n');
 
   try {
-    // Start Next.js development server
-    console.log('📦 Starting Next.js dev server...');
-    const nextProcess = spawn('pnpm', ['run', 'dev'], {
-      stdio: 'inherit',
-      shell: true,
-    });
-
-    // Wait for the server to start (adjust timing as needed)
-    await new Promise(resolve => setTimeout(resolve, 5000));
-
     // Start ngrok tunnel
     console.log('🌐 Starting ngrok tunnel...');
     const url = await ngrok.connect({
       port: 3000,
       proto: 'http',
       authtoken_from_env: true, // Will use NGROK_AUTHTOKEN from env if available
+    });
+
+    console.log('🌍 Public ngrok URL: ' + url);
+
+    // Start Next.js development server
+    console.log('📦 Starting Next.js dev server...');
+    const nextProcess = spawn('pnpm', ['run', 'dev'], {
+      stdio: 'inherit',
+      shell: true,
+      env: {
+        ...process.env,
+        NEXT_PUBLIC_EXTERNAL_URL: url,
+        // NEXT_PUBLIC_APP_URL: url // Commented out to keep localhost for user navigation
+      }
+    });
+
+    // Start Queue Worker
+    console.log('👷 Starting Queue Worker...');
+    const workerProcess = spawn('pnpm', ['exec', 'tsx', 'scripts/setup-queue-worker.ts'], {
+      stdio: 'inherit',
+      shell: true,
+      env: {
+        ...process.env,
+        FORCE_COLOR: '1'
+      }
     });
 
     console.log('\n✅ Development environment ready!\n');
@@ -74,6 +89,7 @@ async function startDevWithNgrok() {
       console.log('\n🛑 Shutting down development environment...');
       await ngrok.kill();
       nextProcess.kill();
+      workerProcess.kill();
       process.exit(0);
     });
 
@@ -81,6 +97,7 @@ async function startDevWithNgrok() {
       console.log('\n🛑 Shutting down development environment...');
       await ngrok.kill();
       nextProcess.kill();
+      workerProcess.kill();
       process.exit(0);
     });
 

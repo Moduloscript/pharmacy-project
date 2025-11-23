@@ -3,10 +3,12 @@ import { apiClient } from "@shared/lib/api-client";
 import type { NextRequest } from "next/server";
 
 export const getSession = async (req: NextRequest): Promise<Session | null> => {
+	// Use localhost for internal middleware requests to avoid ngrok loop
+	const apiOrigin = process.env.INTERNAL_API_URL || "http://localhost:3000";
 	const response = await fetch(
 		new URL(
 			"/api/auth/get-session?disableCookieCache=true",
-			req.nextUrl.origin,
+			apiOrigin,
 		),
 		{
 			headers: {
@@ -25,8 +27,9 @@ export const getSession = async (req: NextRequest): Promise<Session | null> => {
 export const getOrganizationsForSession = async (
 	req: NextRequest,
 ): Promise<Organization[]> => {
+	const apiOrigin = process.env.INTERNAL_API_URL || "http://localhost:3000";
 	const response = await fetch(
-		new URL("/api/auth/organization/list", req.nextUrl.origin),
+		new URL("/api/auth/organization/list", apiOrigin),
 		{
 			headers: {
 				cookie: req.headers.get("cookie") || "",

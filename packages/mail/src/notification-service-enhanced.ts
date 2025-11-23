@@ -126,13 +126,15 @@ export class EnhancedNotificationService {
 					priority: 'normal'
 				});
 
+				console.log(`🔍 Checking ${channel} for customer ${order.customerId}: Allowed=${preferenceCheck.allowed}, Phone=${customer.phone}`);
+
 				if (!preferenceCheck.allowed) {
 					console.log(`❌ ${channel} notification blocked for order ${order.orderNumber}: ${preferenceCheck.reason}`);
 					continue;
 				}
 
-				// Use preferred channel if suggested
-				const actualChannel = preferenceCheck.preferredChannel || channel;
+				// Use the current channel being iterated
+				const actualChannel = channel;
 
 				// Create notification record
 				const message = this.getOrderConfirmationMessage(actualChannel, order, customer);
@@ -187,8 +189,8 @@ export class EnhancedNotificationService {
 				notificationsSent.push(notification);
 				console.log(`✅ Queued ${actualChannel} order confirmation for Order #${order.orderNumber}`);
 
-				// If we sent email successfully, skip SMS unless customer prefers multiple channels
-				if (actualChannel === 'email') break;
+				// If we sent email successfully, we still want to send SMS if available
+				// if (actualChannel === 'email') break;
 			}
 
 			if (notificationsSent.length === 0) {
@@ -485,13 +487,15 @@ export class EnhancedNotificationService {
 
 			for (const admin of adminUsers) {
 				// For admin alerts, we don't check preferences - they need to see these
+				const message = `Product ${product.name} (SKU: ${product.sku}) is running low. Current stock: ${product.currentStock}, Minimum level: ${product.minStockLevel}`;
 				const notification = await db.notification.create({
 					data: {
 						type: mapType('low_stock_alert'),
 						channel: PrismaNotificationChannel.EMAIL,
 						recipient: admin.email,
 						subject: `Low Stock Alert: ${product.name}`,
-						message: `Product ${product.name} (SKU: ${product.sku}) is running low. Current stock: ${product.currentStock}, Minimum level: ${product.minStockLevel}`,
+						message: message,
+						body: message,
 						status: PrismaNotificationStatus.PENDING,
 						priority: PrismaNotificationPriority.HIGH,
 						metadata: {
@@ -524,14 +528,14 @@ export class EnhancedNotificationService {
 	// Helper methods for message generation
 	private getOrderConfirmationMessage(channel: string, order: any, customer: any): string {
 		if (channel === 'sms' || channel === 'whatsapp') {
-			return `Dear ${customer.user.name}, your order #${order.orderNumber} for ₦${order.total.toLocaleString()} has been confirmed. Track: ${process.env.NEXT_PUBLIC_SITE_URL}/track/${order.id}`;
+			return `Hi ${customer.user.name}! Your order #${order.orderNumber} is confirmed and being prepared with care. Total: N${order.total.toLocaleString()}. Track: ${process.env.NEXT_PUBLIC_SITE_URL}/track/${order.id} - BenPharm`;
 		}
 		return `Dear ${customer.user.name},\n\nYour order #${order.orderNumber} has been successfully placed.\n\nOrder Total: ₦${order.total.toLocaleString()}\nDelivery Address: ${order.deliveryAddress}\n\nYou can track your order at: ${process.env.NEXT_PUBLIC_SITE_URL}/orders/${order.id}\n\nThank you for shopping with BenPharmacy!`;
 	}
 
 	private getPaymentSuccessMessage(channel: string, order: any, payment: any, customer: any): string {
 		if (channel === 'sms' || channel === 'whatsapp') {
-			return `Payment of ₦${payment.amount.toLocaleString()} confirmed for order #${order.orderNumber}. Your order is being processed.`;
+			return `Payment of N${payment.amount.toLocaleString()} confirmed for order #${order.orderNumber}. Your order is being processed.`;
 		}
 		return `Dear ${customer.user.name},\n\nWe have received your payment of ₦${payment.amount.toLocaleString()} for order #${order.orderNumber}.\n\nPayment Method: ${payment.method}\nTransaction ID: ${payment.transactionId || 'N/A'}\n\nYour order is now being processed and will be shipped soon.\n\nThank you!`;
 	}
@@ -567,6 +571,7 @@ export class EnhancedNotificationService {
 		template: string;
 		templateParams: Record<string, any>;
 	}): Promise<NotificationJobData> {
+		const message = `Notification: ${data.template}`;
 		const notification = await db.notification.create({
 			data: {
 				type: mapType(data.type),
@@ -574,6 +579,8 @@ export class EnhancedNotificationService {
 				recipient: data.recipient,
 				customerId: data.customerId,
 				orderId: data.orderId,
+				message: message,
+				body: message,
 				status: PrismaNotificationStatus.PENDING,
 				metadata: data.templateParams
 			}

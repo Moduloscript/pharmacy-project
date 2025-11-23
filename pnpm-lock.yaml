@@ -11,6 +11,13 @@ overrides:
 importers:
 
   .:
+    dependencies:
+      '@repo/database':
+        specifier: workspace:*
+        version: link:packages/database
+      bullmq:
+        specifier: ^4.15.4
+        version: 4.18.3
     devDependencies:
       '@biomejs/biome':
         specifier: 1.9.4

@@ -10,14 +10,14 @@ export const notificationTemplates: NotificationTemplate[] = [
 	{
 		name: 'order_confirmation_sms',
 		channel: 'sms',
-		requiredParams: ['order_number', 'total_amount', 'tracking_url'],
-		preview: 'Order #{{order_number}} confirmed! ₦{{total_amount}}. Track: {{tracking_url}} - BenPharm'
+		requiredParams: ['customer_name', 'order_number', 'total_amount', 'tracking_url'],
+		preview: 'Hi {{customer_name}}! Your order #{{order_number}} is confirmed and being prepared with care. Total: N{{total_amount}}. Track: {{tracking_url}} - BenPharm'
 	},
 	{
 		name: 'payment_success_sms',
 		channel: 'sms',
 		requiredParams: ['order_number', 'amount', 'method'],
-		preview: 'Payment received: Order #{{order_number}} - ₦{{amount}} via {{method}}. Thank you! - BenPharm'
+		preview: 'Payment received: Order #{{order_number}} - N{{amount}} via {{method}}. Thank you! - BenPharm'
 	},
 	{
 		name: 'delivery_update_sms',
@@ -58,10 +58,10 @@ export const notificationTemplates: NotificationTemplate[] = [
 export const templateMessages = {
 	sms: {
 		order_confirmation: (params: Record<string, any>) =>
-			`Order #${params.order_number} confirmed! Total: ₦${params.total_amount}. Track: ${params.tracking_url} - BenPharm`,
+			`Hi ${params.customer_name}! Your order #${params.order_number} is confirmed and being prepared with care. Total: N${params.total_amount}. Track: ${params.tracking_url} - BenPharm`,
 		
 		payment_success: (params: Record<string, any>) =>
-			`Payment received for Order #${params.order_number}: ₦${params.amount} via ${params.method}. Thank you! - BenPharm`,
+			`Payment received for Order #${params.order_number}: N${params.amount} via ${params.method}. Thank you! - BenPharm`,
 		
 		delivery_update: (params: Record<string, any>) =>
 			`Order #${params.order_number} is ${params.status_label}. ${params.eta_or_notes} - BenPharm`,

@@ -113,22 +113,47 @@ export class TermiiProvider extends BaseNotificationProvider {
 	 */
 	async testConnection(): Promise<boolean> {
 		try {
-			// Use Termii balance endpoint to test credentials
-			const response = await fetch(`${this.apiUrl}/get-balance?api_key=${this.apiKey}`, {
-				method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-			});
+			const apiKeyPreview = `${this.apiKey?.substring(0, 5)}...${this.apiKey?.substring(this.apiKey.length - 5)}`;
+			console.log(`Testing Termii connection with API Key: ${apiKeyPreview} (length: ${this.apiKey?.length})`);
 			
-			if (response.ok) {
-				const data = await response.json();
-				console.log(`✅ Termii connection successful. Balance: ${data.balance} ${data.currency}`);
-				return true;
-			} else {
-				console.error('❌ Termii connection failed:', await response.text());
-				return false;
-			}
+			const testUrl = `${this.apiUrl}/get-balance?api_key=${this.apiKey}`;
+			console.log(`Request URL: ${this.apiUrl}/get-balance?api_key=${apiKeyPreview}`);
+			
+			// Use https module instead of fetch for better compatibility
+			const https = await import('https');
+			
+			return new Promise((resolve) => {
+				https.get(testUrl, (res) => {
+					let data = '';
+					
+					res.on('data', (chunk) => {
+						data += chunk;
+					});
+					
+					res.on('end', () => {
+						console.log(`Termii API Response: Status ${res.statusCode}`);
+						console.log(`Response Body Length: ${data.length}`);
+						console.log(`Response Body: ${data.substring(0, 200)}`);
+						
+						if (res.statusCode === 200 && data.trim()) {
+							try {
+								const result = JSON.parse(data);
+								console.log(`✅ Termii connection successful. Balance: ${result.balance} ${result.currency}`);
+								resolve(true);
+							} catch (e) {
+								console.error('❌ Termii connection failed: Invalid JSON response', data);
+								resolve(false);
+							}
+						} else {
+							console.error('❌ Termii connection failed:', data || 'Empty response');
+							resolve(false);
+						}
+					});
+				}).on('error', (error) => {
+					console.error('❌ Termii connection test error:', error);
+					resolve(false);
+				});
+			});
 		} catch (error) {
 			console.error('❌ Termii connection test error:', error);
 			return false;

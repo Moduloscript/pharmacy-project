@@ -316,22 +316,61 @@ async function persistPaymentData(verificationResult: any, reference: string, ga
       where: {
         OR: [
           { orderNumber: reference },
-          { paymentReference: reference },
-        ],
-      },
+          { paymentReference: reference }
+        ]
+      }
     });
 
     if (existingOrderForRef) {
-      logger.info('Order already exists for reference; skipping callback persistence (webhook handles payment)', {
-        reference,
-        orderId: existingOrderForRef.id,
+      // Check if notifications have been sent for this order
+      const existingNotification = await db.notification.findFirst({
+        where: {
+          orderId: existingOrderForRef.id,
+          type: 'ORDER_CONFIRMATION'
+        }
       });
-      return { success: true, orderId: existingOrderForRef.id, orderNumber: existingOrderForRef.orderNumber };
+
+      if (!existingNotification) {
+        logger.info('Order exists but notifications not sent yet. Sending now.', {
+          orderId: existingOrderForRef.id,
+          reference
+        });
+
+        // Send order confirmation notifications (email + SMS)
+        try {
+          const { enhancedNotificationService } = await import('@repo/mail');
+          await enhancedNotificationService.sendOrderConfirmation({
+            id: existingOrderForRef.id,
+            orderNumber: existingOrderForRef.orderNumber,
+            customerId: existingOrderForRef.customerId,
+            total: Number(existingOrderForRef.total),
+            deliveryAddress: existingOrderForRef.deliveryAddress,
+          });
+          logger.info('Order confirmation notifications queued for existing order', {
+            orderId: existingOrderForRef.id,
+            orderNumber: existingOrderForRef.orderNumber,
+          });
+        } catch (e) {
+          logger.error('Failed to queue order confirmation notifications for existing order', {
+            reference,
+            orderId: existingOrderForRef.id,
+            error: (e as Error)?.message,
+          });
+        }
+      } else {
+        logger.info('Payment already processed and notifications sent', { reference });
+      }
+
+      return { 
+        success: true, 
+        paymentId: 'existing', 
+        orderId: existingOrderForRef.id,
+        orderNumber: existingOrderForRef.orderNumber 
+      };
     }
 
-    // Get the original order data from Flutterwave metadata
     const originalOrderData = await getOriginalOrderData(reference, gateway, verificationResult);
-    
+
     if (!originalOrderData) {
       logger.warn('No original order data found for payment', { reference, gateway });
       return { success: false, error: 'Original order data not found' };
@@ -445,27 +484,14 @@ async function persistPaymentData(verificationResult: any, reference: string, ga
       reference,
       orderId: result.order.id,
       paymentId: result.payment.id,
-      customerEmail: customer.businessEmail || customer.userId
+      orderNumber: result.order.orderNumber
     });
 
-      // After creating order and payment, deduct stock and create movements
-      try {
-        const { inventoryService } = await import('../../services/inventory');
-        await inventoryService.createOutMovementsForOrder(result.order.id);
-      } catch (e) {
-        logger.error('Inventory movement creation failed after payment persistence', {
-          reference,
-          orderId: result.order.id,
-          error: (e as Error)?.message,
-        });
-      }
-
-      return { 
-        success: true, 
-        orderId: result.order.id, 
-        paymentId: result.payment.id,
-        orderNumber: result.order.orderNumber
-      };
+    return {
+      success: true,
+      orderNumber: result.order.orderNumber,
+      orderId: result.order.id
+    };
 
   } catch (error) {
     logger.error('Payment persistence failed', {

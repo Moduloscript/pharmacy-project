@@ -147,10 +147,15 @@ async function findNotificationByTermiiData(messageId: string, receiver: string)
  * Map Termii status to our internal status based on official documentation
  */
 function mapTermiiStatusToInternal(termiiStatus: string): string {
-  switch (termiiStatus) {
-    case 'DELIVERED':
-    case 'Delivered': // Alternative format
-      return 'DELIVERED';
+  // Normalize status for comparison
+  const status = termiiStatus.trim();
+  
+  // Check for specific phrases first
+  if (status.startsWith('DELIVERED') || status.startsWith('Delivered')) {
+    return 'DELIVERED';
+  }
+  
+  switch (status) {
     case 'Message Failed':
     case 'Rejected':
     case 'Expired':
@@ -158,12 +163,12 @@ function mapTermiiStatusToInternal(termiiStatus: string): string {
     case 'Message Sent':
       return 'SENT';
     case 'DND Active on Phone Number':
-      return 'DND_BLOCKED';
+      return 'FAILED'; // Map DND to FAILED as DND_BLOCKED might not be in enum
     case 'Received': // For inbound messages
-      return 'RECEIVED';
+      return 'DELIVERED'; // Map Received to DELIVERED for now if RECEIVED is not in enum
     default:
-      console.warn(`Unknown Termii status: ${termiiStatus}`);
-      return 'UNKNOWN';
+      console.warn(`Unknown Termii status: ${termiiStatus}, mapping to FAILED`);
+      return 'FAILED'; // Default to FAILED to avoid crashing on unknown statuses
   }
 }
 

@@ -399,7 +399,6 @@ async function createBenpharmiPayment(data: BenpharmiCheckoutRequest, gateway: s
       case 'OPAY':
         return await createOpayPayment(data, reference, clientIp);
       case 'PAYSTACK':
-      case 'PAYSTACK':
         // return await createPaystackPayment(data, reference);
         const paystackProvider = createPaystackProvider();
         const nigerianOrder: NigerianOrder = {

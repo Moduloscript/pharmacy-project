@@ -12,7 +12,14 @@
       "Bash(pnpm --filter payments test --testNamePattern=\"paystack\" --verbose)",
       "Bash(pnpm install)",
       "Bash(pnpm type-check)",
-      "Bash(git add .)"
+      "Bash(git add .)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: complete Paystack integration, admin UI improvements, and payment system enhancements\n\n- Add complete Paystack payment provider implementation with tests and verification\n- Enhance admin product management UI with improved movements list and filters  \n- Refactor payment callbacks and checkout flows for better error handling\n- Add comprehensive documentation including changelog and project guides\n- Clean up deprecated Jest config files and improve environment setup\n- Update API routes with better notification and delivery status handling\n- Add new admin components for product movements and table management\n- Improve Nigerian payment utilities and integration examples\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push origin master)",
+      "Bash(pnpm test packages/api/src/routes/payments/__tests__/webhooks.test.ts)",
+      "Bash(npx vitest run src/routes/payments/__tests__/webhooks.test.ts)",
+      "Bash(pnpm --filter payments test provider/paystack/__tests__/paystack.test.ts)",
+      "Bash(turbo type-check)",
+      "Bash(npx turbo type-check)"
     ],
     "deny": [],
     "ask": []

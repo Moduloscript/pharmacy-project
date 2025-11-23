@@ -64,6 +64,9 @@ export function ProductDetails({
   const addToCartAction = useSetAtom(addToCartAtom);
   const cartToast = useCartToast();
 
+  // Bulk pricing rules state (must be declared before use in callbacks)
+  const [bulkRules, setBulkRules] = useState<Array<{ minQty: number; discountPercent?: number; unitPrice?: number }>>([]);
+
   // Define callbacks unconditionally but guard against null product
   const handleAddToCart = useCallback(async () => {
     // Prevent multiple rapid clicks or missing product
@@ -198,7 +201,7 @@ export function ProductDetails({
   }
 
   // Convert string prices to numbers and handle both camelCase and snake_case field names
-  const parsePrice = (price) => {
+  const parsePrice = (price: string | number | undefined) => {
     if (typeof price === 'string') {
       return parseFloat(price) || 0;
     }
@@ -210,7 +213,7 @@ export function ProductDetails({
   const stockQuantity = product.stockQuantity || product.stock_quantity || 0;
 
   // Bulk pricing rules (apply when viewing wholesale price)
-  const [bulkRules, setBulkRules] = useState<Array<{ minQty: number; discountPercent?: number; unitPrice?: number }>>([]);
+
   const computeEffectiveUnitPrice = (base: number, qty: number) => {
     if (!Array.isArray(bulkRules) || bulkRules.length === 0) return base;
     const eligible = bulkRules.filter(r => r.minQty > 0 && r.minQty <= qty);
@@ -294,10 +297,10 @@ export function ProductDetails({
                     Prescription Required
                   </Badge>
                 )}
-                {product.nafdac_number && (
+                {product.nafdacNumber && (
                   <Badge className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-300 dark:border-green-700">
                     <CheckCircle className="size-3 mr-1" />
-                    NAFDAC: {product.nafdac_number}
+                    NAFDAC: {product.nafdacNumber}
                   </Badge>
                 )}
               </div>
