@@ -338,7 +338,7 @@ export function ProductImageManager({
               )}
             </Button>
           )}
-          <Badge variant={images.length === 0 ? "destructive" : "secondary"}>
+          <Badge status={images.length === 0 ? "error" : "info"}>
             {images.length === 0 ? 'No images' : `${images.length} image${images.length === 1 ? '' : 's'}`}
           </Badge>
         </div>
@@ -422,7 +422,7 @@ export function ProductImageManager({
               >
                 {/* Primary badge */}
                 {index === 0 && (
-                  <Badge className="absolute top-2 left-2 z-10 text-xs" variant="default">
+                  <Badge className="absolute top-2 left-2 z-10 text-xs" status="info">
                     Primary
                   </Badge>
                 )}
@@ -434,6 +434,7 @@ export function ProductImageManager({
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  unoptimized
                 />
 
                 {/* Overlay with actions */}
@@ -448,7 +449,7 @@ export function ProductImageManager({
                     </Button>
                     <Button
                       size="sm"
-                      variant="destructive"
+                      variant="error"
                       onClick={() => handleDeleteImage(image.key)}
                       disabled={deleteMutation.isPending}
                     >
@@ -503,6 +504,7 @@ export function ProductImageManager({
                 width={800}
                 height={600}
                 className="object-contain w-full h-auto"
+                unoptimized
               />
             </div>
           </div>

@@ -258,7 +258,8 @@ export function ProductCreateForm() {
       isDirty,
       isValid,
       errors: Object.keys(errors).reduce((acc, key) => {
-        acc[key] = errors[key]?.message || '';
+        const error = errors[key as keyof typeof errors];
+        acc[key] = error?.message || '';
         return acc;
       }, {} as Record<string, string>),
     });
@@ -389,16 +390,16 @@ export function ProductCreateForm() {
   };
   
   // Helper function to safely get and validate numeric values from form
-  const getNumericValue = (fieldName: string): number => {
+  const getNumericValue = (fieldName: keyof ProductFormData): number => {
     const value = watch(fieldName);
-    if (value == null || isNaN(value) || !isFinite(value)) {
+    if (value == null || typeof value !== 'number' || isNaN(value) || !isFinite(value)) {
       return 0;
     }
     return Number(value);
   };
   
   // Helper function to check if a field has a valid positive value
-  const hasValidPositiveValue = (fieldName: string): boolean => {
+  const hasValidPositiveValue = (fieldName: keyof ProductFormData): boolean => {
     const value = getNumericValue(fieldName);
     return value > 0;
   };
@@ -855,12 +856,12 @@ export function ProductCreateForm() {
 
           {/* Pricing Summary */}
           {(hasValidPositiveValue('retailPrice') || hasValidPositiveValue('wholesalePrice') || hasValidPositiveValue('cost')) && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-medium mb-2">Pricing Summary</h4>
+            <div className="mt-6 p-4 bg-white border border-gray-200 rounded-lg">
+              <h4 className="font-medium mb-2 text-gray-900">Pricing Summary</h4>
               <div className="space-y-2 text-sm">
                 {hasValidPositiveValue('cost') && hasValidPositiveValue('retailPrice') && (
                   <div className="flex justify-between">
-                    <span>Retail Margin:</span>
+                    <span className="text-gray-700">Retail Margin:</span>
                     <span className="font-medium text-green-600">
                       {(() => {
                         const cost = getNumericValue('cost');
@@ -876,7 +877,7 @@ export function ProductCreateForm() {
                 )}
                 {hasValidPositiveValue('cost') && hasValidPositiveValue('wholesalePrice') && (
                   <div className="flex justify-between">
-                    <span>Wholesale Margin:</span>
+                    <span className="text-gray-700">Wholesale Margin:</span>
                     <span className="font-medium text-blue-600">
                       {(() => {
                         const cost = getNumericValue('cost');
@@ -954,7 +955,7 @@ export function ProductCreateForm() {
                       </div>
                       <Button
                         type="button"
-                        variant="destructive"
+                        variant="error"
                         size="sm"
                         className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 p-0"
                         onClick={() => removeImage(index)}

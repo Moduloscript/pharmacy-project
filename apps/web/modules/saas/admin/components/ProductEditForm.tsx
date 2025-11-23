@@ -860,12 +860,12 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
 
               {/* Pricing Summary */}
               {(watch('retailPrice') || watch('wholesalePrice') || watch('cost')) && (
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium mb-2">Pricing Summary</h4>
+                <div className="mt-6 p-4 bg-white border border-gray-200 rounded-lg">
+                  <h4 className="font-medium mb-2 text-gray-900">Pricing Summary</h4>
                   <div className="space-y-2 text-sm">
                     {watch('cost') && watch('cost') > 0 && watch('retailPrice') && watch('retailPrice') > 0 && (
                       <div className="flex justify-between">
-                        <span>Retail Margin:</span>
+                        <span className="text-gray-700">Retail Margin:</span>
                         <span className="font-medium text-green-600">
                           {(((watch('retailPrice') - watch('cost')) / watch('cost')) * 100).toFixed(1)}%
                         </span>
@@ -873,7 +873,7 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
                     )}
                     {watch('cost') && watch('cost') > 0 && watch('wholesalePrice') && watch('wholesalePrice') > 0 && (
                       <div className="flex justify-between">
-                        <span>Wholesale Margin:</span>
+                        <span className="text-gray-700">Wholesale Margin:</span>
                         <span className="font-medium text-blue-600">
                           {(((watch('wholesalePrice') - watch('cost')) / watch('cost')) * 100).toFixed(1)}%
                         </span>

@@ -138,6 +138,7 @@ productsRouter.get('/', zValidator('query', productsQuerySchema), async (c) => {
           images: true,
           wholesalePrice: true,
           retailPrice: true,
+          cost: true,
           stockQuantity: true,
           minOrderQuantity: true,
           isPrescriptionRequired: true,
@@ -479,6 +480,7 @@ productsRouter.post('/', authMiddleware, zValidator('json', createProductSchema)
         images: true,
         wholesalePrice: true,
         retailPrice: true,
+        cost: true,
         stockQuantity: true,
         minOrderQuantity: true,
         isPrescriptionRequired: true,
@@ -527,6 +529,7 @@ productsRouter.put('/:id', authMiddleware, zValidator('json', updateProductSchem
         images: true,
         wholesalePrice: true,
         retailPrice: true,
+        cost: true,
         stockQuantity: true,
         minOrderQuantity: true,
         isPrescriptionRequired: true,
@@ -772,7 +775,7 @@ productsRouter.get('/:id/images', async (c) => {
 });
 
 // Delete specific product image (admin only)
-productsRouter.delete('/:id/images/:imageKey', authMiddleware, async (c) => {
+productsRouter.delete('/:id/images/:imageKey{.+}', authMiddleware, async (c) => {
   const productId = c.req.param('id');
   const imageKey = c.req.param('imageKey');
   const user = c.get('user');

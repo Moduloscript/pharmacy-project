@@ -186,7 +186,6 @@ ordersRouter.put('/:id/status', zValidator('json', updateStatusSchema), async (c
   try {
     const orderId = c.req.param('id');
     const { status } = c.req.valid('json');
-    const newStatus = status as keyof typeof validTransitions;
     
     const order = await db.order.findUnique({
       where: { id: orderId },
@@ -197,27 +196,50 @@ ordersRouter.put('/:id/status', zValidator('json', updateStatusSchema), async (c
     }
     
     // Validate status transition (optional - add business logic)
-    type OrderStatus = 'RECEIVED' | 'PROCESSING' | 'READY' | 'DISPATCHED' | 'DELIVERED' | 'CANCELLED';
+    type OrderStatus = 'RECEIVED' | 'PROCESSING' | 'READY' | 'DISPATCHED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
     const validTransitions: Record<OrderStatus, OrderStatus[]> = {
       RECEIVED: ['PROCESSING', 'CANCELLED'],
       PROCESSING: ['READY', 'CANCELLED'],
       READY: ['DISPATCHED'],
       DISPATCHED: ['DELIVERED'],
       DELIVERED: [],
-      CANCELLED: []
+      CANCELLED: [],
+      REFUNDED: []
     };
     
-    const currentStatus = order.status as keyof typeof validTransitions;
+    const currentStatus = order.status as OrderStatus;
+    const newStatus = status as OrderStatus;
+    
+    console.log('Debug Order Status Update:', { 
+      orderId, 
+      dbStatus: order.status, 
+      currentStatus, 
+      inputStatus: status, 
+      newStatus,
+      validTransitionsKeys: Object.keys(validTransitions)
+    });
+
+    if (!validTransitions[currentStatus]) {
+      console.error(`Invalid current status in DB: ${currentStatus}`);
+      return c.json({ error: `Invalid current order status: ${currentStatus}` }, 500);
+    }
+
     if (!validTransitions[currentStatus].includes(newStatus) && newStatus !== currentStatus) {
-      return c.json({ error: `Cannot transition from ${currentStatus} to ${status}` }, 400);
+      return c.json({ error: `Cannot transition from ${currentStatus} to ${newStatus}` }, 400);
     }
     
-    const updatedOrder = await db.order.update({
+    // 1. Update the order status (without includes to avoid potential Prisma issues)
+    await db.order.update({
       where: { id: orderId },
       data: {
         status: newStatus,
         updatedAt: new Date(),
       },
+    });
+
+    // 2. Fetch the updated order with all necessary relations
+    const updatedOrder = await db.order.findUnique({
+      where: { id: orderId },
       include: {
         customer: {
           select: {
@@ -244,6 +266,10 @@ ordersRouter.put('/:id/status', zValidator('json', updateStatusSchema), async (c
         }
       },
     });
+
+    if (!updatedOrder) {
+      return c.json({ error: 'Failed to retrieve updated order' }, 500);
+    }
     // Enqueue delivery status update notification (non-blocking)
     try {
       const { notificationService } = await import('@repo/mail');
