@@ -1,4 +1,5 @@
 import { FaqSection } from "@marketing/home/components/FaqSection";
+import { TestimonialsCarousel } from "@marketing/home/components/TestimonialsCarousel";
 import { Features } from "@marketing/home/components/Features";
 import { Hero } from "@marketing/home/components/Hero";
 import { Newsletter } from "@marketing/home/components/Newsletter";
@@ -17,6 +18,7 @@ export default async function Home({
 		<>
 			<Hero />
 			<Features />
+			<TestimonialsCarousel />
 			<PricingSection />
 			<FaqSection />
 			<Newsletter />

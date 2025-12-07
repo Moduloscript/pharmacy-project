@@ -1,22 +1,35 @@
 "use client";
 
-import { MobileIcon } from "@radix-ui/react-icons";
 import { cn } from "@ui/lib";
 import {
-	CloudIcon,
-	ComputerIcon,
-	PaperclipIcon,
-	StarIcon,
-	WandIcon,
+	Activity,
+	BarChart3,
+	Bot,
+	FileText,
+	Globe,
+	Package,
+	ShieldCheck,
+	Truck,
+	Zap,
 } from "lucide-react";
+import { motion, useScroll, useTransform, useSpring } from "framer-motion";
+import {
+	fadeInUp,
+	getAnimationProps,
+} from "../../../../lib/animation-utils";
 import Image, { type StaticImageData } from "next/image";
-import { type JSXElementConstructor, type ReactNode, useState } from "react";
+import React, { type JSXElementConstructor, type ReactNode } from "react";
+import aiIcon from "../../../../public/images/ai-icon.svg";
+import complianceIcon from "../../../../public/images/compliance-icon.svg";
 import heroImage from "../../../../public/images/hero.svg";
+import inventoryIcon from "../../../../public/images/inventory-icon.svg";
+import { VelocityText } from "../../../../components/ui/velocity-text";
 
 export const featureTabs: Array<{
 	id: string;
 	title: string;
 	icon: JSXElementConstructor<any>;
+	color: string;
 	subtitle?: string;
 	description?: ReactNode;
 	image?: StaticImageData;
@@ -35,247 +48,236 @@ export const featureTabs: Array<{
 	}[];
 }> = [
 	{
-		id: "feature1",
-		title: "Feature 1",
-		icon: StarIcon,
-		subtitle: "Do more with our amazing SaaS.",
+		id: "inventory",
+		title: "Smart Inventory",
+		icon: Package,
+		color: "#06B6D4",
+		subtitle: "Precision control for your supply chain.",
 		description:
-			"This is a brilliant feature. And below you can see some reasons why. This is basically just a dummy text.",
+			"Manage your pharmaceutical catalog with unprecedented ease. Real-time stock levels, batch tracking, and automated alerts keep your operations running smoothly.",
 		stack: [],
-		image: heroImage,
+		image: inventoryIcon,
 		imageBorder: false,
 		highlights: [
 			{
-				title: "Benefit 1",
+				title: "Real-time Updates",
 				description:
-					"This is an awesome benefit. And below you can see some reasons why. This is basically just a dummy text.",
-				icon: WandIcon,
+					"Monitor stock levels instantly across all your distribution centers with live data synchronization.",
+				icon: Activity,
 			},
 			{
-				title: "Benefit 2",
+				title: "Batch Tracking",
 				description:
-					"This is an awesome benefit. And below you can see some reasons why. This is basically just a dummy text.",
-				icon: ComputerIcon,
+					"Complete traceability for every batch, ensuring safety and compliance throughout the lifecycle.",
+				icon: BarChart3,
 			},
 			{
-				title: "Benefit 3",
+				title: "Global Logistics",
 				description:
-					"This is an awesome benefit. And below you can see some reasons why. This is basically just a dummy text.",
-				icon: MobileIcon,
+					"Seamlessly manage international shipments with built-in customs and regulatory support.",
+				icon: Globe,
 			},
 		],
 	},
 	{
-		id: "feature2",
-		title: "Feature 2",
-		icon: CloudIcon,
-		subtitle: "Your SaaS can also do this.",
-		description: "Another dummy text for another feature.",
+		id: "compliance",
+		title: "Compliance First",
+		icon: ShieldCheck,
+		color: "#EC4899",
+		subtitle: "Security and regulation built-in.",
+		description:
+			"Navigate complex regulations with confidence. Our platform handles prescription verification, secure document storage, and audit trails automatically.",
 		stack: [],
-		image: heroImage,
+		image: complianceIcon,
 		imageBorder: false,
 		highlights: [
 			{
-				title: "Benefit 1",
+				title: "Secure Uploads",
 				description:
-					"This is an awesome benefit. And below you can see some reasons why. This is basically just a dummy text.",
-				icon: WandIcon,
+					"Bank-grade encryption for all sensitive documents and prescription uploads.",
+				icon: FileText,
 			},
 			{
-				title: "Benefit 2",
+				title: "Audit Ready",
 				description:
-					"This is an awesome benefit. And below you can see some reasons why. This is basically just a dummy text.",
-				icon: ComputerIcon,
+					"Automated logging of all actions creates a bulletproof audit trail for regulatory inspections.",
+				icon: ShieldCheck,
 			},
 			{
-				title: "Benefit 3",
+				title: "Verified Chains",
 				description:
-					"This is an awesome benefit. And below you can see some reasons why. This is basically just a dummy text.",
-				icon: MobileIcon,
+					"Ensure chain of custody integrity with immutable transaction records.",
+				icon: Zap,
 			},
 		],
 	},
 	{
-		id: "feature3",
-		title: "Feature 3",
-		icon: PaperclipIcon,
-		subtitle: "We even got a third one.",
+		id: "ai",
+		title: "AI Operations",
+		icon: Bot,
+		color: "#FBBF24",
+		subtitle: "Intelligent automation for pharma.",
 		description:
-			"Of course your SaaS will have more features than this, but this is just a dummy text.",
+			"Empower your team with BenPharma AI. From predictive analytics to instant support queries, our AI assistant optimizes every step of your workflow.",
 		stack: [],
-		image: heroImage,
+		image: aiIcon,
 		imageBorder: false,
 		highlights: [
 			{
-				title: "Benefit 1",
+				title: "Predictive Analytics",
 				description:
-					"This is an awesome benefit. And below you can see some reasons why. This is basically just a dummy text.",
-				icon: WandIcon,
+					"Forecast demand and prevent stockouts with advanced machine learning models.",
+				icon: BarChart3,
 			},
 			{
-				title: "Benefit 2",
+				title: "Instant Support",
 				description:
-					"This is an awesome benefit. And below you can see some reasons why. This is basically just a dummy text.",
-				icon: ComputerIcon,
+					"Our AI assistant provides immediate answers to operational and compliance questions.",
+				icon: Bot,
 			},
 			{
-				title: "Benefit 3",
+				title: "Smart Routing",
 				description:
-					"This is an awesome benefit. And below you can see some reasons why. This is basically just a dummy text.",
-				icon: MobileIcon,
+					"Optimize delivery routes and carrier selection automatically for cost and speed.",
+				icon: Truck,
 			},
 		],
 	},
 ];
 
 export function Features() {
-	const [selectedTab, setSelectedTab] = useState(featureTabs[0].id);
+	const ref = React.useRef(null);
+	const { scrollYProgress } = useScroll({
+		target: ref,
+		offset: ["start start", "end start"],
+	});
+
+	const springConfig = { stiffness: 100, damping: 50, bounce: 20 };
+
+	const translateX = useSpring(
+		useTransform(scrollYProgress, [0, 1], [0, 1000]),
+		springConfig
+	);
+	const translateXReverse = useSpring(
+		useTransform(scrollYProgress, [0, 1], [0, -1000]),
+		springConfig
+	);
+	const rotateX = useSpring(
+		useTransform(scrollYProgress, [0, 0.2], [15, 0]),
+		springConfig
+	);
+	const opacity = useSpring(
+		useTransform(scrollYProgress, [0, 0.2], [0.2, 1]),
+		springConfig
+	);
+	const rotateZ = useSpring(
+		useTransform(scrollYProgress, [0, 0.2], [20, 0]),
+		springConfig
+	);
+	const translateY = useSpring(
+		useTransform(scrollYProgress, [0, 0.2], [-700, 500]),
+		springConfig
+	);
+
 	return (
-		<section id="features" className="scroll-my-20 pt-12 lg:pt-16">
-			<div className="container max-w-5xl">
-				<div className="mx-auto mb-6 lg:mb-0 lg:max-w-5xl lg:text-center">
-					<h2 className="font-bold text-4xl lg:text-5xl">
-						Features your clients will love
+		<div
+			ref={ref}
+			className="h-[300vh] py-40 overflow-hidden antialiased relative flex flex-col self-auto [perspective:1000px] [transform-style:preserve-3d] bg-background"
+		>
+			<div className="max-w-7xl relative mx-auto py-20 md:py-40 px-4 w-full left-0 top-0">
+				<motion.div
+					className="mx-auto mb-6 lg:mb-0 lg:max-w-5xl lg:text-center"
+					{...getAnimationProps(fadeInUp)}
+				>
+					<h2 className="font-black text-4xl lg:text-6xl uppercase tracking-tight">
+						Everything your pharmacy{" "}
+						<span className="bg-[var(--color-accent)] px-2 text-black border-2 border-black inline-block transform -rotate-1">
+							needs
+						</span>
 					</h2>
-					<p className="mt-6 text-balance text-lg opacity-50">
-						In this section you can showcase all the features of
-						your SaaS provides and how they can benefit your
-						clients.
+					<p className="mt-6 text-balance text-lg font-medium opacity-70">
+						A complete ecosystem for pharmaceutical management. Control inventory, ensure compliance, and leverage AI insights—all in one secure platform.
 					</p>
-				</div>
-
-				<div className="mt-8 mb-4 hidden justify-center lg:flex">
-					{featureTabs.map((tab) => {
-						return (
-							<button
-								type="button"
-								key={tab.id}
-								onClick={() => setSelectedTab(tab.id)}
-								className={cn(
-									"flex w-24 flex-col items-center gap-2 rounded-lg px-4 py-2 md:w-32",
-									selectedTab === tab.id
-										? "bg-primary/5 font-bold text-primary dark:bg-primary/10"
-										: "font-medium text-foreground/80",
-								)}
-							>
-								<tab.icon
-									className={cn(
-										"size-6 md:size-8",
-										selectedTab === tab.id
-											? "text-primary"
-											: "text-foreground opacity-30",
-									)}
-								/>
-								<span className="text-xs md:text-sm">
-									{tab.title}
-								</span>
-							</button>
-						);
-					})}
-				</div>
+				</motion.div>
 			</div>
-
-			<div className="bg-card dark:bg-card">
-				<div className="container max-w-5xl">
-					{featureTabs.map((tab) => {
-						const filteredStack = tab.stack || [];
-						const filteredHighlights = tab.highlights || [];
-						return (
-							<div
-								key={tab.id}
-								className={cn(
-									"border-t py-8 first:border-t-0 md:py-12 lg:border-t-0 lg:py-16",
-									selectedTab === tab.id
-										? "block"
-										: "block lg:hidden",
-								)}
-							>
-								<div className="grid grid-cols-1 items-center gap-8 md:grid-cols-2 lg:gap-12">
-									<div>
-										<h3 className="font-normal text-2xl text-foreground/60 leading-normal md:text-3xl">
-											<strong className="text-secondary">
-												{tab.title}.{" "}
-											</strong>
-											{tab.subtitle}
-										</h3>
-
-										{tab.description && (
-											<p className="mt-4 text-foreground/60">
-												{tab.description}
-											</p>
-										)}
-
-										{filteredStack?.length > 0 && (
-											<div className="mt-4 flex flex-wrap gap-6">
-												{filteredStack.map(
-													(tool, k) => (
-														<a
-															href={tool.href}
-															target="_blank"
-															key={`stack-tool-${k}`}
-															className="flex items-center gap-2"
-															rel="noreferrer"
-														>
-															<tool.icon className="size-6" />
-															<strong className="block text-sm">
-																{tool.title}
-															</strong>
-														</a>
-													),
-												)}
-											</div>
-										)}
-									</div>
-									<div>
-										{tab.image && (
-											<Image
-												src={tab.image}
-												alt={tab.title}
-												className={cn(
-													" h-auto w-full max-w-xl",
-													{
-														"rounded-2xl border-4 border-secondary/10":
-															tab.imageBorder,
-													},
-												)}
-											/>
-										)}
-									</div>
-								</div>
-
-								{filteredHighlights.length > 0 && (
-									<div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-										{filteredHighlights.map(
-											(highlight, k) => (
-												<div
-													key={`highlight-${k}`}
-													className="flex flex-col items-stretch justify-between rounded-lg border p-4"
-												>
-													<div>
-														<highlight.icon
-															className="text-primary text-xl"
-															width="1em"
-															height="1em"
-														/>
-														<strong className="mt-2 block">
-															{highlight.title}
-														</strong>
-														<p className="mt-1 text-sm opacity-50">
-															{
-																highlight.description
-															}
-														</p>
-													</div>
-												</div>
-											),
-										)}
-									</div>
-								)}
-							</div>
-						);
-					})}
-				</div>
-			</div>
-		</section>
+			
+			<motion.div
+				style={{
+					rotateX,
+					rotateZ,
+					translateY,
+					opacity,
+				}}
+				className=""
+			>
+				<motion.div className="flex flex-row-reverse space-x-reverse space-x-20 mb-20">
+					{featureTabs.map((feature) => (
+						<FeatureCard
+							feature={feature}
+							translate={translateX}
+							key={feature.title}
+						/>
+					))}
+				</motion.div>
+				<motion.div className="flex flex-row mb-20 space-x-20">
+					{featureTabs.map((feature) => (
+						<FeatureCard
+							feature={feature}
+							translate={translateXReverse}
+							key={feature.title + "-reverse"}
+						/>
+					))}
+				</motion.div>
+			</motion.div>
+			
+			<VelocityText className="absolute bottom-40 left-0 z-10 w-full py-10">
+				<span className="text-7xl font-black uppercase text-[var(--color-accent)] [-webkit-text-stroke:2px_black] dark:[-webkit-text-stroke:2px_white] md:text-9xl opacity-80">
+					Smart Inventory — Compliance First — AI Operations — Smart Inventory — Compliance First — AI Operations —
+				</span>
+			</VelocityText>
+		</div>
 	);
 }
+
+const FeatureCard = ({
+	feature,
+	translate,
+}: {
+	feature: typeof featureTabs[0];
+	translate: any;
+}) => {
+	return (
+		<motion.div
+			style={{
+				x: translate,
+			}}
+			whileHover={{
+				y: -20,
+			}}
+			key={feature.title}
+			className="group/product h-96 w-[30rem] relative shrink-0"
+		>
+			<div className="block group-hover/product:shadow-2xl h-full w-full bg-card border-2 border-black dark:border-white rounded-xl overflow-hidden relative">
+				<div className="absolute inset-0 z-0">
+					{feature.image && (
+						<Image
+							src={feature.image}
+							alt={feature.title}
+							className="object-cover object-center h-full w-full opacity-50"
+						/>
+					)}
+				</div>
+				<div className="absolute inset-0 z-10 bg-gradient-to-t from-background via-background/80 to-transparent p-8 flex flex-col justify-end">
+					<div 
+						className="size-12 rounded-lg flex items-center justify-center mb-4 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_#000] dark:shadow-[4px_4px_0px_0px_#fff]"
+						style={{ backgroundColor: feature.color }}
+					>
+						<feature.icon className="size-6 text-black" />
+					</div>
+					<h3 className="text-2xl font-bold mb-2">{feature.title}</h3>
+					<p className="text-foreground/80 font-medium">{feature.description}</p>
+				</div>
+			</div>
+		</motion.div>
+	);
+};

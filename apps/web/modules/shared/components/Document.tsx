@@ -5,15 +5,19 @@ import { Toaster } from "@ui/components/toast";
 import { cn } from "@ui/lib";
 import { Provider as JotaiProvider } from "jotai";
 import { ThemeProvider } from "next-themes";
-import { Poppins } from "next/font/google";
+import { Manrope, Unbounded } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import type { PropsWithChildren } from "react";
 
-const sansFont = Poppins({
+const headingFont = Unbounded({
 	subsets: ["latin"],
-	weight: ["400", "500", "600", "700"],
-	variable: "--font-sans",
+	variable: "--font-heading",
+});
+
+const bodyFont = Manrope({
+	subsets: ["latin"],
+	variable: "--font-body",
 });
 
 export function Document({
@@ -24,8 +28,9 @@ export function Document({
 		<html lang={locale} suppressHydrationWarning>
 			<body
 				className={cn(
-					"min-h-screen bg-background font-sans text-foreground antialiased",
-					sansFont.variable,
+					"min-h-screen bg-background font-body text-foreground antialiased",
+					headingFont.variable,
+					bodyFont.variable,
 				)}
 			>
 				<NuqsAdapter>

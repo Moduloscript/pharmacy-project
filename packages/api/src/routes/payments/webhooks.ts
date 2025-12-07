@@ -711,6 +711,7 @@ async function updateOrderStatus(reference: string, status: string, paymentData:
             gatewayReference: paymentData.gatewayReference,
             gatewayResponse: JSON.stringify(paymentData),
             updatedAt: new Date(),
+            completedAt: dbStatus === 'COMPLETED' ? new Date() : orphanExisting.completedAt,
           },
         });
       } else {
@@ -727,6 +728,7 @@ async function updateOrderStatus(reference: string, status: string, paymentData:
             gatewayResponse: JSON.stringify(paymentData),
             gatewayFee: paymentData.gatewayFee || 0,
             appFee: paymentData.appFee || 0,
+            completedAt: dbStatus === 'COMPLETED' ? new Date() : null,
           },
         });
       }
@@ -800,6 +802,7 @@ async function updateOrderStatus(reference: string, status: string, paymentData:
           gatewayReference: paymentData.gatewayReference,
           gatewayResponse: JSON.stringify(paymentData),
           updatedAt: new Date(),
+          completedAt: dbStatus === 'COMPLETED' ? new Date() : existingPayment.completedAt,
         }
       });
     } else {
@@ -816,6 +819,7 @@ async function updateOrderStatus(reference: string, status: string, paymentData:
           gatewayResponse: JSON.stringify(paymentData),
           gatewayFee: paymentData.gatewayFee || 0,
           appFee: paymentData.appFee || 0,
+          completedAt: dbStatus === 'COMPLETED' ? new Date() : null,
         }
       });
     }

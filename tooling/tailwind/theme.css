@@ -56,29 +56,29 @@
 
 @layer base {
 	:root {
-		--border: #e3ebf6;
-		--input: #c7ced8;
+		--border: #d0d4d8;
+		--input: #b8bfc7;
 		--ring: #4e6df5;
-		--background: #f2f4f3;
-		--foreground: #292b35;
+		--background: #e8e9e7;
+		--foreground: #2a2c32;
 		--primary: #4e6df5;
-		--primary-foreground: #f2f4f3;
-		--secondary: #292b35;
-		--secondary-foreground: #f2f4f3;
+		--primary-foreground: #e8e9e7;
+		--secondary: #2a2c32;
+		--secondary-foreground: #e8e9e7;
 		--destructive: #ef4444;
-		--destructive-foreground: #f2f4f3;
+		--destructive-foreground: #e8e9e7;
 		--success: #39a561;
-		--success-foreground: #f2f4f3;
-		--muted: #f2f4f3;
-		--muted-foreground: #64748b;
-		--accent: #e8eae9;
-		--accent-foreground: #292b35;
-		--popover: #f2f4f3;
-		--popover-foreground: #292b35;
-		--card: #f2f4f3;
-		--card-foreground: #292b35;
+		--success-foreground: #e8e9e7;
+		--muted: #dfe0de;
+		--muted-foreground: #5a6370;
+		--accent: #d5d7d5;
+		--accent-foreground: #2a2c32;
+		--popover: #dfe0de;
+		--popover-foreground: #2a2c32;
+		--card: #dfe0de;
+		--card-foreground: #2a2c32;
 		--highlight: #e5a158;
-		--highlight-foreground: #f2f4f3;
+		--highlight-foreground: #e8e9e7;
 		--radius: 0.75rem;
 
 		/* fumadocs */

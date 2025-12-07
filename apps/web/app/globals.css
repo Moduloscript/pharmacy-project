@@ -111,38 +111,58 @@ html, body {
 	animation: slide-up 0.3s ease-out;
 }
 
-/* Enhanced Dark Mode Theme Variables for Prescriptions */
-:root {
-	/* Light mode defaults */
-	--rx-bg: #f2f4f3;
-	--rx-surface: #f2f4f3;
-	--rx-elevated: #e8eae9;
-	--rx-border: #e5e7eb;
-	--rx-muted: #6b7280;
-	--rx-text: #111827;
-	--rx-accent: #2563eb;
-	--rx-success: #10b981;
-	--rx-warning: #f59e0b;
-	--rx-danger: #ef4444;
-	--rx-pending: #f59e0b;
-	--rx-clarify: #3b82f6;
-}
+	/* Enhanced Dark Mode Theme Variables for Prescriptions */
+	:root {
+		/* Neo-Brutalist Theme Variables */
+		--color-accent: #CCFF00;
+		--border-width: 2px;
+		--shadow-hard: 4px 4px 0px 0px #000;
+		--font-heading: var(--font-heading);
+		--font-body: var(--font-body);
 
-.dark {
-	/* Dark mode overrides */
-	--rx-bg: #0b0f14;
-	--rx-surface: #0f141a;
-	--rx-elevated: #1a1f2e;
-	--rx-border: #2a3441;
-	--rx-muted: #9ca3af;
-	--rx-text: #f3f4f6;
-	--rx-accent: #60a5fa;
-	--rx-success: #34d399;
-	--rx-warning: #fbbf24;
-	--rx-danger: #f87171;
-	--rx-pending: #fbbf24;
-	--rx-clarify: #60a5fa;
-}
+		/* Light mode defaults */
+		--rx-bg: #e8e9e7;
+		--rx-surface: #dfe0de;
+		--rx-elevated: #d5d7d5;
+		--rx-border: #d0d4d8;
+		--rx-muted: #5a6370;
+		--rx-text: #2a2c32;
+		--rx-accent: #2563eb;
+		--rx-success: #10b981;
+		--rx-warning: #f59e0b;
+		--rx-danger: #ef4444;
+		--rx-pending: #f59e0b;
+		--rx-clarify: #3b82f6;
+	}
+
+	.dark {
+		/* Dark mode overrides */
+		--rx-bg: #0b0f14;
+		--rx-surface: #0f141a;
+		--rx-elevated: #1a1f2e;
+		--rx-border: #2a3441;
+		--rx-muted: #9ca3af;
+		--rx-text: #f3f4f6;
+		--rx-accent: #60a5fa;
+		--rx-success: #34d399;
+		--rx-warning: #fbbf24;
+		--rx-danger: #f87171;
+		--rx-pending: #fbbf24;
+		--rx-clarify: #60a5fa;
+		
+		/* Neo-Brutalist Dark Mode Overrides */
+		--shadow-hard: 4px 4px 0px 0px #fff;
+	}
+
+	/* Typography Overrides */
+	h1, h2, h3, h4, h5, h6 {
+		font-family: var(--font-heading);
+		letter-spacing: -0.02em;
+	}
+
+	body {
+		font-family: var(--font-body);
+	}
 
 /* Prescription Status Badge Styles */
 .rx-badge {
