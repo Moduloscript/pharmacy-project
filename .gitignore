@@ -71,3 +71,5 @@ ngrok-temp.yml
 # Sensitive documentation - DO NOT COMMIT (temporarily disabled)
 # docs/
 # *.md
+.vercel
+.env*.local

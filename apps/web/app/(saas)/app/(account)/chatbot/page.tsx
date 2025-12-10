@@ -23,7 +23,7 @@ export default async function AiDemoPage() {
 		}
 
 		return response.json();
-	})();
+	})() as Array<{ id: string }>;
 
 	await queryClient.prefetchQuery({
 		queryKey: aiChatListQueryKey(),
