@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NotificationPreferenceChecker } from '../notification-preference-checker';
 import { db } from '@repo/database';
-import type { NotificationPreferences, Customer } from '@prisma/client';
+import type { NotificationPreferences, Customer } from '@repo/database';
 
 // Mock the database module
 vi.mock('@repo/database', () => ({

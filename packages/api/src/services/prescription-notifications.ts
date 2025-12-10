@@ -7,7 +7,7 @@ import {
   NotificationChannel as PrismaNotificationChannel,
   NotificationPriority as PrismaNotificationPriority,
   NotificationStatus as PrismaNotificationStatus,
-} from '@prisma/client'
+} from '@repo/database'
 
 interface PrescriptionNotificationData {
   prescriptionId: string

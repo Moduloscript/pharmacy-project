@@ -20,7 +20,7 @@ import {
   auditPrescriptionStatusUpdate,
   auditSecurityEvent
 } from '../services/prescription-audit'
-import { PrescriptionAuditAction } from '@prisma/client'
+import { PrescriptionAuditAction } from '@repo/database'
 import type { AppBindings } from '../types/context'
 
 const app = new Hono<AppBindings>()

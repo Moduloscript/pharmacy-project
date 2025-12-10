@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { db } from '@repo/database';
-import { NotificationChannel, NotificationType, NotificationStatus } from '@prisma/client';
+import { NotificationChannel, NotificationType, NotificationStatus } from '@repo/database';
 
 /**
  * Notification Idempotency Utilities

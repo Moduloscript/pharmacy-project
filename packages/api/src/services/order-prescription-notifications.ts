@@ -4,7 +4,7 @@ import {
   NotificationChannel, 
   NotificationStatus, 
   NotificationPriority 
-} from '@prisma/client'
+} from '@repo/database'
 
 /**
  * Phase 1: Send email notification when order requires prescription upload

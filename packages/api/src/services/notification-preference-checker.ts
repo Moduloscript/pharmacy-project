@@ -1,5 +1,5 @@
 import { db } from '@repo/database';
-import { NotificationChannel, NotificationOptOutType } from '@prisma/client';
+import { NotificationChannel, NotificationOptOutType } from '@repo/database';
 
 /**
  * Notification Preference Checker Service

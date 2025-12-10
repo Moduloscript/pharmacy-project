@@ -1,5 +1,5 @@
 import { db } from '@repo/database'
-import { PrescriptionStatus, PrescriptionAuditAction } from '@prisma/client'
+import { PrescriptionStatus, PrescriptionAuditAction } from '@repo/database'
 import { maskSensitiveInfo } from '../utils/prescription-security'
 
 export interface AuditLogEntry {

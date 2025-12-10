@@ -1,5 +1,5 @@
 import { db } from '@repo/database'
-import { PrescriptionStatus } from '@prisma/client'
+import { PrescriptionStatus } from '@repo/database'
 
 export interface PrescriptionValidationResult {
   isValid: boolean

@@ -8,7 +8,7 @@ import {
   NotificationType as PrismaNotificationType,
   NotificationChannel as PrismaNotificationChannel,
   NotificationStatus as PrismaNotificationStatus,
-} from '@prisma/client';
+} from '@repo/database';
 
 function mapType(t: string): PrismaNotificationType {
   switch ((t || '').toLowerCase()) {
