@@ -44,7 +44,7 @@ dist/
 .content-collections/
 
 # Logs
-logs
+/logs
 *.log
 dev-debug.log
 # Dependency directories
