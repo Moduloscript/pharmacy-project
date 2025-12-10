@@ -28,7 +28,8 @@
 	"dependencies": {
 		"bullmq": "^4.15.4",
 		"ioredis": "^5.3.2",
-		"@repo/database": "workspace:*"
+		"@repo/database": "workspace:*",
+		"@prisma/client": "^6.3.1"
 	},
 	"devDependencies": {
 		"@repo/tsconfig": "workspace:*",
