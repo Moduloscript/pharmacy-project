@@ -13,7 +13,7 @@ import {
   NotificationType as PrismaNotificationType,
   NotificationChannel as PrismaNotificationChannel,
   NotificationStatus as PrismaNotificationStatus,
-} from '@prisma/client';
+} from '@repo/database';
 
 // Mapping helpers to convert internal strings to Prisma enums
 function mapType(t: string): PrismaNotificationType {

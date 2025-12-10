@@ -1,5 +1,5 @@
 import { db } from '@repo/database';
-import { NotificationType, NotificationChannel } from '@prisma/client';
+import { NotificationType, NotificationChannel } from '@repo/database';
 import { createNotificationWorker, registerNotificationProvider } from '../worker.js';
 import { addNotificationJob } from '../notifications.js';
 import type { NotificationJobData, NotificationJobResult, NotificationProvider } from '../types.js';

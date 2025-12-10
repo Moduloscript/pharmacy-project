@@ -1,5 +1,5 @@
 import { db } from "@repo/database";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@repo/database";
 import { logger } from "@repo/logs";
 
 export type ListParams = {

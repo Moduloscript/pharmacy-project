@@ -1,5 +1,5 @@
 import { db } from "@repo/database";
-import { CustomerType, BusinessVerificationStatus } from "@prisma/client";
+import { CustomerType, BusinessVerificationStatus } from "@repo/database";
 
 export async function getUserByEmail(email: string) {
 	const user = await db.user.findUnique({
