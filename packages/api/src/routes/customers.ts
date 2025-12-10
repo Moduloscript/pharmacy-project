@@ -8,7 +8,7 @@ import {
   getCustomersByVerificationStatus,
   userNeedsCustomerProfile 
 } from '@repo/auth/lib/user';
-import { CustomerType, BusinessVerificationStatus } from '@prisma/client';
+import { CustomerType, BusinessVerificationStatus } from '@repo/database';
 import type { AppBindings } from '../types/context';
 
 const customersRouter = new Hono<AppBindings>();

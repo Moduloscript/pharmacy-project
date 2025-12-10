@@ -237,7 +237,7 @@ model Customer {
 }
 
 model Product {
-  id                     String              @id @default(cuid())
+  id                     String                 @id @default(cuid())
   name                   String
   description            String?
   category               ProductCategory
@@ -249,29 +249,29 @@ model Product {
   strength               String?
   dosageForm             String?
   activeIngredient       String?
-  retailPrice            Decimal             @db.Decimal(10, 2)
-  wholesalePrice         Decimal?            @db.Decimal(10, 2)
-  cost                   Decimal?            @db.Decimal(10, 2)
-  sku                    String              @unique
+  retailPrice            Decimal                @db.Decimal(10, 2)
+  wholesalePrice         Decimal?               @db.Decimal(10, 2)
+  cost                   Decimal?               @db.Decimal(10, 2)
+  sku                    String                 @unique
   barcode                String?
-  stockQuantity          Int                 @default(0)
-  minStockLevel          Int                 @default(10)
+  stockQuantity          Int                    @default(0)
+  minStockLevel          Int                    @default(10)
   maxStockLevel          Int?
   packSize               String?
-  unit                   String              @default("piece")
-  weight                 Decimal?            @db.Decimal(8, 2)
+  unit                   String                 @default("piece")
+  weight                 Decimal?               @db.Decimal(8, 2)
   dimensions             String?
-  isActive               Boolean             @default(true)
-  isPrescriptionRequired Boolean             @default(false)
-  isRefrigerated         Boolean             @default(false)
-  isControlled           Boolean             @default(false)
-  slug                   String              @unique
+  isActive               Boolean                @default(true)
+  isPrescriptionRequired Boolean                @default(false)
+  isRefrigerated         Boolean                @default(false)
+  isControlled           Boolean                @default(false)
+  slug                   String                 @unique
   tags                   String?
-  hasExpiry              Boolean             @default(true)
+  hasExpiry              Boolean                @default(true)
   shelfLifeMonths        Int?
-  minOrderQuantity       Int                 @default(1)
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  minOrderQuantity       Int                    @default(1)
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
   imageUrl               String?
   images                 Json?
   cartItems              CartItem[]
@@ -438,15 +438,15 @@ model PaymentRetryLog {
 }
 
 model ProductBatch {
-  id          String    @id @default(cuid())
-  productId   String    @map("product_id")
-  batchNumber String    @map("batch_number")
-  qty         Int       @default(0)
-  costPrice   Decimal?  @db.Decimal(10, 2) @map("cost_price")
-  expiryDate  DateTime? @map("expiry_date")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  product     Product   @relation(fields: [productId], references: [id])
+  id          String              @id @default(cuid())
+  productId   String              @map("product_id")
+  batchNumber String              @map("batch_number")
+  qty         Int                 @default(0)
+  costPrice   Decimal?            @map("cost_price") @db.Decimal(10, 2)
+  expiryDate  DateTime?           @map("expiry_date")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+  product     Product             @relation(fields: [productId], references: [id])
   movements   InventoryMovement[]
 
   @@unique([productId, batchNumber])
@@ -456,7 +456,7 @@ model ProductBatch {
 }
 
 model InventoryMovement {
-  id            String       @id @default(cuid())
+  id            String        @id @default(cuid())
   productId     String
   type          String
   quantity      Int
@@ -466,11 +466,11 @@ model InventoryMovement {
   newStock      Int
   batchNumber   String?
   expiryDate    DateTime?
-  batchId       String?   @map("batch_id")
+  batchId       String?       @map("batch_id")
   userId        String?
   notes         String?
-  createdAt     DateTime     @default(now())
-  product       Product      @relation(fields: [productId], references: [id])
+  createdAt     DateTime      @default(now())
+  product       Product       @relation(fields: [productId], references: [id])
   batch         ProductBatch? @relation(fields: [batchId], references: [id])
 
   @@index([createdAt])
@@ -480,14 +480,14 @@ model InventoryMovement {
 }
 
 model ProductBulkPriceRule {
-  id               BigInt    @id @default(autoincrement())
-  productId        String    @map("product_id")
-  minQty           Int       @map("min_qty")
-  discountPercent  Decimal?  @db.Decimal(5, 2) @map("discount_percent")
-  unitPrice        Decimal?  @db.Decimal(10, 2) @map("unit_price")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @default(now()) @map("updated_at")
-  product          Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id              BigInt   @id @default(autoincrement())
+  productId       String   @map("product_id")
+  minQty          Int      @map("min_qty")
+  discountPercent Decimal? @map("discount_percent") @db.Decimal(5, 2)
+  unitPrice       Decimal? @map("unit_price") @db.Decimal(10, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @map("updated_at")
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([productId, minQty])
   @@index([productId])
@@ -577,16 +577,16 @@ model NotificationOptOut {
 }
 
 model NotificationRateLimit {
-  id                  String    @id @default(cuid())
-  customerId          String
-  notificationType    String
-  windowStart         DateTime
-  windowEnd           DateTime
-  count               Int       @default(0)
-  exceeded            Boolean   @default(false)
-  lastNotificationAt  DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  customerId         String
+  notificationType   String
+  windowStart        DateTime
+  windowEnd          DateTime
+  count              Int       @default(0)
+  exceeded           Boolean   @default(false)
+  lastNotificationAt DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@unique([customerId, notificationType, windowStart])
   @@index([customerId])
