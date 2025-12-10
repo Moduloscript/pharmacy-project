@@ -1,7 +1,7 @@
 'use client';
 
 import { atom } from 'jotai';
-import { atomWithStorage, type SyncStorage } from 'jotai/utils';
+import { atomWithStorage } from 'jotai/utils';
 
 // Session-related types
 export interface CartSession {
@@ -227,8 +227,15 @@ export class SessionManager {
 }
 
 // Base session state atom (tab-scoped)
-const sessionStateStorage: SyncStorage<CartSessionState | null> = {
-  getItem: (_key, initialValue) => {
+// Base session state atom (tab-scoped)
+interface Storage<T> {
+  getItem: (key: string, initialValue: T) => T;
+  setItem: (key: string, newValue: T) => void;
+  removeItem: (key: string) => void;
+}
+
+const sessionStateStorage: Storage<CartSessionState | null> = {
+  getItem: (_key: string, initialValue: CartSessionState | null) => {
     try {
       if (typeof window === 'undefined') return initialValue
       const fromSession = sessionStorage.getItem('benpharm-cart-session')
@@ -249,14 +256,14 @@ const sessionStateStorage: SyncStorage<CartSessionState | null> = {
       return initialValue
     }
   },
-  setItem: (_key, newValue) => {
+  setItem: (_key: string, newValue: CartSessionState | null) => {
     try {
       if (typeof window === 'undefined') return
       const str = JSON.stringify(newValue)
       sessionStorage.setItem('benpharm-cart-session', str)
     } catch {}
   },
-  removeItem: (_key) => {
+  removeItem: (_key: string) => {
     try {
       if (typeof window === 'undefined') return
       sessionStorage.removeItem('benpharm-cart-session')
@@ -272,11 +279,17 @@ export const cartSessionStateAtom = atomWithStorage<CartSessionState | null>(
 
 // Derived atoms
 export const currentSessionAtom = atom(
-  (get) => get(cartSessionStateAtom)?.session || null
+  (get) => {
+    const state = get(cartSessionStateAtom);
+    return state && 'session' in state ? state.session : null;
+  }
 );
 
 export const sessionMetadataAtom = atom(
-  (get) => get(cartSessionStateAtom)?.metadata || null
+  (get) => {
+    const state = get(cartSessionStateAtom); 
+    return state && 'metadata' in state ? state.metadata : null;
+  }
 );
 
 export const isSessionActiveAtom = atom(
@@ -293,7 +306,8 @@ export const initializeSessionAtom = atom(
     const currentState = get(cartSessionStateAtom);
 
     // If there's no session or it's not active, start a fresh one
-    if (!currentState || !SessionManager.isActive(currentState.session)) {
+    // If there's no session or it's not active, start a fresh one
+    if (!currentState || !('session' in currentState) || !SessionManager.isActive(currentState.session)) {
       // Clean up any legacy localStorage mirrors and stale keys
       SessionManager.cleanupExpiredSessions();
       const newState = {
@@ -305,6 +319,7 @@ export const initializeSessionAtom = atom(
     }
 
     // Otherwise just update activity
+    if (!('session' in currentState)) return;
     const updatedSession = SessionManager.updateActivity(currentState.session);
     set(cartSessionStateAtom, {
       ...currentState,
@@ -321,7 +336,7 @@ export const updateSessionActivityAtom = atom(
   null,
   (get, set) => {
     const currentState = get(cartSessionStateAtom);
-    if (!currentState || !SessionManager.isActive(currentState.session)) return;
+    if (!currentState || !('session' in currentState) || !SessionManager.isActive(currentState.session)) return;
 
     const updatedSession = SessionManager.updateActivity(currentState.session);
     set(cartSessionStateAtom, {
@@ -339,7 +354,7 @@ export const startCheckoutSessionAtom = atom(
   null,
   (get, set, orderId?: string) => {
     const currentState = get(cartSessionStateAtom);
-    if (!currentState) return;
+    if (!currentState || !('session' in currentState)) return;
 
     const checkoutSession = SessionManager.startCheckout(currentState.session, orderId);
     set(cartSessionStateAtom, {
@@ -357,7 +372,7 @@ export const completeSessionAtom = atom(
   null,
   (get, set) => {
     const currentState = get(cartSessionStateAtom);
-    if (!currentState) return;
+    if (!currentState || !('session' in currentState)) return;
 
     const completedSession = SessionManager.completeSession(currentState.session);
     set(cartSessionStateAtom, {
@@ -375,7 +390,7 @@ export const failPaymentAtom = atom(
   null,
   (get, set) => {
     const currentState = get(cartSessionStateAtom);
-    if (!currentState) return;
+    if (!currentState || !('session' in currentState)) return;
 
     const failedSession = SessionManager.failPayment(currentState.session);
     set(cartSessionStateAtom, {

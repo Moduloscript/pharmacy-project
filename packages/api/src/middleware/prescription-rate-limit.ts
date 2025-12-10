@@ -60,7 +60,7 @@ export function prescriptionRateLimit(config: RateLimitConfig) {
       
       // Store rate limit violation in database for monitoring
       try {
-        await db.auditLog.create({
+        await db.prescriptionAuditLog.create({
           data: {
             userId: user?.id,
             action: 'RATE_LIMIT_EXCEEDED',
@@ -72,7 +72,7 @@ export function prescriptionRateLimit(config: RateLimitConfig) {
               path: c.req.path,
               method: c.req.method
             },
-            createdAt: new Date()
+            timestamp: new Date()
           }
         })
       } catch (error) {

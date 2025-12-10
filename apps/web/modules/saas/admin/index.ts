@@ -11,15 +11,15 @@ export {
 // Types
 export type {
   DashboardMetrics,
-  RevenueAnalytics,
-  TopProduct,
+  RevenueData as RevenueAnalytics,
+  ProductPerformance as TopProduct,
   InventoryAlert,
   SystemHealth,
   DashboardFilters
 } from './lib/types';
 
 // API
-export { AdminAPI, AdminUtils } from './lib/api';
+export { AdminDashboardAPI as AdminAPI, AdminUtils } from './lib/api';
 
 // Query hooks
 export {

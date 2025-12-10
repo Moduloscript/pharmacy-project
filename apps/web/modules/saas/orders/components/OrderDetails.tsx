@@ -233,7 +233,7 @@ export function OrderDetails({ orderId, isAdmin = false }: OrderDetailsProps) {
   if (!order) return null
   
   // Check if order requires prescription - handle both items and orderItems structures
-  const orderItems = order?.items || order?.orderItems || []
+  const orderItems = order?.items || []
   const requiresPrescription = orderItems.some(item => 
     item?.product?.isPrescriptionRequired || item?.product?.isControlled
   )
@@ -625,7 +625,7 @@ export function OrderDetails({ orderId, isAdmin = false }: OrderDetailsProps) {
             <div className="flex flex-col sm:flex-row gap-4">
               {['RECEIVED', 'PROCESSING'].includes(order.status) && (
                 <Button
-                  variant="destructive"
+                  variant="error"
                   onClick={handleCancelOrder}
                   disabled={cancelOrderMutation.isPending}
                   className="rounded-lg h-12 px-6"

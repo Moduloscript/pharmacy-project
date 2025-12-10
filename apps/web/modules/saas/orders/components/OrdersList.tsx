@@ -495,7 +495,7 @@ export function OrdersList({
                     return (
                       <Button
                         key={pageNum}
-                        variant={pageNum === currentPage ? "default" : "outline"}
+                        variant={pageNum === currentPage ? "primary" : "outline"}
                         size="sm"
                         onClick={() => handlePageChange(pageNum)}
                       >

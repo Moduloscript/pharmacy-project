@@ -57,8 +57,22 @@ export function ProductFilters({ className }: ProductFiltersProps) {
     return iconMap[category] || '💊';
   };
 
+  interface FilterOption {
+    value: string;
+    label: string;
+    icon?: string;
+    count?: number;
+    description?: string;
+  }
+
   // Enhanced filter sections with icons and better styling
-  const filterSections = [
+  const filterSections: {
+    id: string;
+    name: string;
+    icon?: string;
+    description?: string;
+    options: FilterOption[];
+  }[] = [
     {
       id: 'category',
       name: 'Category',

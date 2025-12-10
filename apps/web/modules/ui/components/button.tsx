@@ -20,6 +20,9 @@ const buttonVariants = cva(
 					"border-black bg-white text-black shadow-[var(--shadow-hard)] hover:bg-gray-100 dark:border-white",
 				ghost: "border-transparent text-primary hover:bg-primary/10 hover:text-primary",
 				link: "border-transparent text-primary underline-offset-4 hover:underline",
+				default:
+					"border-black bg-[var(--color-accent)] text-black shadow-[var(--shadow-hard)] hover:bg-[var(--color-accent)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_#000] dark:border-white dark:shadow-[var(--shadow-hard)] dark:hover:shadow-[6px_6px_0px_0px_#fff]",
+				destructive: "bg-destructive text-destructive-foreground border-destructive shadow-[var(--shadow-hard)] hover:bg-destructive/90",
 			},
 			size: {
 				md: "h-12 px-6 text-sm",

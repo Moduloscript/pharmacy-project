@@ -9,7 +9,7 @@ import { config } from "@repo/config";
 import { HTTPException } from "hono/http-exception";
 
 import type { AppBindings } from "../types/context";
-export const documentsRouter = new Hono<AppBindings>().basePath("/documents");
+export const documentsRouter = new Hono<AppBindings>();
 
 // Create document record after successful client-side upload
 // POST /api/documents

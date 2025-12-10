@@ -13,7 +13,8 @@
 				"@shared/*": ["./modules/shared/*"],
 				"@repo/config": ["../../config"],
 				"content-collections": ["./.content-collections/generated"]
-			}
+			},
+			"downlevelIteration": true
 	},
 	"include": [
 		"**/*.ts",

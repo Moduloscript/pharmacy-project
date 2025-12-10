@@ -13,4 +13,7 @@ declare global {
 
 declare global {
 	interface IntlMessages extends Messages {}
+    interface Window {
+        gtag: (command: string, action: string, params?: any) => void;
+    }
 }

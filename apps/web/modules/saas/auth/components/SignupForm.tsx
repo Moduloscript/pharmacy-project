@@ -68,6 +68,7 @@ export function SignupForm({ prefillEmail }: { prefillEmail?: string }) {
 			name: "",
 			email: prefillEmail ?? email ?? "",
 			password: "",
+			customerType: "RETAIL",
 		},
 	});
 

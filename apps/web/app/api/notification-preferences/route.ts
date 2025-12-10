@@ -157,13 +157,13 @@ export async function PUT(request: NextRequest) {
       });
 
       if (Object.keys(changes).length > 0) {
-        await db.notificationPreferenceHistory.create({
-          data: {
-            customerId: customer.id,
-            changes,
-            source: 'manual',
-          },
-        });
+        // await db.notificationPreferenceHistory.create({
+        //   data: {
+        //     customerId: customer.id,
+        //     changes,
+        //     source: 'manual',
+        //   },
+        // });
       }
     }
 

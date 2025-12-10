@@ -41,7 +41,10 @@ export interface Product {
   usage_instructions?: string;
   side_effects?: string;
   contraindications?: string;
+  sku?: string;
   hasBulkRules?: boolean;
+  is_controlled?: boolean;
+  isControlled?: boolean;
 }
 
 export interface ProductsResponse {

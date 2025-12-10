@@ -1,7 +1,7 @@
 'use client';
 
-import { atom } from 'jotai';
-import { atomWithStorage, type SyncStorage } from 'jotai/utils';
+import { atom, type WritableAtom } from 'jotai';
+import { atomWithStorage } from 'jotai/utils';
 import type { Product } from '../../products/lib/api';
 import { 
   cartSessionStateAtom, 
@@ -77,8 +77,33 @@ function shouldAllowLegacyMigrationForThisSession(): boolean {
   }
 }
 
-const sessionCartStorage: SyncStorage<unknown> = {
-  getItem: (key, initialValue) => {
+// Cart types
+export interface CartSummary {
+  items: CartItem[];
+  subtotal: number;
+  bulkDiscount: number;
+  deliveryFee: number;
+  total: number;
+  grandTotal: number;
+  tax: number;
+  discount: number;
+  totalQuantity: number;
+  selectedDelivery: DeliveryOption['id'];
+  isEmpty: boolean;
+  requiresPrescription: boolean;
+  session: CartSession | null;
+  isActive: boolean;
+}
+
+// Define Storage interface locally since it's not exported
+interface Storage<T> {
+  getItem: (key: string, initialValue: T) => T;
+  setItem: (key: string, newValue: T) => void;
+  removeItem: (key: string) => void;
+}
+
+const sessionCartStorage: Storage<CartItem[]> = {
+  getItem: (key: string, initialValue: CartItem[]) => {
     try {
       if (typeof window === 'undefined') return initialValue;
       const dynKey = perSessionCartKey();
@@ -112,7 +137,7 @@ const sessionCartStorage: SyncStorage<unknown> = {
       return initialValue;
     }
   },
-  setItem: (key, newValue) => {
+  setItem: (key: string, newValue: CartItem[]) => {
     try {
       if (typeof window === 'undefined') return;
       const dynKey = perSessionCartKey();
@@ -122,7 +147,7 @@ const sessionCartStorage: SyncStorage<unknown> = {
       // noop
     }
   },
-  removeItem: (key) => {
+  removeItem: (key: string) => {
     try {
       if (typeof window === 'undefined') return;
       const dynKey = perSessionCartKey();
@@ -184,7 +209,7 @@ export const DELIVERY_OPTIONS: DeliveryOption[] = [
 
 // Enhanced cart state atoms with session awareness
 // cartItemsAtom now uses per-session/per-tab dynamic keys via sessionCartStorage
-export const cartItemsAtom = atomWithStorage<CartItem[]>('benpharm-cart-items', [], sessionCartStorage)
+export const cartItemsAtom = atomWithStorage<CartItem[]>('benpharm-cart-items', [], sessionCartStorage) as WritableAtom<CartItem[], [CartItem[]], void>
 export const selectedDeliveryAtom = atomWithStorage<DeliveryOption['id']>('benpharm-delivery', 'pickup')
 
 // Session-aware cart management
@@ -258,6 +283,9 @@ export const cartSummaryAtom = atom((get) => {
      bulkDiscount,
      deliveryFee,
      total,
+     grandTotal: total,
+     tax: 0,
+     discount: bulkDiscount,
      totalQuantity,
      selectedDelivery,
      isEmpty: items.length === 0 || !isActive,

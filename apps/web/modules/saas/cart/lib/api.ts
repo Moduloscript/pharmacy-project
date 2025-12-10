@@ -187,7 +187,7 @@ export const CartUtils = {
         errors.push(`${item.product.name}: Only ${item.product.stock_quantity} units available (requested ${item.quantity})`);
       }
       
-      if (item.quantity < item.product.min_order_qty) {
+      if (item.quantity < (item.product?.min_order_qty || 1)) {
         errors.push(`${item.product.name}: Minimum order quantity is ${item.product.min_order_qty} (current ${item.quantity})`);
       }
     });

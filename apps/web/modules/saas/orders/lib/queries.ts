@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { OrdersAPI } from './api';
 import { 
-  OrdersAPI,
   OrderFilters, 
   CreateOrderRequest, 
   UpdateOrderRequest,
   Order,
   OrderStatus,
   PaymentStatus
-} from './api';
+} from './types';
 
 // Query Keys Factory
 export const orderKeys = {

@@ -376,8 +376,8 @@ export class CartVersioningManager {
       const remoteItemMap = new Map(remoteData.items.map((item: any) => [item.id, item]))
 
       // Check for quantity conflicts
-      localItemMap.forEach((localItem, id) => {
-        const remoteItem = remoteItemMap.get(id)
+      localItemMap.forEach((localItem: any, id) => {
+        const remoteItem: any = remoteItemMap.get(id)
         if (remoteItem && localItem.quantity !== remoteItem.quantity) {
           conflicts.push({
             field: `items.${id}.quantity`,

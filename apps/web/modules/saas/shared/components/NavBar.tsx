@@ -192,7 +192,7 @@ export function NavBar() {
 								<button
 									onClick={(e) => {
 										e.preventDefault();
-										menuItem.onClick();
+										menuItem.onClick?.();
 									}}
 									className={cn(
 										"flex items-center gap-2 whitespace-nowrap border-b-2 px-1 pb-3 relative w-full text-left",

@@ -1,5 +1,8 @@
 {
 	"extends": "@repo/tsconfig/base.json",
+	"compilerOptions": {
+		"downlevelIteration": true
+	},
 	"include": ["**/*.ts"],
 	"exclude": ["dist", "build", "node_modules"]
 }

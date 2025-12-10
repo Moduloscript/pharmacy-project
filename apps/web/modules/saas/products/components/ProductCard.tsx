@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { SupabaseImage } from '@/components/ui/supabase-image';
 import { Badge } from '@ui/components/badge';
 import { Button } from '@ui/components/button';
@@ -268,7 +269,7 @@ export function ProductCardCompact({ product, onAddToCart }: ProductCardProps) {
             width={64}
             height={64}
             className="size-full object-cover"
-            onError={(e) => {
+            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
               e.currentTarget.style.display = 'none';
               const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
               if (placeholder) {

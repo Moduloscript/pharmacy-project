@@ -1117,7 +1117,7 @@ app.get('/:prescriptionId/files', prescriptionViewRateLimit, async (c) => {
   const files: RxFile[] = []
 
   // Helper to HEAD-check a URL and extract content-type for legacy external urls
-  async function probe(url: string): Promise<{ ok: boolean; contentType: string | null; size: number | null; lastModified: string | null }> {
+  const probe = async (url: string): Promise<{ ok: boolean; contentType: string | null; size: number | null; lastModified: string | null }> => {
     try {
       const head = await fetch(url, { method: 'HEAD' })
       if (!head.ok) return { ok: false, contentType: null, size: null, lastModified: null }

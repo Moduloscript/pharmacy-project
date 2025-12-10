@@ -73,7 +73,7 @@ export function DocumentUpload(props: {
         }
 
         // 3) Persist metadata via API
-        const createRes = await apiClient.documents.$post({
+        const createRes = await (apiClient as any).documents.$post({
           json: {
             name: file.name,
             key,

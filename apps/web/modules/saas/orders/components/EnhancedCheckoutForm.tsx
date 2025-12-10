@@ -765,7 +765,7 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
             </RadioGroup>
             
             {/* Purchase Order Number for wholesale customers */}
-            {cartData?.data?.customerInfo?.customerType !== 'RETAIL' && (
+            {(cartData as any)?.data?.customerInfo?.customerType !== 'RETAIL' && (
               <div className="mt-4">
                 <Label htmlFor="purchaseOrderNumber">Purchase Order Number (Optional)</Label>
                 <Input

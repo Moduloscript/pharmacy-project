@@ -1,6 +1,7 @@
 import { auth } from "../auth";
 import { headers } from "next/headers";
 import { cache } from "react";
+import React from "react";
 
 /**
  * Get the current session on the server side

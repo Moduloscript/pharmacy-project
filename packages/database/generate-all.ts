@@ -15,7 +15,20 @@ try {
   console.log('Fixing z.cuid() references...');
   const zodIndexPath = join(__dirname, 'src', 'zod', 'index.ts');
   let content = readFileSync(zodIndexPath, 'utf-8');
-  const updatedContent = content.replace(/z\.cuid\(\)/g, 'z.string().cuid()');
+  let updatedContent = content.replace(/z\.cuid\(\)/g, 'z.string().cuid()');
+  
+  // Step 4: Fix DecimalJsLike schema  
+  console.log('Fixing DecimalJsLike schema...');
+  updatedContent = updatedContent.replace(
+    /export const DecimalJsLikeSchema: z\.ZodType<Prisma\.DecimalJsLike> = z\.object\(\{[\s\S]*?\}\)/,
+    `export const DecimalJsLikeSchema: z.ZodType<Prisma.DecimalJsLike> = z.object({
+  d: z.array(z.number()),
+  e: z.number(),
+  s: z.number(),
+  toFixed: z.function().args().returns(z.string()),
+}) as z.ZodType<Prisma.DecimalJsLike>`
+  );
+  
   writeFileSync(zodIndexPath, updatedContent, 'utf-8');
   
   console.log('✓ Database generation complete!');

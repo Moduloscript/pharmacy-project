@@ -74,7 +74,7 @@ export function PrescriptionDetailsModal({
     async function refresh() {
       try {
         // Prefer the list endpoint which handles legacy imageUrl and documentKey
-        const res = await fetch(`/api/prescriptions/${prescription.id}/files`, { credentials: 'include' });
+        const res = await fetch(`/api/prescriptions/${prescription?.id}/files`, { credentials: 'include' });
         if (res.ok) {
           const json = await res.json();
           const f = json?.data?.files?.[0];

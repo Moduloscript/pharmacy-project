@@ -116,7 +116,7 @@ interface Product {
   isRefrigerated: boolean;
   isControlled: boolean;
   slug: string;
-  images?: any[];
+  images?: unknown[];
   imageUrl?: string;
   tags?: string;
   hasExpiry: boolean;
@@ -334,7 +334,7 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
   };
 
   // Handle images update
-  const handleImagesUpdate = (newImages: any[]) => {
+  const handleImagesUpdate = (newImages: unknown[]) => {
     refetchImages();
   };
 
@@ -863,19 +863,19 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
                 <div className="mt-6 p-4 bg-white border border-gray-200 rounded-lg">
                   <h4 className="font-medium mb-2 text-gray-900">Pricing Summary</h4>
                   <div className="space-y-2 text-sm">
-                    {watch('cost') && watch('cost') > 0 && watch('retailPrice') && watch('retailPrice') > 0 && (
+                    {watch('cost')! > 0 && watch('retailPrice')! > 0 && (
                       <div className="flex justify-between">
                         <span className="text-gray-700">Retail Margin:</span>
                         <span className="font-medium text-green-600">
-                          {(((watch('retailPrice') - watch('cost')) / watch('cost')) * 100).toFixed(1)}%
+                          {(((watch('retailPrice')! - watch('cost')!) / watch('cost')!) * 100).toFixed(1)}%
                         </span>
                       </div>
                     )}
-                    {watch('cost') && watch('cost') > 0 && watch('wholesalePrice') && watch('wholesalePrice') > 0 && (
+                    {watch('cost')! > 0 && watch('wholesalePrice')! > 0 && (
                       <div className="flex justify-between">
                         <span className="text-gray-700">Wholesale Margin:</span>
                         <span className="font-medium text-blue-600">
-                          {(((watch('wholesalePrice') - watch('cost')) / watch('cost')) * 100).toFixed(1)}%
+                          {(((watch('wholesalePrice')! - watch('cost')!) / watch('cost')!) * 100).toFixed(1)}%
                         </span>
                       </div>
                     )}

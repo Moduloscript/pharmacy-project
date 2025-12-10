@@ -13,12 +13,12 @@ export const metadata: Metadata = {
   description: 'Audit trail for stock adjustments',
 };
 
-export default async function ProductMovementsPage({ params }: { params: { id: string } }) {
+export default async function ProductMovementsPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session) redirect('/auth/login');
   if (session.user?.role !== 'admin') redirect('/app');
 
-  const { id } = params;
+  const { id } = await params;
 
   return (
     <div className="container mx-auto px-6 py-8 space-y-6">

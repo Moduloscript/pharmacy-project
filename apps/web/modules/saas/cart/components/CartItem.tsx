@@ -79,7 +79,10 @@ export function CartItem({
   const [, removeItem] = useAtom(removeFromCartAtom);
 
   const handleQuantityChange = async (newQuantity: number) => {
-    if (newQuantity < item.product.min_order_qty || newQuantity > item.product.stock_quantity) {
+    const minQty = item.product?.min_order_qty || 1;
+    const stockQty = item.product?.stock_quantity || 0;
+    
+    if (newQuantity < minQty || newQuantity > stockQty) {
       return; // Don't update if invalid
     }
 
@@ -95,10 +98,10 @@ export function CartItem({
     removeItem(item.id);
   };
 
-  const isOutOfStock = item.product.stock_quantity === 0;
-  const isLowStock = item.product.stock_quantity > 0 && item.product.stock_quantity < 10;
-  const exceedsStock = item.quantity > item.product.stock_quantity;
-  const belowMinimum = item.quantity < item.product.min_order_qty;
+  const isOutOfStock = (item.product?.stock_quantity || 0) === 0;
+  const isLowStock = (item.product?.stock_quantity || 0) > 0 && (item.product?.stock_quantity || 0) < 10;
+  const exceedsStock = item.quantity > (item.product?.stock_quantity || 0);
+  const belowMinimum = item.quantity < (item.product?.min_order_qty || 1);
   const hasValidationError = exceedsStock || belowMinimum;
 
   const itemTotal = item.unitPrice * item.quantity;
@@ -206,9 +209,9 @@ export function CartItem({
                 </Badge>
               )}
 
-              {item.product.nafdac_number && (
+              {item.product.nafdacNumber && (
                 <Badge variant="outline" className="text-xs">
-                  NAFDAC: {item.product.nafdac_number}
+                  NAFDAC: {item.product.nafdacNumber}
                 </Badge>
               )}
             </div>
@@ -292,7 +295,7 @@ export function CartItem({
                   size="sm"
                   aria-label="Decrease quantity"
                   onClick={() => handleQuantityChange(item.quantity - 1)}
-                  disabled={isUpdating || item.quantity <= item.product.min_order_qty}
+                  disabled={isUpdating || item.quantity <= (item.product?.min_order_qty || 1)}
                   className="size-12 p-0"
                 >
                   <MinusIcon className="size-5" />
@@ -303,17 +306,19 @@ export function CartItem({
                   value={item.quantity}
                   onChange={(e) => {
                     const raw = parseInt(e.target.value);
-                    const clamped = isNaN(raw)
-                      ? item.product.min_order_qty
-                      : Math.min(
-                          Math.max(raw, item.product.min_order_qty),
-                          item.product.stock_quantity,
-                        );
-                    handleQuantityChange(clamped);
-                  }}
-                  className="w-20 h-12 text-center"
-                  min={item.product.min_order_qty}
-                  max={item.product.stock_quantity}
+                      const minQty = item.product?.min_order_qty || 1;
+                      const stockQty = item.product?.stock_quantity || 0;
+                      const clamped = isNaN(raw)
+                        ? minQty
+                        : Math.min(
+                            Math.max(raw, minQty),
+                            stockQty,
+                          );
+                      handleQuantityChange(clamped);
+                    }}
+                    className="w-20 h-12 text-center"
+                    min={item.product?.min_order_qty || 1}
+                    max={item.product?.stock_quantity || 100}
                   disabled={isUpdating}
                 />
 

@@ -109,7 +109,7 @@ export class ResendEmailProvider extends BaseNotificationProvider {
         return 'Welcome to BenPharm';
       default:
         // Prescription and others fall back here
-        if (t && t.startsWith('prescription')) {
+        if (t && typeof t === 'string' && (t as string).startsWith('prescription')) {
           return 'Prescription Update';
         }
         return 'Notification from BenPharm';
@@ -153,7 +153,7 @@ export class ResendEmailProvider extends BaseNotificationProvider {
       let html: string | null = null;
 
       if (data.template) {
-        html = renderEmailByTemplate(data.template, {
+        html = await renderEmailByTemplate(data.template, {
           ...p,
           order_number: p.order_number ?? p.orderNumber,
           customer_name: p.customer_name ?? p.customerName,
@@ -166,7 +166,7 @@ export class ResendEmailProvider extends BaseNotificationProvider {
       }
 
       if (!html) {
-        html = renderEmailByType(data.type, {
+        html = await renderEmailByType(data.type, {
           ...p,
           order_number: p.order_number ?? p.orderNumber,
           customer_name: p.customer_name ?? p.customerName,

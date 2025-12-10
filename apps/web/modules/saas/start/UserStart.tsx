@@ -128,7 +128,7 @@ export default function UserStart() {
 									<div>
 										<div className="text-xs text-blue-200 uppercase tracking-wider">Account Type</div>
 										<div className="font-semibold text-lg">
-											{user?.customerType === 'wholesale' ? (
+											{(user as any)?.customer?.customerType === 'WHOLESALE' ? (
 												<Badge className="bg-yellow-400 text-yellow-900">Wholesale Partner</Badge>
 											) : (
 												<Badge className="bg-blue-400 text-blue-900">Retail Customer</Badge>

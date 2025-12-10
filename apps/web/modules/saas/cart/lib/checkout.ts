@@ -49,7 +49,7 @@ export class CheckoutService {
       image: item.product.images?.[0] || item.product.imageUrl || '',
       totalPrice: item.unitPrice * item.quantity,
       category: item.product.category || 'General',
-      requiresPrescription: item.product.requires_prescription || item.product.requiresPrescription || false,
+      requiresPrescription: item.product.requires_prescription || item.product.isPrescriptionRequired || item.product.is_prescription_required || false,
       wholesalePrice: item.product.wholesalePrice || item.product.wholesale_price,
       retailPrice: item.product.retailPrice || item.product.retail_price || item.unitPrice,
       sku: item.product.sku || item.product.id
@@ -109,7 +109,7 @@ export class CheckoutService {
 
     // Validate prescriptions
     const prescriptionItems = cartItems.filter(item => 
-      item.product.requires_prescription || item.product.requiresPrescription
+      item.product.requires_prescription || item.product.isPrescriptionRequired || item.product.is_prescription_required
     );
     
     if (prescriptionItems.length > 0) {
@@ -293,7 +293,7 @@ export class CheckoutService {
       deliveryMethod: checkoutData.deliveryMethod,
       paymentMethod: checkoutData.paymentMethod,
       hasPresciptions: cartItems.some(item => 
-        item.product.requires_prescription || item.product.requiresPrescription
+        item.product.requires_prescription || item.product.isPrescriptionRequired || item.product.is_prescription_required
       )
     };
   }

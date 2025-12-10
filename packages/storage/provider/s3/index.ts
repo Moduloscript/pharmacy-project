@@ -58,7 +58,7 @@ export const deleteObject: DeleteObjectHandler = async (path, { bucket }) => {
 			new DeleteObjectCommand({ Bucket: bucket, Key: path }),
 		);
 	} catch (e) {
-		logger.error(e);
+		logger.error(e as string);
 		throw new Error("Could not delete object");
 	}
 };
@@ -81,7 +81,7 @@ export const getSignedUploadUrl: GetSignedUploadUrlHandler = async (
 			},
 		);
 	} catch (e) {
-		logger.error(e);
+		logger.error(e as string);
 
 		throw new Error("Could not get signed upload url");
 	}
@@ -99,7 +99,7 @@ export const getSignedUrl: GetSignedUrlHander = async (
 			{ expiresIn },
 		);
 	} catch (e) {
-		logger.error(e);
+		logger.error(e as string);
 		throw new Error("Could not get signed url");
 	}
 };

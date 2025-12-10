@@ -120,7 +120,7 @@ export class NotificationMonitor {
       // Build channel stats
       const byChannel: Record<string, { sent: number; failed: number; successRate: number }> = {};
       channelStats.forEach(stat => {
-        const channel = stat.channel;
+        const channel = stat.channel || 'unknown';
         if (!byChannel[channel]) {
           byChannel[channel] = { sent: 0, failed: 0, successRate: 0 };
         }
@@ -141,7 +141,7 @@ export class NotificationMonitor {
       // Build type stats
       const byType: Record<string, { sent: number; failed: number; successRate: number }> = {};
       typeStats.forEach(stat => {
-        const type = stat.type;
+        const type = stat.type || 'unknown';
         if (!byType[type]) {
           byType[type] = { sent: 0, failed: 0, successRate: 0 };
         }
@@ -170,7 +170,7 @@ export class NotificationMonitor {
           type: activity.type,
           channel: activity.channel,
           status: activity.status,
-          recipient: this.maskRecipient(activity.recipient)
+          recipient: this.maskRecipient(activity.recipient || '')
         }))
       };
     } catch (error) {
@@ -346,7 +346,7 @@ export class NotificationMonitor {
    * Check for notification delivery issues and alerts
    */
   async checkForAlerts(): Promise<Array<{ type: string; message: string; severity: 'low' | 'medium' | 'high' }>> {
-    const alerts = [];
+    const alerts: Array<{ type: string; message: string; severity: 'low' | 'medium' | 'high' }> = [];
     
     try {
       const metrics = await this.getMetrics();
@@ -356,7 +356,7 @@ export class NotificationMonitor {
         alerts.push({
           type: 'high_failure_rate',
           message: `Notification success rate is ${metrics.successRate.toFixed(1)}% (below 85% threshold)`,
-          severity: metrics.successRate < 50 ? 'high' : 'medium' as const
+          severity: (metrics.successRate < 50 ? 'high' : 'medium') as 'low' | 'medium' | 'high'
         });
       }
       
@@ -366,7 +366,7 @@ export class NotificationMonitor {
           alerts.push({
             type: 'channel_degraded',
             message: `${channel} channel success rate is ${stats.successRate.toFixed(1)}% (below 80% threshold)`,
-            severity: stats.successRate < 50 ? 'high' : 'medium' as const
+            severity: (stats.successRate < 50 ? 'high' : 'medium') as 'low' | 'medium' | 'high'
           });
         }
       });
@@ -385,7 +385,7 @@ export class NotificationMonitor {
         alerts.push({
           type: 'stuck_notifications',
           message: `${stuckNotifications} notifications have been pending for over 30 minutes`,
-          severity: stuckNotifications > 10 ? 'high' : 'medium' as const
+          severity: (stuckNotifications > 10 ? 'high' : 'medium') as 'low' | 'medium' | 'high'
         });
       }
       
@@ -393,7 +393,7 @@ export class NotificationMonitor {
       alerts.push({
         type: 'monitoring_error',
         message: `Failed to check notification metrics: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        severity: 'low' as const
+        severity: 'low'
       });
     }
     

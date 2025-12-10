@@ -209,7 +209,7 @@ export const auth = betterAuth({
 	],
 	onAPIError: {
 		onError(error, ctx) {
-			logger.error(error, { ctx });
+			logger.error(error as any, { ctx });
 		},
 	},
 });

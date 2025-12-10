@@ -57,7 +57,7 @@ const appRouter = app
 	.route("/products", productsRouter)
 	.route("/categories", categoriesRouter)
 	.route("/customers", customersRouter)
-	.route("/", documentsRouter)
+	.route("/documents", documentsRouter)
 	// Uncommented now that dependencies are fixed
 	.route("/cart", cartRouter)
 	.route("/orders", ordersRouter)

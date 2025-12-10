@@ -484,9 +484,8 @@ export function BusinessSignupForm({
                         }}
                       />
                       {/* Show current value if present */}
-                      {/* @ts-expect-error dynamic key access */}
-                      {form.watch(doc.key) && (
-                        <p className="mt-2 text-xs text-gray-600 break-all">Saved: {/* @ts-expect-error */}{form.watch(doc.key)}</p>
+                      {form.watch(doc.key as any) && (
+                        <p className="mt-2 text-xs text-gray-600 break-all">Saved: {form.watch(doc.key as any)}</p>
                       )}
                     </div>
                   </div>

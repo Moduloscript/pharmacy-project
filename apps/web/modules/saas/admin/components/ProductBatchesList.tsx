@@ -34,7 +34,7 @@ export function ProductBatchesList({ productId }: { productId: string }) {
       const res = await fetch(`/api/admin/products/${productId}/batches?${params.toString()}`, { credentials: 'include' });
       if (!res.ok) throw new Error(`Failed to fetch batches (${res.status})`);
       const data = await res.json();
-      const list = (data?.data || []).map((b: any) => ({
+      const list = (data?.data || []).map((b: { id: string; batchNumber: string; qty: number; expiryDate?: string | null; createdAt: string }) => ({
         id: b.id,
         batchNumber: b.batchNumber,
         qty: b.qty,
@@ -84,14 +84,14 @@ export function ProductBatchesList({ productId }: { productId: string }) {
               variant="outline"
               onClick={() => {
                 const headers = ['batchNumber','qty','expiryDate','createdAt','id'];
-                const rows = rows.map(b => [
+                const csvRows = rows.map(b => [
                   b.batchNumber,
                   String(b.qty),
                   b.expiryDate ? new Date(b.expiryDate).toISOString().slice(0,10) : '',
                   new Date(b.createdAt).toISOString(),
                   b.id,
                 ]);
-                const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n');
+                const csv = [headers.join(','), ...csvRows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n');
                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');

@@ -1,3 +1,4 @@
+import "@/lib/polyfill-storage";
 import { AnalyticsScript } from "@analytics";
 import { config } from "@repo/config";
 import { ApiClientProvider } from "@shared/components/ApiClientProvider";

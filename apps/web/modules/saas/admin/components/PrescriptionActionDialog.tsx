@@ -59,21 +59,23 @@ export function PrescriptionActionDialog({
     setIsSubmitting(true)
     
     try {
-      const data: any = {
+      const baseData = {
         notes: notes.trim() || undefined
-      }
+      };
+
+      let data: any; // Using explicit any temporarily to satisfy the strictly typed onConfirm until we refactor the props
 
       if (action === 'approve') {
-        data.status = 'APPROVED'
+        data = { ...baseData, status: 'APPROVED' };
       } else if (action === 'reject') {
-        data.status = 'REJECTED'
-        data.rejectionReason = rejectionReason.trim()
+        data = { ...baseData, status: 'REJECTED', rejectionReason: rejectionReason.trim() };
       } else if (action === 'clarify') {
-        data.status = 'CLARIFICATION_REQUESTED'
-        data.clarificationRequest = clarificationRequest.trim()
+        data = { ...baseData, status: 'CLARIFICATION_REQUESTED', clarificationRequest: clarificationRequest.trim() };
       }
 
-      await onConfirm(data)
+      if (data) {
+        await onConfirm(data);
+      }
       
       // Reset form
       setRejectionReason('')
@@ -226,7 +228,7 @@ export function PrescriptionActionDialog({
             type="button"
             onClick={handleConfirm}
             disabled={isSubmitting}
-            variant={action === 'reject' ? 'destructive' : 'default'}
+            variant={action === 'reject' ? 'error' : 'primary'}
           >
             {isSubmitting ? 'Processing...' : 'Confirm'}
           </Button>

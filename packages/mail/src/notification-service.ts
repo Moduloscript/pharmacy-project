@@ -459,7 +459,7 @@ export class NotificationService {
 	async healthCheck(): Promise<Record<string, boolean>> {
 		const results: Record<string, boolean> = {};
 
-		for (const [channel, provider] of this.providers.entries()) {
+		for (const [channel, provider] of Array.from(this.providers.entries())) {
 			try {
 				if (provider.testConnection) {
 					results[channel] = await provider.testConnection();

@@ -15,31 +15,42 @@ export const badge = cva(
 	],
 	{
 		variants: {
-			status: {
+			variant: {
+				default: ["bg-primary", "text-primary-foreground"],
+				secondary: ["bg-secondary", "text-secondary-foreground"],
+				destructive: ["bg-destructive", "text-destructive-foreground"],
+				outline: ["border", "border-border", "text-foreground"],
 				success: ["bg-success/10", "text-success"],
 				info: ["bg-primary/10", "text-primary"],
 				warning: ["bg-highlight/10", "text-highlight"],
 				error: ["bg-destructive/10", "text-destructive"],
+				primary: ["bg-primary", "text-primary-foreground"],
 			},
 		},
 		defaultVariants: {
-			status: "info",
+			variant: "info",
 		},
 	},
 );
 
 export type BadgeProps = React.HtmlHTMLAttributes<HTMLDivElement> &
-	VariantProps<typeof badge>;
+	VariantProps<typeof badge> & {
+		status?: "success" | "info" | "warning" | "error";
+	};
 
 export const Badge = ({
 	children,
 	className,
 	status,
+	variant,
 	...props
-}: BadgeProps) => (
-	<span className={cn(badge({ status }), className)} {...props}>
-		{children}
-	</span>
-);
+}: BadgeProps) => {
+	const finalVariant = variant || status || "info";
+	return (
+		<span className={cn(badge({ variant: finalVariant }), className)} {...props}>
+			{children}
+		</span>
+	);
+};
 
 Badge.displayName = "Badge";

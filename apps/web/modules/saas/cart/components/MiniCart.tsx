@@ -12,8 +12,8 @@ import { CartDrawer } from './CartDrawer';
 interface MiniCartProps {
   className?: string;
   showLabel?: boolean;
-  variant?: 'default' | 'outline' | 'ghost';
-  size?: 'sm' | 'default' | 'lg';
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | 'primary';
+  size?: 'default' | 'sm' | 'lg' | 'icon' | 'md';
 }
 
 export function MiniCart({ 
@@ -28,8 +28,8 @@ export function MiniCart({
   return (
     <>
       <Button
-        variant={variant}
-        size={size}
+        variant={variant as any}
+        size={size as any}
         onClick={toggleDrawer}
         className={className}
         aria-label={`Shopping cart with ${cartSummary.totalQuantity} items`}

@@ -117,7 +117,7 @@ export async function getCustomersByVerificationStatus(
 			where: {
 				verificationStatus: status,
 				customerType: {
-					in: ['WHOLESALE', 'PHARMACY', 'CLINIC']
+					in: ['WHOLESALE', 'PHARMACY', 'CLINIC'] as CustomerType[]
 				}
 			},
 			include: {

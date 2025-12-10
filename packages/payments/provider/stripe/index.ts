@@ -144,7 +144,7 @@ export const webhookHandler: WebhookHandler = async (req) => {
 			process.env.STRIPE_WEBHOOK_SECRET as string,
 		);
 	} catch (e) {
-		logger.error(e);
+		logger.error(e as any);
 
 		return new Response("Invalid request.", {
 			status: 400,

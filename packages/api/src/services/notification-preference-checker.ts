@@ -94,7 +94,7 @@ export class NotificationPreferenceChecker {
     const rateLimitExceeded = await this.checkRateLimit(
       customerId,
       type,
-      preferences.dailyNotificationLimit
+      preferences.dailyNotificationLimit ?? 0
     );
     
     if (rateLimitExceeded && priority !== 'high' && !isEmergency) {

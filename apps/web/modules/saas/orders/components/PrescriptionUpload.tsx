@@ -55,7 +55,6 @@ export function PrescriptionUpload({ orderId, onSuccess }: PrescriptionUploadPro
         uploadFileMutation.mutate({
           prescriptionId: newId,
           file,
-          csrfToken: variables.csrfToken,
         })
       } else {
         toast({
@@ -123,7 +122,7 @@ export function PrescriptionUpload({ orderId, onSuccess }: PrescriptionUploadPro
       // Step 3: Update prescription with document key
       console.log('🔄 Updating prescription record with document key...');
       const csrfResp = await fetch('/api/prescriptions/csrf', { credentials: 'include' })
-      const csrfToken = csrfResp.headers.get('X-CSRF-Token') || (await csrfResp.json()).csrfToken
+      const csrfToken = csrfResp.headers.get('X-CSRF-Token') || (await csrfResp.json() as any).csrfToken
       console.log('Got CSRF token:', csrfToken ? 'Yes' : 'No');
       
       const updatePayload = {
@@ -220,7 +219,7 @@ export function PrescriptionUpload({ orderId, onSuccess }: PrescriptionUploadPro
 
     // Obtain CSRF token before submitting
     const tokenResp = await fetch('/api/prescriptions/csrf', { credentials: 'include' })
-    const csrfToken = tokenResp.headers.get('X-CSRF-Token') || (await tokenResp.json().catch(() => ({}))).csrfToken
+    const csrfToken = tokenResp.headers.get('X-CSRF-Token') || (await tokenResp.json().catch(() => ({})) as any).csrfToken
 
     if (!csrfToken) {
       toast({ title: 'Security error', description: 'Unable to get CSRF token. Please try again.', variant: 'destructive' })

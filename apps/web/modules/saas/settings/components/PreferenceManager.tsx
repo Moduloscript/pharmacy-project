@@ -32,21 +32,37 @@ interface PreferenceManagerProps {
 }
 
 // Extended preferences type to include all features
-export interface ExtendedPreferences extends NotificationPreferences {
-  preferredChannel?: string;
-  quietHoursEnabled?: boolean;
-  quietHoursStart?: string;
-  quietHoursEnd?: string;
-  emergencyOverride?: boolean;
-  dailyNotificationLimit?: number;
-  weeklyNotificationLimit?: number;
-  prescriptionApproval?: boolean;
-  prescriptionRejection?: boolean;
-  prescriptionClarification?: boolean;
-  lowStockAlerts?: boolean;
-  channelPriority?: string[];
-  digestFrequency?: 'instant' | 'hourly' | 'daily' | 'weekly';
-  timezone?: string;
+// Extended preferences type to include all features with correct typing (non-nullable local state)
+export interface ExtendedPreferences extends Omit<NotificationPreferences, 
+  | 'preferredChannel' 
+  | 'quietHoursEnabled' 
+  | 'quietHoursStart' 
+  | 'quietHoursEnd' 
+  | 'emergencyOverride' 
+  | 'dailyNotificationLimit' 
+  | 'weeklyNotificationLimit' 
+  | 'prescriptionApproval' 
+  | 'prescriptionRejection' 
+  | 'prescriptionClarification' 
+  | 'lowStockAlerts' 
+  | 'channelPriority' 
+  | 'digestFrequency' 
+  | 'timezone'
+> {
+  preferredChannel: string;
+  quietHoursEnabled: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
+  emergencyOverride: boolean;
+  dailyNotificationLimit: number;
+  weeklyNotificationLimit: number;
+  prescriptionApproval: boolean;
+  prescriptionRejection: boolean;
+  prescriptionClarification: boolean;
+  lowStockAlerts: boolean;
+  channelPriority: string[];
+  digestFrequency: 'instant' | 'hourly' | 'daily' | 'weekly';
+  timezone: string;
 }
 
 const preferencesAtom = atom<ExtendedPreferences | null>(null);
@@ -81,8 +97,8 @@ export function PreferenceManager({ userId }: PreferenceManagerProps) {
         prescriptionApproval: serverPreferences.prescriptionApproval ?? true,
         prescriptionRejection: serverPreferences.prescriptionRejection ?? true,
         prescriptionClarification: serverPreferences.prescriptionClarification ?? true,
-        channelPriority: serverPreferences.channelPriority || ['sms', 'whatsapp', 'email'],
-        digestFrequency: serverPreferences.digestFrequency || 'instant',
+        channelPriority: (serverPreferences.channelPriority as unknown as string[]) || ['sms', 'whatsapp', 'email'],
+        digestFrequency: (serverPreferences.digestFrequency as 'instant' | 'hourly' | 'daily' | 'weekly') || 'instant',
         timezone: serverPreferences.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
       };
       setLocalPreferences(extendedPrefs);

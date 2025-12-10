@@ -339,7 +339,6 @@ export function StatsCards({ className }: StatsCardsProps) {
 
 // Export individual components for flexibility
 export {
-  StatsCard,
   useDashboardStats,
   type DashboardStats,
   type StatsCardProps,

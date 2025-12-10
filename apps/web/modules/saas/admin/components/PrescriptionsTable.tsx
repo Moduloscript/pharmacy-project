@@ -75,7 +75,7 @@ export function PrescriptionsTable() {
 
   const [detailsModalState, setDetailsModalState] = useState<{
     isOpen: boolean;
-    prescription: any | null;
+    prescription: any | null; // Keeping as any for now to facilitate incremental changes, ideally strictly typed
   }>({ isOpen: false, prescription: null });
 
   const rows = useMemo(() => prescriptions, [prescriptions]);
@@ -111,7 +111,7 @@ export function PrescriptionsTable() {
     });
   };
 
-  const handleDialogConfirm = async (data: any) => {
+  const handleDialogConfirm = async (data: { status: string; notes?: string; rejectionReason?: string; clarificationRequest?: string }) => {
     console.log('handleDialogConfirm called with data:', data);
     setBusyId(dialogState.prescriptionId);
     
@@ -423,7 +423,7 @@ export function PrescriptionsTable() {
                                 Approve
                               </Button>
                               <Button
-                                variant="destructive"
+                                variant="error"
                                 size="sm"
                                 onClick={() => handleReject(p.id, orderNumber)}
                                 disabled={!canReject || isBusy}

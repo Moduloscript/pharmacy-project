@@ -6,7 +6,7 @@ import { Button } from '@ui/components/button';
 import { Card } from '@ui/components/card';
 import { Badge } from '@ui/components/badge';
 import { cn } from '@ui/lib';
-import { Product, IProductFilters, productsAPI } from '../lib/api';
+import { Product, ProductFilters, productsAPI } from '../lib/api';
 import { useProducts, useCategories } from '../lib/queries';
 import { 
   productFiltersAtom,
@@ -122,7 +122,7 @@ export function ProductCatalog({
     const getVisiblePages = () => {
       const delta = 2; // Show 2 pages before and after current page
       const range = [];
-      const rangeWithDots = [];
+      const rangeWithDots: (number | string)[] = [];
       
       for (let i = 1; i <= pages; i++) {
         if (i === 1 || i === pages || (i >= page - delta && i <= page + delta)) {
@@ -201,6 +201,8 @@ export function ProductCatalog({
                     </span>
                   );
                 }
+
+                if (typeof pageNum !== 'number') return null;
 
                 const isCurrentPage = pageNum === page;
                 const isHidden = pageNum > 3 && pageNum < pages - 2 && Math.abs(pageNum - page) > 1;
@@ -471,7 +473,7 @@ export function ProductCatalog({
                         <div key={product.id} onClick={() => setUI({ ...ui, selectedProductId: product.id })}>
                           <ProductCard
                             product={product}
-                            showWholesalePrice={pricingPrefs.showWholesale}
+                            showWholesalePrice={pricingPrefs.showWholesalePrice}
                             onAddToCart={onAddToCart}
                           />
                         </div>
@@ -545,7 +547,7 @@ export function ProductCatalogSimple({
     async function loadProducts() {
       try {
         setIsLoading(true);
-        const filters: IProductFilters = { 
+        const filters: ProductFilters = { 
           limit,
           in_stock_only: true
         };

@@ -11,17 +11,17 @@ export type EmailTemplateName =
   | 'delivery_update_email'
   | 'generic_notice';
 
-export function renderEmailByTemplate(template: string, params: Record<string, any>): string | null {
+export async function renderEmailByTemplate(template: string, params: Record<string, any>): Promise<string | null> {
   try {
     switch (template) {
       case 'order_confirmation_email':
-        return render(React.createElement(OrderConfirmationEmail, params));
+        return await render(React.createElement(OrderConfirmationEmail, params as any));
       case 'payment_success_email':
-        return render(React.createElement(PaymentSuccessEmail, params));
+        return await render(React.createElement(PaymentSuccessEmail, params as any));
       case 'delivery_update_email':
-        return render(React.createElement(DeliveryUpdateEmail, params));
+        return await render(React.createElement(DeliveryUpdateEmail, params as any));
       case 'generic_notice':
-        return render(React.createElement(GenericNoticeEmail, params));
+        return await render(React.createElement(GenericNoticeEmail, params as any));
       default:
         return null;
     }
@@ -31,17 +31,17 @@ export function renderEmailByTemplate(template: string, params: Record<string, a
   }
 }
 
-export function renderEmailByType(type: string, params: Record<string, any>): string | null {
+export async function renderEmailByType(type: string, params: Record<string, any>): Promise<string | null> {
   const t = (type || '').toLowerCase();
   switch (t) {
     case 'order_confirmation':
-      return renderEmailByTemplate('order_confirmation_email', params);
+      return await renderEmailByTemplate('order_confirmation_email', params);
     case 'payment_success':
-      return renderEmailByTemplate('payment_success_email', params);
+      return await renderEmailByTemplate('payment_success_email', params);
     case 'delivery_update':
-      return renderEmailByTemplate('delivery_update_email', params);
+      return await renderEmailByTemplate('delivery_update_email', params);
     default:
-      return renderEmailByTemplate('generic_notice', {
+      return await renderEmailByTemplate('generic_notice', {
         title: 'Notification from BenPharm',
         preview: params.preview,
         message: params.message,

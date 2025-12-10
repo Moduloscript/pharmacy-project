@@ -157,7 +157,7 @@ export function ProductCatalogWithSidebar({
                   </svg>
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Products</h3>
-                <p className="text-gray-600 mb-4">{error?.message || error || 'Something went wrong while loading products.'}</p>
+                <p className="text-gray-600 mb-4">{error?.message || (typeof error === 'string' ? error : null) || 'Something went wrong while loading products.'}</p>
                 <Button onClick={() => window.location.reload()}>
                   Try Again
                 </Button>
@@ -174,7 +174,7 @@ export function ProductCatalogWithSidebar({
                         <ProductCardTailwind
                           key={product.id}
                           product={product}
-                          showWholesalePrice={pricingPrefs.showWholesale}
+                          showWholesalePrice={pricingPrefs.showWholesalePrice}
                           onAddToCart={onAddToCart}
                         />
                       ))}
