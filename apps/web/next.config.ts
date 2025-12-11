@@ -54,7 +54,7 @@ const nextConfig: NextConfig = {
 		ignoreDuringBuilds: true,
 	},
 	outputFileTracingIncludes: {
-		"/api/**/*": ["../../packages/database/src/generated/**/*"],
+		"/**": ["../../packages/database/src/generated/**"],
 	},
 };
 
