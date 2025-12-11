@@ -20,6 +20,7 @@
 	"name": "@repo/database",
 	"scripts": {
 		"generate": "pnpm exec tsx generate-all.ts",
+		"postinstall": "pnpm generate",
 		"push": "dotenv -c -e ../../.env -- prisma db push --skip-generate",
 		"migrate": "dotenv -c -e ../../.env -- prisma migrate dev",
 		"studio": "dotenv -c -e ../../.env -- prisma studio",
