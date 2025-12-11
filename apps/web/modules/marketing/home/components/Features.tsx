@@ -257,8 +257,8 @@ const FeatureCard = ({
 			key={feature.title}
 			className="group/product h-96 w-[30rem] relative shrink-0"
 		>
-			<div className="block group-hover/product:shadow-2xl h-full w-full bg-card border-2 border-black dark:border-white rounded-xl overflow-hidden relative">
-				<div className="absolute inset-0 z-0">
+			<div className="block group-hover/product:shadow-2xl h-full w-full bg-card border-2 border-black dark:border-white rounded-xl relative overflow-hidden">
+				<div className="absolute inset-0 z-0 overflow-hidden rounded-xl">
 					{feature.image && (
 						<Image
 							src={feature.image}
@@ -267,7 +267,7 @@ const FeatureCard = ({
 						/>
 					)}
 				</div>
-				<div className="absolute inset-0 z-10 bg-gradient-to-t from-background via-background/80 to-transparent p-8 flex flex-col justify-end">
+				<div className="absolute inset-0 z-10 bg-gradient-to-t from-background via-background/90 to-transparent p-8 flex flex-col justify-end">
 					<div 
 						className="size-12 rounded-lg flex items-center justify-center mb-4 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_#000] dark:shadow-[4px_4px_0px_0px_#fff]"
 						style={{ backgroundColor: feature.color }}
@@ -275,7 +275,7 @@ const FeatureCard = ({
 						<feature.icon className="size-6 text-black" />
 					</div>
 					<h3 className="text-2xl font-bold mb-2">{feature.title}</h3>
-					<p className="text-foreground/80 font-medium">{feature.description}</p>
+					<p className="text-foreground/80 font-medium leading-relaxed line-clamp-4">{feature.description}</p>
 				</div>
 			</div>
 		</motion.div>

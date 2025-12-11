@@ -139,6 +139,9 @@ importers:
       '@repo/payments':
         specifier: workspace:*
         version: link:../../packages/payments
+      '@repo/queue':
+        specifier: workspace:*
+        version: link:../../packages/queue
       '@repo/storage':
         specifier: workspace:*
         version: link:../../packages/storage
