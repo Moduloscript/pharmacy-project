@@ -1,5 +1,5 @@
 import { db } from '@repo/database';
-import type { NotificationChannel as PrismaNotificationChannel, NotificationPriority as PrismaPriority, NotificationType as PrismaNotificationType } from '@prisma/client';
+import type { NotificationChannel as PrismaNotificationChannel, NotificationPriority as PrismaPriority, NotificationType as PrismaNotificationType } from '@repo/database';
 import { sendNotificationImmediate } from '../send-immediate';
 import type { NotificationChannel, NotificationType, NotificationJobData } from '../../types';
 

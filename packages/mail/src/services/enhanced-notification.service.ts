@@ -1,5 +1,5 @@
 import { db } from '@repo/database';
-import type { NotificationChannel as PrismaNotificationChannel, NotificationPriority } from '@prisma/client';
+import type { NotificationChannel as PrismaNotificationChannel, NotificationPriority as PrismaPriority } from '@repo/database';
 import { sendNotificationImmediate } from '../send-immediate';
 import type { NotificationChannel, NotificationType, NotificationJobData } from '../../types';
 
@@ -8,8 +8,8 @@ function toPrismaChannel(channel: PrismaNotificationChannel): NotificationChanne
   return channel.toLowerCase() as NotificationChannel;
 }
 
-function toPrismaPriority(priority: 'low' | 'normal' | 'high'): NotificationPriority {
-  return priority.toUpperCase() as NotificationPriority;
+function toPrismaPriority(priority: 'low' | 'normal' | 'high'): PrismaPriority {
+  return priority.toUpperCase() as PrismaPriority;
 }
 
 /**
