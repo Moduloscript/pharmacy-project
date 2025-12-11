@@ -1,5 +1,10 @@
 {
   "github": {
     "silent": true
+  },
+  "functions": {
+    "apps/web/**/*.{js,ts,tsx}": {
+      "includeFiles": "node_modules/.pnpm/@prisma+client@*/node_modules/.prisma/client/**"
+    }
   }
 }
