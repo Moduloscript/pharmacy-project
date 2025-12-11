@@ -439,7 +439,11 @@ export function createWhatsAppProvider(config?: {
 	businessAccountId?: string;
 }): WhatsAppProvider {
 	if (config?.accessToken && config?.phoneNumberId && config?.businessAccountId) {
-		return new WhatsAppProvider(config);
+		return new WhatsAppProvider({
+			accessToken: config.accessToken,
+			phoneNumberId: config.phoneNumberId,
+			businessAccountId: config.businessAccountId,
+		});
 	}
 	
 	return WhatsAppProvider.fromEnvironment();
