@@ -53,10 +53,8 @@ const nextConfig: NextConfig = {
 	eslint: {
 		ignoreDuringBuilds: true,
 	},
-	experimental: {
-		outputFileTracingIncludes: {
-			"/api/**/*": ["../../packages/database/src/generated/**/*"],
-		},
+	outputFileTracingIncludes: {
+		"/api/**/*": ["../../packages/database/src/generated/**/*"],
 	},
 };
 
