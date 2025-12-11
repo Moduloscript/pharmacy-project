@@ -108,7 +108,7 @@
 	"name": "@repo/web",
 	"private": true,
 	"scripts": {
-		"build": "next build",
+		"build": "pnpm --filter @repo/database generate && next build",
 		"dev": "next dev",
 		"postinstall": "node scripts/setup-pdfjs.js",
 		"e2e": "pnpm exec playwright test --ui",
