@@ -109,6 +109,7 @@
 	"private": true,
 	"scripts": {
 		"build": "pnpm --filter @repo/database generate && next build",
+		"postbuild": "node scripts/copy-prisma-binaries.js",
 		"dev": "next dev",
 		"postinstall": "node scripts/setup-pdfjs.js",
 		"e2e": "pnpm exec playwright test --ui",
