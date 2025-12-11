@@ -2,6 +2,12 @@
   "github": {
     "silent": true
   },
+  "crons": [
+    {
+      "path": "/api/cron/process-notifications",
+      "schedule": "* * * * *"
+    }
+  ],
   "functions": {
     "apps/web/**": {
       "includeFiles": "{node_modules/.pnpm/@prisma+client@*/node_modules/.prisma/client/**,packages/database/src/generated/**}"
