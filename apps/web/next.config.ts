@@ -54,7 +54,7 @@ const nextConfig: NextConfig = {
 		ignoreDuringBuilds: true,
 	},
 	outputFileTracingIncludes: {
-		"/api/**": [
+		"/**": [
 			"../../packages/database/src/generated/**",
 			"../../node_modules/.pnpm/@prisma+client@*/node_modules/.prisma/client/**",
 			"../../node_modules/@prisma/client/**",
