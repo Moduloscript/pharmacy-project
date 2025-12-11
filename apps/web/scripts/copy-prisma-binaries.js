@@ -4,8 +4,8 @@ const fs = require('fs');
 const path = require('path');
 
 // Paths
-const prismaClientPath = path.join(__dirname, '../../packages/database/src/generated/client');
-const standaloneServerPath = path.join(__dirname, '.next/standalone/packages/database/src/generated/client');
+const prismaClientPath = path.join(__dirname, '../../../packages/database/src/generated/client');
+const standaloneServerPath = path.join(__dirname, '../.next/standalone/packages/database/src/generated/client');
 
 console.log('Copying Prisma binaries to standalone output...');
 
