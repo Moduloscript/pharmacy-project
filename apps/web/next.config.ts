@@ -53,6 +53,11 @@ const nextConfig: NextConfig = {
 	eslint: {
 		ignoreDuringBuilds: true,
 	},
+	experimental: {
+		outputFileTracingIncludes: {
+			"/api/**/*": ["../../packages/database/src/generated/**/*"],
+		},
+	},
 };
 
 export default withContentCollections(withNextIntl(nextConfig));
