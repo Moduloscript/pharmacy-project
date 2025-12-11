@@ -21,7 +21,7 @@ export async function addNotificationJob(
 	
 	// Send notification immediately in the background (don't await)
 	// This prevents blocking the API response
-	sendNotificationWithRetry(data).catch((error) => {
+	sendNotificationWithRetry(data).catch((error: any) => {
 		console.error(`❌ Failed to send notification ${data.notificationId}:`, error);
 	});
 	

@@ -1,9 +1,7 @@
 // Export existing mail functionality
 export * from './provider/index';
 
-// Export new notification functionality
-export { NotificationService } from './notification-service';
-export { EnhancedNotificationService, enhancedNotificationService } from './notification-service-enhanced';
+// Export new notification functionality (providers and types only)
 export type { INotificationProvider, NotificationTemplate, ProviderResponse } from './provider/notifications';
 export { BaseNotificationProvider } from './provider/notifications';
 
@@ -16,6 +14,4 @@ export { notificationTemplates, templateMessages, getTemplateMessage } from './t
 // Monitoring exports
 export { NotificationMonitor, notificationMonitor } from './monitoring/notification-monitor';
 
-// Create and export a global notification service instance
-import { NotificationService } from './notification-service';
-export const notificationService = new NotificationService();
+

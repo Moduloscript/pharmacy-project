@@ -1,5 +1,5 @@
-import type { NotificationChannel, NotificationJobData } from '@repo/queue';
-import { TermiiProvider, ResendEmailProvider } from '@repo/mail';
+import type { NotificationChannel, NotificationJobData } from '../types';
+import { TermiiProvider, ResendEmailProvider } from './provider';
 import { db } from '@repo/database';
 
 // Initialize providers

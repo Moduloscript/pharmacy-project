@@ -6,7 +6,6 @@
 		"@repo/database": "workspace:*",
 		"@repo/i18n": "workspace:*",
 		"@repo/logs": "workspace:*",
-		"@repo/queue": "workspace:*",
 		"next-intl": "3.26.5",
 		"nodemailer": "^6.10.0",
 		"react": "19.0.0",

@@ -6,15 +6,15 @@
 	"exports": {
 		".": {
 			"import": "./dist/index-immediate.js",
-			"types": "./dist/types/index-immediate.d.ts"
+			"types": "./dist/index-immediate.d.ts"
 		},
 		"./notifications": {
 			"import": "./dist/notifications.js",
-			"types": "./dist/types/notifications.d.ts"
+			"types": "./dist/notifications.d.ts"
 		},
 		"./worker": {
 			"import": "./dist/worker.js",
-			"types": "./dist/types/worker.d.ts"
+			"types": "./dist/worker.d.ts"
 		}
 	},
 	"scripts": {
@@ -29,6 +29,7 @@
 		"bullmq": "^4.15.4",
 		"ioredis": "^5.3.2",
 		"@repo/database": "workspace:*",
+		"@repo/mail": "workspace:*",
 		"@prisma/client": "^6.3.1"
 	},
 	"devDependencies": {

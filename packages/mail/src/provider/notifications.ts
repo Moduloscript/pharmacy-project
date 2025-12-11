@@ -1,4 +1,4 @@
-import type { NotificationJobData, NotificationJobResult, NotificationProvider } from '@repo/queue';
+import type { NotificationJobData, NotificationJobResult, NotificationProvider } from '../../types';
 
 /**
  * Base notification provider interface

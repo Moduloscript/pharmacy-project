@@ -732,6 +732,9 @@ importers:
       '@repo/database':
         specifier: workspace:*
         version: link:../database
+      '@repo/mail':
+        specifier: workspace:*
+        version: link:../mail
       bullmq:
         specifier: ^4.15.4
         version: 4.18.3

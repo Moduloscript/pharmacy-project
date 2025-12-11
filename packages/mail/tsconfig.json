@@ -3,7 +3,7 @@
 	"compilerOptions": {
 		"downlevelIteration": true
 	},
-	"include": ["**/*.ts"],
+	"include": ["**/*.ts", "**/*.tsx"],
 	"exclude": [
 		"dist",
 		"build",

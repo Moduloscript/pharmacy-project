@@ -1,6 +1,6 @@
 import { BaseNotificationProvider } from './notifications';
 import { getTemplateMessage } from '../templates/index';
-import type { NotificationJobData, NotificationJobResult } from '@repo/queue';
+import type { NotificationJobData, NotificationJobResult } from '../../types';
 
 /**
  * WhatsApp Business API Provider for BenPharm

@@ -22,6 +22,9 @@ export {
 	closeNotificationWorker,
 } from './worker.js';
 
+// Notification service
+export { NotificationService } from './notification-service.js';
+
 // Types
 export type {
 	NotificationChannel,

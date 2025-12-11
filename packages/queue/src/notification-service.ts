@@ -3,11 +3,10 @@ import {
 	queueOrderConfirmation, 
 	queuePaymentSuccess, 
 	queueDeliveryUpdate, 
-	queueLowStockAlert,
-	type NotificationJobData,
-	type NotificationType 
-} from '@repo/queue';
-import type { INotificationProvider, NotificationTemplate } from './provider/notifications';
+	queueLowStockAlert
+} from './notifications';
+import type { NotificationJobData, NotificationType } from '@repo/mail';
+import type { INotificationProvider, NotificationTemplate } from '@repo/mail';
 
 import {
   NotificationType as PrismaNotificationType,

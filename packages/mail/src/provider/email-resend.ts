@@ -1,6 +1,6 @@
 import { config } from '@repo/config';
 import { BaseNotificationProvider } from './notifications';
-import type { NotificationJobData, NotificationJobResult } from '@repo/queue';
+import type { NotificationJobData, NotificationJobResult } from '../../types';
 import { renderEmailByTemplate, renderEmailByType } from '../templates/email';
 
 /**
