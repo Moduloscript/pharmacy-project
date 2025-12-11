@@ -24,7 +24,8 @@ export type NotificationStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED';
 
 export type NotificationType = 
 	| 'order_confirmation' 
-	| 'payment_success' 
+	| 'payment_success'
+	| 'payment_confirmation'
 	| 'delivery_update' 
 	| 'low_stock_alert'
 	| 'business_verification'

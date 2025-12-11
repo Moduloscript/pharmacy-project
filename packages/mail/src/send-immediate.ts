@@ -2,12 +2,26 @@ import type { NotificationChannel, NotificationJobData } from '../types';
 import { TermiiProvider, ResendEmailProvider } from './provider';
 import { db } from '@repo/database';
 
-// Initialize providers
-const emailProvider = new ResendEmailProvider();
-const smsProvider = new TermiiProvider({
-	apiKey: process.env.SMS_API_KEY || '',
-	senderId: process.env.SMS_SENDER_ID || '',
-});
+// Lazy-load providers to avoid build-time errors when env vars are missing
+let emailProvider: ResendEmailProvider | null = null;
+let smsProvider: TermiiProvider | null = null;
+
+function getEmailProvider(): ResendEmailProvider {
+	if (!emailProvider) {
+		emailProvider = new ResendEmailProvider();
+	}
+	return emailProvider;
+}
+
+function getSmsProvider(): TermiiProvider {
+	if (!smsProvider) {
+		smsProvider = new TermiiProvider({
+			apiKey: process.env.SMS_API_KEY || process.env.TERMII_API_KEY || '',
+			senderId: process.env.SMS_SENDER_ID || process.env.TERMII_SENDER_ID || '',
+		});
+	}
+	return smsProvider;
+}
 
 /**
  * Send notification immediately without queueing
@@ -17,8 +31,8 @@ export async function sendNotificationImmediate(
 	data: NotificationJobData
 ): Promise<{ success: boolean; error?: string }> {
 	try {
-		// Get the appropriate provider
-		const provider = data.channel === 'email' ? emailProvider : smsProvider;
+		// Get the appropriate provider (lazy-loaded)
+		const provider = data.channel === 'email' ? getEmailProvider() : getSmsProvider();
 
 		// Update notification status to PENDING
 		await db.notification.update({

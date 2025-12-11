@@ -150,7 +150,7 @@ export const NullsOrderSchema = z.enum(['first','last']);
 
 export const JsonNullValueFilterSchema = z.enum(['DbNull','JsonNull','AnyNull',]).transform((value) => value === 'JsonNull' ? Prisma.JsonNull : value === 'DbNull' ? Prisma.DbNull : value === 'AnyNull' ? Prisma.AnyNull : value);
 
-export const NotificationTypeSchema = z.enum(['ORDER_UPDATE','ORDER_CONFIRMATION','PRESCRIPTION_REQUIRED','PRESCRIPTION_APPROVED','PRESCRIPTION_REJECTED','PRESCRIPTION_REMINDER','PAYMENT_UPDATE','DELIVERY_UPDATE','LOW_STOCK_ALERT','PROMOTION','SYSTEM_ALERT']);
+export const NotificationTypeSchema = z.enum(['ORDER_UPDATE','ORDER_CONFIRMATION','PRESCRIPTION_REQUIRED','PRESCRIPTION_APPROVED','PRESCRIPTION_REJECTED','PRESCRIPTION_REMINDER','PAYMENT_UPDATE','PAYMENT_CONFIRMATION','DELIVERY_UPDATE','LOW_STOCK_ALERT','PROMOTION','SYSTEM_ALERT']);
 
 export type NotificationTypeType = `${z.infer<typeof NotificationTypeSchema>}`
 

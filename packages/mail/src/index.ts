@@ -14,4 +14,8 @@ export { notificationTemplates, templateMessages, getTemplateMessage } from './t
 // Monitoring exports
 export { NotificationMonitor, notificationMonitor } from './monitoring/notification-monitor';
 
+// Export notification services
+export { NotificationService, notificationService } from './services/notification.service';
+export { EnhancedNotificationService, enhancedNotificationService } from './services/enhanced-notification.service';
+
 
