@@ -1,4 +1,4 @@
-export { PrismaClient, PrescriptionStatus, PrescriptionAuditAction, CustomerType, BusinessVerificationStatus, NotificationType, NotificationChannel, NotificationStatus, NotificationPriority, NotificationOptOutType, Prisma } from "./src/generated/client";
+export { PrismaClient, PrescriptionStatus, PrescriptionAuditAction, CustomerType, BusinessVerificationStatus, NotificationType, NotificationChannel, NotificationStatus, NotificationPriority, NotificationOptOutType, Prisma } from "@prisma/client";
 export * from "./src/client";
 export { db } from "./src/client";
 export * from "./src/zod/index";
