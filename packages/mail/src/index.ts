@@ -7,6 +7,9 @@ export { EnhancedNotificationService, enhancedNotificationService } from './noti
 export type { INotificationProvider, NotificationTemplate, ProviderResponse } from './provider/notifications';
 export { BaseNotificationProvider } from './provider/notifications';
 
+// Export immediate sending (for Vercel Hobby plan)
+export { sendNotificationImmediate, sendNotificationWithRetry } from './send-immediate';
+
 // Export templates
 export { notificationTemplates, templateMessages, getTemplateMessage } from './templates/index';
 
