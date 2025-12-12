@@ -175,6 +175,9 @@ export class ResendEmailProvider extends BaseNotificationProvider {
           transaction_id: p.transaction_id ?? p.transactionId,
           status_label: p.status_label ?? p.statusLabel,
           tracking_url: p.tracking_url ?? p.trackingUrl,
+          order_items: p.order_items ?? p.orderItems, // Add this
+          delivery_address: p.delivery_address ?? p.deliveryAddress, // Add this
+          total_amount: p.total_amount ?? p.total ?? p.totalAmount, // Add this
         });
       }
 

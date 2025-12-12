@@ -272,8 +272,8 @@ ordersRouter.put('/:id/status', zValidator('json', updateStatusSchema), async (c
     }
     // Enqueue delivery status update notification (non-blocking)
     try {
-      const { notificationService } = await import('@repo/mail');
-      await notificationService.sendDeliveryUpdate({
+      const { enhancedNotificationService } = await import('@repo/mail');
+      await enhancedNotificationService.sendDeliveryUpdate({
         id: updatedOrder.id,
         orderNumber: updatedOrder.orderNumber,
         customerId: updatedOrder.customer.id,

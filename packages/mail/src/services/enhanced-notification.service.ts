@@ -46,6 +46,20 @@ export class EnhancedNotificationService {
         return;
       }
 
+      // Fetch order items to display in email
+      const order = await db.order.findUnique({
+        where: { id: data.id },
+        include: {
+          orderItems: true,
+        },
+      });
+
+      const orderItems = order?.orderItems.map(item => ({
+        name: item.productName,
+        quantity: item.quantity,
+        price: Number(item.unitPrice)
+      })) || [];
+
       // Check notification preferences
       const preferences = await db.notificationPreferences.findUnique({
         where: { customerId: data.customerId },
@@ -87,8 +101,8 @@ export class EnhancedNotificationService {
             channel,
             type: 'ORDER_CONFIRMATION',
             subject: `Order Confirmation - ${data.orderNumber}`,
-            message: `Your order ${data.orderNumber} has been confirmed. Total: ₦${data.total.toLocaleString()}`,
-            body: `Your order ${data.orderNumber} has been confirmed. Total: ₦${data.total.toLocaleString()}`,
+            message: `BenPharmacy: Dear ${customer.user.name || 'Customer'}, Order #${data.orderNumber} confirmed. Total: ₦${data.total.toLocaleString()}. We are processing it now. Questions? Support: +234-XXX-XXXX`,
+            body: `BenPharmacy: Dear ${customer.user.name || 'Customer'}, Order #${data.orderNumber} confirmed. Total: ₦${data.total.toLocaleString()}. We are processing it now. Questions? Support: +234-XXX-XXXX`,
             metadata: {
               orderId: data.id,
               orderNumber: data.orderNumber,
@@ -99,17 +113,20 @@ export class EnhancedNotificationService {
           },
         });
 
-        // Send immediately (for Vercel Hobby plan compatibility)
+        // Send immediately
         await sendNotificationImmediate({
           notificationId: notification.id,
           type: 'order_confirmation',
           channel: toPrismaChannel(channel),
           recipient,
-          template: 'order_confirmation',
+          template: channel === 'EMAIL' ? 'order_confirmation' : undefined,
+          message: channel === 'SMS' ? notification.message : undefined, // Ensure SMS uses the professional message
           templateParams: {
             orderNumber: data.orderNumber,
             total: data.total,
             deliveryAddress: data.deliveryAddress,
+            order_items: orderItems,
+            customer_name: customer.user.name || 'Customer',
           },
           priority: 'high',
         });
@@ -124,6 +141,27 @@ export class EnhancedNotificationService {
   }
 
   /**
+   * Convert order status to human-readable label
+   */
+  /**
+   * Convert order status to human-readable label
+   */
+  private getStatusLabel(status: string): string {
+    const s = status?.toUpperCase() || '';
+    const statusLabels: Record<string, string> = {
+      'RECEIVED': 'Order Received',
+      'PENDING': 'Order Pending',
+      'PROCESSING': 'Processing',
+      'READY': 'Ready for Pickup/Delivery',
+      'DISPATCHED': 'Out for Delivery',
+      'DELIVERED': 'Delivered',
+      'CANCELLED': 'Cancelled',
+      'COMPLETED': 'Completed',
+    };
+    return statusLabels[s] || status;
+  }
+
+  /**
    * Send delivery update notification
    */
   async sendDeliveryUpdate(data: {
@@ -134,6 +172,13 @@ export class EnhancedNotificationService {
     notes?: string;
   }): Promise<void> {
     try {
+      // Prevent duplicate notifications for initial order states
+      // These are covered by the standard Order Confirmation email
+      if (['RECEIVED', 'PENDING'].includes(data.status.toUpperCase())) {
+        console.log(`ℹ️ Skipping delivery update for initial status: ${data.status}`);
+        return;
+      }
+
       // Get customer details
       const customer = await db.customer.findUnique({
         where: { id: data.customerId },
@@ -151,6 +196,20 @@ export class EnhancedNotificationService {
         console.error(`Customer not found: ${data.customerId}`);
         return;
       }
+
+      // Fetch order items to display in delivery update
+      const order = await db.order.findUnique({
+        where: { id: data.id },
+        include: {
+          orderItems: true,
+        },
+      });
+
+      const orderItems = order?.orderItems.map(item => ({
+        name: item.productName,
+        quantity: item.quantity,
+        price: Number(item.unitPrice)
+      })) || [];
 
       // Check notification preferences
       const preferences = await db.notificationPreferences.findUnique({
@@ -180,6 +239,12 @@ export class EnhancedNotificationService {
         return;
       }
 
+      const statusLabel = this.getStatusLabel(data.status);
+      const customerName = customer.user.name || 'Customer';
+
+      // Professional SMS Message
+      const smsMessage = `BenPharmacy: Dear ${customerName}, update for Order #${data.orderNumber}. Status: ${statusLabel}.${data.notes ? ` Note: ${data.notes}` : ''} Track here: https://pharmacy-project-web.vercel.app/orders/${data.id}`;
+
       // Send to all enabled channels
       await Promise.all(channels.map(async (channel) => {
         const recipient = channel === 'EMAIL' ? customer.user.email : customer.phone;
@@ -192,14 +257,16 @@ export class EnhancedNotificationService {
             recipient,
             channel,
             type: 'DELIVERY_UPDATE',
-            subject: `Delivery Update - ${data.orderNumber}`,
-            message: `Your order ${data.orderNumber} status: ${data.status}${data.notes ? `. ${data.notes}` : ''}`,
-            body: `Your order ${data.orderNumber} status: ${data.status}${data.notes ? `. ${data.notes}` : ''}`,
+            subject: `Update on Order #${data.orderNumber}`,
+            message: smsMessage,
+            body: smsMessage,
             metadata: {
               orderId: data.id,
               orderNumber: data.orderNumber,
               status: data.status,
+              status_label: statusLabel, // Critical for email template
               notes: data.notes,
+              customerName,
             },
             status: 'PENDING',
           },
@@ -211,11 +278,16 @@ export class EnhancedNotificationService {
           type: 'delivery_update',
           channel: toPrismaChannel(channel),
           recipient,
-          template: 'delivery_update',
+          template: channel === 'EMAIL' ? 'delivery_update' : undefined,
+          message: channel === 'SMS' ? notification.message : undefined, // Ensure SMS uses the professional message
           templateParams: {
-            orderNumber: data.orderNumber,
-            status: data.status,
+            customer_name: customerName,
+            order_number: data.orderNumber,
+            status_label: statusLabel,
             notes: data.notes,
+            eta_or_notes: data.notes,
+            tracking_url: `https://pharmacy-project-web.vercel.app/orders/${data.id}`,
+            order_items: orderItems,
           },
           priority: 'normal',
         });
@@ -298,9 +370,9 @@ export class EnhancedNotificationService {
             recipient,
             channel,
             type: 'PAYMENT_CONFIRMATION',
-            subject: `Payment Confirmed - ${data.orderNumber}`,
-            message: `Payment of ₦${data.amount.toLocaleString()} confirmed for order ${data.orderNumber}`,
-            body: `Payment of ₦${data.amount.toLocaleString()} confirmed for order ${data.orderNumber}`,
+            subject: `Payment Receipt - ${data.orderNumber}`,
+            message: `BenPharmacy: Payment received for Order #${data.orderNumber}. Amount: ₦${data.amount.toLocaleString()}. We will notify you when it ships. Thank you!`,
+            body: `BenPharmacy: Payment received for Order #${data.orderNumber}. Amount: ₦${data.amount.toLocaleString()}. We will notify you when it ships. Thank you!`,
             metadata: {
               orderId: data.orderId,
               orderNumber: data.orderNumber,
@@ -314,14 +386,15 @@ export class EnhancedNotificationService {
         // Send immediately
         await sendNotificationImmediate({
           notificationId: notification.id,
-          type: 'payment_confirmation',
+          type: 'payment_success',
           channel: toPrismaChannel(channel),
           recipient,
-          template: 'payment_confirmation',
+          template: channel === 'EMAIL' ? 'payment_success' : undefined,
+          message: channel === 'SMS' ? notification.message : undefined, // Ensure SMS uses the professional message
           templateParams: {
             orderNumber: data.orderNumber,
             amount: data.amount,
-            paymentMethod: data.paymentMethod,
+            method: data.paymentMethod,
           },
           priority: 'high',
         });

@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { db } from '@repo/database';
-import { NotificationService, notificationMonitor } from '@repo/mail';
+import { notificationMonitor } from '@repo/mail';
 import { addNotificationJob } from '@repo/queue';
 import type { NotificationJobData } from '@repo/queue';
 import type { AppBindings } from '../types/context';
@@ -114,20 +114,6 @@ function maskRecipient(recipient: string): string {
     return `${local.substring(0, 2)}***@${domain}`;
   } else {
     return recipient.substring(0, 6) + '***' + recipient.slice(-4);
-  }
-}
-
-// Initialize services (in a real app, these would be injected)
-let notificationService: NotificationService;
-
-// Initialize function to be called when setting up the router
-export async function initializeNotificationServices() {
-  try {
-    notificationService = new NotificationService();
-    console.log('📦 Notification services initialized successfully');
-  } catch (error) {
-    console.error('❌ Failed to initialize notification services:', error);
-    throw error;
   }
 }
 
