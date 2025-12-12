@@ -182,7 +182,7 @@ export function Features() {
 	return (
 		<div
 			ref={ref}
-			className="h-[300vh] py-40 overflow-hidden antialiased relative flex flex-col self-auto [perspective:1000px] [transform-style:preserve-3d] bg-background"
+			className="lg:h-[300vh] py-20 lg:py-40 overflow-hidden antialiased relative flex flex-col self-auto lg:[perspective:1000px] lg:[transform-style:preserve-3d] bg-background"
 		>
 			<div className="max-w-7xl relative mx-auto py-20 md:py-40 px-4 w-full left-0 top-0">
 				<motion.div
@@ -208,7 +208,7 @@ export function Features() {
 					translateY,
 					opacity,
 				}}
-				className=""
+				className="hidden lg:block"
 			>
 				<motion.div className="flex flex-row-reverse space-x-reverse space-x-20 mb-20">
 					{featureTabs.map((feature) => (
@@ -230,7 +230,42 @@ export function Features() {
 				</motion.div>
 			</motion.div>
 			
-			<VelocityText className="absolute bottom-40 left-0 z-10 w-full py-10">
+			{/* Mobile Card Grid - Visible only on small screens */}
+			<div className="lg:hidden px-4 space-y-6">
+				{featureTabs.map((feature) => (
+					<motion.div
+						key={feature.title + "-mobile"}
+						className="bg-card border-2 border-black dark:border-white rounded-xl overflow-hidden"
+						initial={{ opacity: 0, y: 20 }}
+						whileInView={{ opacity: 1, y: 0 }}
+						viewport={{ once: true, margin: "-50px" }}
+						transition={{ duration: 0.5 }}
+					>
+						<div className="relative h-32 overflow-hidden">
+							{feature.image && (
+								<Image
+									src={feature.image}
+									alt={feature.title}
+									className="object-cover object-center h-full w-full opacity-50"
+								/>
+							)}
+							<div className="absolute inset-0 bg-gradient-to-t from-background via-background/90 to-transparent" />
+						</div>
+						<div className="p-6 -mt-12 relative z-10">
+							<div 
+								className="size-12 rounded-lg flex items-center justify-center mb-4 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_#000] dark:shadow-[4px_4px_0px_0px_#fff]"
+								style={{ backgroundColor: feature.color }}
+							>
+								<feature.icon className="size-6 text-black" />
+							</div>
+							<h3 className="text-xl font-bold mb-2">{feature.title}</h3>
+							<p className="text-foreground/80 font-medium leading-relaxed text-sm">{feature.description}</p>
+						</div>
+					</motion.div>
+				))}
+			</div>
+			
+			<VelocityText className="absolute bottom-40 left-0 z-10 w-full py-10 hidden lg:block">
 				<span className="text-7xl font-black uppercase text-[var(--color-accent)] [-webkit-text-stroke:2px_black] dark:[-webkit-text-stroke:2px_white] md:text-9xl opacity-80">
 					Smart Inventory — Compliance First — AI Operations — Smart Inventory — Compliance First — AI Operations —
 				</span>

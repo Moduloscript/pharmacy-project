@@ -125,7 +125,7 @@ export function Hero() {
 
 			{/* Dock Image - Background Element */}
 			<motion.div
-				className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/4 w-full max-w-6xl opacity-80 pointer-events-none z-0 hidden lg:block dark:opacity-35"
+				className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/4 w-full max-w-6xl opacity-80 pointer-events-none z-0 hidden lg:block"
 				initial={{ opacity: 0, scale: 0.9 }}
 				animate={{ opacity: 0.8, scale: 1 }}
 				transition={{ duration: 1.5, delay: 0.2 }}
@@ -133,12 +133,12 @@ export function Hero() {
 				<Image
 					src={dockImage}
 					alt="Dock Background"
-					className="w-full h-auto brightness-50 dark:brightness-100"
+					className="w-full h-auto brightness-50"
 					priority
 				/>
 			</motion.div>
 
-			<div className="container relative z-10 flex flex-col items-center pt-20 pb-12 lg:pt-32">
+			<div className="container relative z-10 flex flex-col items-center px-4 sm:px-6 pt-20 sm:pt-24 pb-8 sm:pb-12 lg:pt-32">
 			
 			{/* Floating Playful Icons */}
 			<FloatingIcon delay={0} duration={4} className="top-32 left-[10%] hidden lg:block">
@@ -175,7 +175,7 @@ export function Hero() {
 				
 				{/* Badge */}
 				<motion.div
-					className="mb-8 inline-flex items-center border-2 border-black bg-white px-4 py-2 font-bold text-black shadow-[4px_4px_0px_0px_#000] dark:border-white dark:shadow-[4px_4px_0px_0px_#fff]"
+					className="mb-6 sm:mb-8 inline-flex items-center border-2 border-black bg-white px-4 py-2 font-bold text-black shadow-[4px_4px_0px_0px_#000] dark:border-white dark:shadow-[4px_4px_0px_0px_#fff]"
 					{...getAnimationProps(fadeInUp)}
 					whileHover={{ scale: 1.05, rotate: -2 }}
 				>
@@ -187,26 +187,35 @@ export function Hero() {
 
 				{/* Headline */}
 				<motion.h1
-					className="mx-auto max-w-5xl text-center font-bold text-5xl uppercase leading-[0.9] tracking-tighter lg:text-8xl relative z-30"
+					className="mx-auto max-w-5xl text-center font-bold uppercase leading-[0.95] tracking-tighter relative z-30"
 					{...getAnimationProps(fadeInUp)}
 					transition={{ delay: 0.1 }}
 				>
-					<span className="text-white [-webkit-text-stroke:2px_black] dark:text-black dark:[-webkit-text-stroke:2px_white]">
-						The BenPharma
-					</span> <br />
-					<span className="bg-[var(--color-accent)] px-2 text-black">
+					{/* "The" - Small and subtle */}
+					<span className="block text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold tracking-wide text-foreground/70 mb-2 sm:mb-3">
+						The
+					</span>
+					{/* "BenPharma" - Main focal point with accent background */}
+					<span className="inline-block bg-[var(--color-accent)] px-3 sm:px-4 py-1 sm:py-2 text-3xl sm:text-5xl md:text-6xl lg:text-8xl text-black shadow-[4px_4px_0px_0px_#000] dark:shadow-[4px_4px_0px_0px_#fff] mb-3 sm:mb-4">
+						BenPharma
+					</span>
+					<br />
+					{/* "Platform" - Secondary, clean solid text, smaller */}
+					<span className="block mt-2 sm:mt-3 text-xl sm:text-2xl md:text-3xl lg:text-5xl text-black dark:text-white font-semibold">
 						Platform
 					</span>
 				</motion.h1>
 
-				{/* Subheadline */}
-				<motion.p
-					className="mx-auto mt-8 max-w-2xl text-center font-semibold text-lg text-foreground md:text-xl relative z-30 drop-shadow-sm"
+				{/* Subheadline - with backdrop for readability over images */}
+				<motion.div
+					className="mx-auto mt-6 sm:mt-8 max-w-2xl relative z-30 px-2 sm:px-0"
 					{...getAnimationProps(fadeInUp)}
 					transition={{ delay: 0.2 }}
 				>
-					Streamline your pharmaceutical operations with our cutting-edge, compliance-first platform. Built for speed, security, and scale.
-				</motion.p>
+					<p className="text-center font-semibold text-base sm:text-lg md:text-xl lg:text-2xl text-black dark:text-white">
+						Streamline your pharmaceutical operations with our cutting-edge, compliance-first platform. Built for speed, security, and scale.
+					</p>
+				</motion.div>
 
 				{/* Buttons */}
 				<motion.div
@@ -224,8 +233,8 @@ export function Hero() {
 							</LocaleLink>
 						</Button>
 					</motion.div>
-					<motion.div variants={staggerItem}>
-						<Button variant="outline" size="lg" asChild>
+				<motion.div variants={staggerItem}>
+						<Button variant="outline" size="lg" className="w-full sm:w-auto text-black dark:text-white border-black dark:border-white hover:bg-black/10 dark:hover:bg-white/10" asChild>
 							<LocaleLink href="/docs">Read Documentation</LocaleLink>
 						</Button>
 					</motion.div>
@@ -233,13 +242,13 @@ export function Hero() {
 
 				{/* Hero Image */}
 				<motion.div
-					className="mt-20 w-full max-w-6xl relative z-10"
+					className="mt-10 sm:mt-16 lg:mt-20 w-full max-w-6xl relative z-10 px-2 sm:px-0"
 					initial={{ opacity: 0, y: 40, scale: 0.95 }}
 					whileInView={{ opacity: 1, y: 0, scale: 1 }}
 					transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
 					viewport={{ once: true }}
 				>
-					<div className="relative rounded-xl border-4 border-black bg-black p-2 shadow-[12px_12px_0px_0px_#000] dark:border-white dark:bg-white dark:shadow-[12px_12px_0px_0px_#fff]">
+					<div className="relative rounded-lg sm:rounded-xl border-2 sm:border-4 border-black bg-black p-1 sm:p-2 shadow-[4px_4px_0px_0px_#000] sm:shadow-[8px_8px_0px_0px_#000] lg:shadow-[12px_12px_0px_0px_#000] dark:border-white dark:bg-white dark:shadow-[4px_4px_0px_0px_#fff] sm:dark:shadow-[8px_8px_0px_0px_#fff] lg:dark:shadow-[12px_12px_0px_0px_#fff]">
 						<div className="relative overflow-hidden rounded-lg border-2 border-black dark:border-black">
 							<Image
 								src={heroImage}
