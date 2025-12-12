@@ -220,10 +220,8 @@ export async function sendPrescriptionStatusNotification(data: PrescriptionNotif
       notificationsSent.push(notification)
       console.log(`✅ Queued ${channel} prescription ${status.toLowerCase()} notification for Order #${orderNumber}`)
 
-      // If email was sent successfully, we might skip SMS unless it's high priority
-      if (channel === 'email' && priority !== 'high') {
-        break
-      }
+      // If email was sent successfully, we continue to other channels
+      // (Removed logic that skipped SMS/WhatsApp for normal priority)
     }
 
     if (notificationsSent.length === 0) {
