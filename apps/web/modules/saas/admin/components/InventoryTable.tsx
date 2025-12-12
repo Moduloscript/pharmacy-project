@@ -545,23 +545,38 @@ export function InventoryTable({ className }: InventoryTableProps) {
 			</div>
 
 			{/* Search and Filters */}
-			<Card className="p-6">
-				<div className="flex items-center justify-between mb-4">
-					<div className="flex items-center space-x-4 flex-1">
-						<div className="relative flex-1 max-w-md">
+			<Card className="p-4 sm:p-6">
+				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+					{/* Search row */}
+					<div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1 sm:max-w-md">
+						<div className="relative flex-1">
 							<SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400" />
 							<Input
-								placeholder="Search products, NAFDAC numbers, categories..."
+								placeholder="Search products..."
 								value={filters.search}
 								onChange={(e) =>
 									updateFilter("search", e.target.value)
 								}
-								className="pl-10"
+								className="pl-10 w-full"
 							/>
 						</div>
 
 						<Button
 							variant="outline"
+							size="icon"
+							className="shrink-0 sm:hidden"
+							onClick={() =>
+								updateFilter(
+									"showFilters",
+									!filters.showFilters,
+								)
+							}
+						>
+							<FilterIcon className="size-4" />
+						</Button>
+						<Button
+							variant="outline"
+							className="hidden sm:inline-flex"
 							onClick={() =>
 								updateFilter(
 									"showFilters",
@@ -574,10 +589,12 @@ export function InventoryTable({ className }: InventoryTableProps) {
 						</Button>
 					</div>
 
-					<div className="flex items-center space-x-2">
+					{/* Actions row */}
+					<div className="flex items-center justify-between gap-2 sm:justify-end">
 						<Button
 							onClick={handleRefresh}
 							size="sm"
+							variant="outline"
 							disabled={isLoading}
 						>
 							<RefreshCwIcon
@@ -592,7 +609,8 @@ export function InventoryTable({ className }: InventoryTableProps) {
 						<Link href="/app/admin/products/new">
 							<Button size="sm">
 								<PlusIcon className="size-4 mr-2" />
-								Add Product
+								<span className="hidden sm:inline">Add Product</span>
+								<span className="sm:hidden">Add</span>
 							</Button>
 						</Link>
 					</div>
@@ -672,20 +690,17 @@ export function InventoryTable({ className }: InventoryTableProps) {
 				)}
 			</Card>
 
-			{/* Inventory Table */}
-			<Card>
-				<div className="p-6 border-b">
-					<div className="flex items-center justify-between">
-						<h2 className="text-lg font-semibold">
+				<Card>
+				<div className="p-4 sm:p-6 border-b">
+					<div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+						<h2 className="text-base sm:text-lg font-semibold">
 							Products ({filteredProducts.length} of{" "}
 							{products.length})
 						</h2>
-						<div className="flex items-center space-x-2">
-							<p className="text-sm text-gray-600">
-								Total Value:{" "}
-								{formatCurrency(inventoryStats.totalValue)}
-							</p>
-						</div>
+						<p className="text-xs sm:text-sm text-muted-foreground">
+							Total Value:{" "}
+							{formatCurrency(inventoryStats.totalValue)}
+						</p>
 					</div>
 				</div>
 
@@ -719,152 +734,237 @@ export function InventoryTable({ className }: InventoryTableProps) {
 						</p>
 					</div>
 				) : (
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>Image</TableHead>
-								<TableHead>Product</TableHead>
-								<TableHead>Category</TableHead>
-								<TableHead>Stock</TableHead>
-								<TableHead>Prices</TableHead>
-								<TableHead>Status</TableHead>
-								<TableHead>Actions</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{filteredProducts.map((product) => {
-								return (
-									<TableRow key={product.id}>
-										<TableCell>
-											<div className="w-16 h-16 relative rounded-md overflow-hidden bg-gray-100">
-												<SupabaseImage
-													src={product.imageUrl}
-													alt={product.name}
-													fill
-													className="object-cover rounded-md"
-													sizes="64px"
-													fallbackIcon={
-														<PackageIcon className="w-8 h-8 text-gray-400" />
-													}
-												/>
+					<>
+						{/* Mobile Card View */}
+						<div className="lg:hidden p-4 space-y-4">
+							{filteredProducts.map((product) => (
+								<div key={product.id} className="bg-card rounded-lg border p-4 space-y-3">
+									{/* Header with Image and Product Info */}
+									<div className="flex gap-3">
+										<div className="w-16 h-16 relative rounded-md overflow-hidden bg-gray-100 shrink-0">
+											<SupabaseImage
+												src={product.imageUrl}
+												alt={product.name}
+												fill
+												className="object-cover rounded-md"
+												sizes="64px"
+												fallbackIcon={
+													<PackageIcon className="w-6 h-6 text-gray-400" />
+												}
+											/>
+										</div>
+										<div className="flex-1 min-w-0">
+											<p className="font-medium text-sm truncate">{product.name}</p>
+											{product.genericName && (
+												<p className="text-xs text-muted-foreground truncate">{product.genericName}</p>
+											)}
+											<div className="flex items-center gap-2 mt-1 flex-wrap">
+												<Badge className="bg-gray-100 text-gray-800 text-xs">
+													{product.category}
+												</Badge>
+												<Badge className={cn(getStockStatusColor(product), "text-xs")}>
+													{getStockStatus(product)}
+												</Badge>
 											</div>
-										</TableCell>
-										<TableCell>
+										</div>
+									</div>
+
+									{/* Stock and Price Info */}
+									<div className="grid grid-cols-2 gap-3 py-2 border-y">
+										<div>
+											<p className="text-xs text-muted-foreground">Stock</p>
+											<p className="text-sm font-semibold">{product.stockQuantity} units</p>
+										</div>
+										<div>
+											<p className="text-xs text-muted-foreground">Retail Price</p>
+											<p className="text-sm font-medium">{formatCurrency(product.retailPrice)}</p>
+										</div>
+										<div>
+											<p className="text-xs text-muted-foreground">Wholesale</p>
+											<p className="text-sm">{formatCurrency(product.wholesalePrice)}</p>
+										</div>
+										{(product.nafdacNumber || product.nafdacRegNumber) && (
 											<div>
-												<p className="font-medium">
-													{product.name}
-												</p>
-												{product.genericName && (
-													<p className="text-sm text-gray-600">
-														{product.genericName}
-													</p>
-												)}
-												{(product.nafdacNumber ||
-													product.nafdacRegNumber) && (
-													<p className="text-xs text-gray-500">
-														NAFDAC:{" "}
-														{product.nafdacNumber ||
-															product.nafdacRegNumber}
-													</p>
-												)}
+												<p className="text-xs text-muted-foreground">NAFDAC</p>
+												<p className="text-xs font-mono truncate">{product.nafdacNumber || product.nafdacRegNumber}</p>
 											</div>
-										</TableCell>
+										)}
+									</div>
 
-										<TableCell>
-											<Badge className="bg-gray-100 text-gray-800">
-												{product.category}
-											</Badge>
-										</TableCell>
+									{/* Actions */}
+									<div className="flex flex-wrap gap-2 pt-1">
+										<Link href={`/app/admin/products/${product.id}`} className="flex-1 min-w-[80px]">
+											<Button variant="outline" size="sm" className="w-full text-xs sm:text-sm">
+												<EyeIcon className="size-3 sm:size-4 mr-1 sm:mr-2" />
+												View
+											</Button>
+										</Link>
+										<Link href={`/app/admin/products/${product.id}/edit`} className="flex-1 min-w-[80px]">
+											<Button variant="outline" size="sm" className="w-full text-xs sm:text-sm">
+												<EditIcon className="size-3 sm:size-4 mr-1 sm:mr-2" />
+												Edit
+											</Button>
+										</Link>
+										<Link href={`/app/admin/products/${product.id}/movements#adjust`} className="flex-1 min-w-[80px]">
+											<Button variant="outline" size="sm" className="w-full text-xs sm:text-sm">
+												Adjust
+											</Button>
+										</Link>
+									</div>
+								</div>
+							))}
+						</div>
 
-										<TableCell>
-											<div className="space-y-1">
-												<p className="font-semibold">
-													{product.stockQuantity}
-												</p>
-												<ProductStockInput
-													product={product}
-												/>
-											</div>
-										</TableCell>
-
-										<TableCell>
-											<div>
-												<p className="text-sm">
-													Retail:{" "}
-													{formatCurrency(
-														product.retailPrice,
-													)}
-												</p>
-												<p className="text-xs text-gray-600">
-													Wholesale:{" "}
-													{formatCurrency(
-														product.wholesalePrice,
-													)}
-												</p>
-											</div>
-										</TableCell>
-
-										<TableCell>
-											<Badge
-												className={getStockStatusColor(
-													product,
-												)}
-											>
-												{getStockStatus(product)}
-											</Badge>
-										</TableCell>
-
-										<TableCell>
-											<div className="flex items-center space-x-1">
-												<Link
-													href={`/app/admin/products/${product.id}`}
-												>
-													<Button
-														variant="outline"
-														size="sm"
-													>
-														<EyeIcon className="size-4" />
-													</Button>
-												</Link>
-
-												<Link
-													href={`/app/admin/products/${product.id}/edit`}
-												>
-													<Button
-														variant="outline"
-														size="sm"
-													>
-														<EditIcon className="size-4" />
-													</Button>
-												</Link>
-
-												<Link
-													href={`/app/admin/products/${product.id}/movements`}
-												>
-													<Button
-														variant="outline"
-														size="sm"
-													>
-														Movements
-													</Button>
-												</Link>
-												<Link
-													href={`/app/admin/products/${product.id}/movements#adjust`}
-												>
-													<Button
-														variant="outline"
-														size="sm"
-													>
-														Adjust
-													</Button>
-												</Link>
-											</div>
-										</TableCell>
+						{/* Desktop Table View */}
+						<div className="hidden lg:block">
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead>Image</TableHead>
+										<TableHead>Product</TableHead>
+										<TableHead>Category</TableHead>
+										<TableHead>Stock</TableHead>
+										<TableHead>Prices</TableHead>
+										<TableHead>Status</TableHead>
+										<TableHead>Actions</TableHead>
 									</TableRow>
-								);
-							})}
-						</TableBody>
-					</Table>
+								</TableHeader>
+								<TableBody>
+									{filteredProducts.map((product) => {
+										return (
+											<TableRow key={product.id}>
+												<TableCell>
+													<div className="w-16 h-16 relative rounded-md overflow-hidden bg-gray-100">
+														<SupabaseImage
+															src={product.imageUrl}
+															alt={product.name}
+															fill
+															className="object-cover rounded-md"
+															sizes="64px"
+															fallbackIcon={
+																<PackageIcon className="w-8 h-8 text-gray-400" />
+															}
+														/>
+													</div>
+												</TableCell>
+												<TableCell>
+													<div>
+														<p className="font-medium">
+															{product.name}
+														</p>
+														{product.genericName && (
+															<p className="text-sm text-gray-600">
+																{product.genericName}
+															</p>
+														)}
+														{(product.nafdacNumber ||
+															product.nafdacRegNumber) && (
+															<p className="text-xs text-gray-500">
+																NAFDAC:{" "}
+																{product.nafdacNumber ||
+																	product.nafdacRegNumber}
+															</p>
+														)}
+													</div>
+												</TableCell>
+
+												<TableCell>
+													<Badge className="bg-gray-100 text-gray-800">
+														{product.category}
+													</Badge>
+												</TableCell>
+
+												<TableCell>
+													<div className="space-y-1">
+														<p className="font-semibold">
+															{product.stockQuantity}
+														</p>
+														<ProductStockInput
+															product={product}
+														/>
+													</div>
+												</TableCell>
+
+												<TableCell>
+													<div>
+														<p className="text-sm">
+															Retail:{" "}
+															{formatCurrency(
+																product.retailPrice,
+															)}
+														</p>
+														<p className="text-xs text-gray-600">
+															Wholesale:{" "}
+															{formatCurrency(
+																product.wholesalePrice,
+															)}
+														</p>
+													</div>
+												</TableCell>
+
+												<TableCell>
+													<Badge
+														className={getStockStatusColor(
+															product,
+														)}
+													>
+														{getStockStatus(product)}
+													</Badge>
+												</TableCell>
+
+												<TableCell>
+													<div className="flex items-center space-x-1">
+														<Link
+															href={`/app/admin/products/${product.id}`}
+														>
+															<Button
+																variant="outline"
+																size="sm"
+															>
+																<EyeIcon className="size-4" />
+															</Button>
+														</Link>
+
+														<Link
+															href={`/app/admin/products/${product.id}/edit`}
+														>
+															<Button
+																variant="outline"
+																size="sm"
+															>
+																<EditIcon className="size-4" />
+															</Button>
+														</Link>
+
+														<Link
+															href={`/app/admin/products/${product.id}/movements`}
+														>
+															<Button
+																variant="outline"
+																size="sm"
+															>
+																Movements
+															</Button>
+														</Link>
+														<Link
+															href={`/app/admin/products/${product.id}/movements#adjust`}
+														>
+															<Button
+																variant="outline"
+																size="sm"
+															>
+																Adjust
+															</Button>
+														</Link>
+													</div>
+												</TableCell>
+											</TableRow>
+										);
+									})}
+								</TableBody>
+							</Table>
+						</div>
+					</>
 				)}
 			</Card>
 		</div>

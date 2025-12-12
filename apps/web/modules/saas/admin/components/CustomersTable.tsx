@@ -680,9 +680,10 @@ export function CustomersTable({ className }: CustomersTableProps) {
       {/* Search and Filters */}
       <Card className="p-0">
         <div className="sticky top-16 z-20 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-6 py-4 border-b">
-          <div className="flex flex-wrap items-center gap-3 justify-between">
-            <div className="flex items-center gap-4 flex-1 min-w-0">
-              <div className="relative flex-1 min-w-[220px] max-w-md">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            {/* Search and filters row */}
+            <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1 sm:max-w-lg">
+              <div className="relative flex-1">
                 <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                 <Input
                   placeholder="Search customers, emails, business names..."
@@ -693,6 +694,17 @@ export function CustomersTable({ className }: CustomersTableProps) {
               </div>
               <Button
                 variant="outline"
+                size="icon"
+                className="shrink-0 sm:hidden"
+                onClick={() => updateFilter('showFilters', !filters.showFilters)}
+                aria-expanded={filters.showFilters}
+                aria-controls="admin-customers-advanced-filters"
+              >
+                <FilterIcon className="size-4" />
+              </Button>
+              <Button
+                variant="outline"
+                className="hidden sm:inline-flex"
                 onClick={() => updateFilter('showFilters', !filters.showFilters)}
                 aria-expanded={filters.showFilters}
                 aria-controls="admin-customers-advanced-filters"
@@ -702,8 +714,9 @@ export function CustomersTable({ className }: CustomersTableProps) {
               </Button>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-1 mr-2">
+            {/* Actions row */}
+            <div className="flex items-center justify-between gap-2 sm:justify-end">
+              <div className="flex items-center gap-1">
                 <Button size="sm" variant={listView ? 'default' : 'outline'} aria-pressed={listView} onClick={() => setListView(true)}>
                   List
                 </Button>

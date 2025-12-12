@@ -23,14 +23,14 @@ export default async function AdminInventoryPage() {
   return (
     <div className="container mx-auto px-6 py-8">
       <div className="mb-10">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg transition-colors">
-            <svg className="w-8 h-8 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex items-start gap-3 sm:items-center mb-4">
+          <div className="p-2 sm:p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg transition-colors shrink-0">
+            <svg className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
           </div>
-          <div>
-            <h1 className="text-4xl font-bold text-foreground leading-tight">Inventory Management</h1>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold text-foreground leading-tight">Inventory Management</h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 transition-colors">
                 Stock Monitoring

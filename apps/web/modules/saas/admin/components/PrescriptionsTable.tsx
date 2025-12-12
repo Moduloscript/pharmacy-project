@@ -232,233 +232,344 @@ export function PrescriptionsTable() {
         )}
 
         {!isLoading && !isError && rows.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="rx-table">
-              <thead>
-                <tr>
-                  <th className="w-[160px]">Date</th>
-                  <th className="w-[160px]">Order #</th>
-                  <th className="w-[280px]">Customer</th>
-                  <th className="w-[140px]">File</th>
-                  <th className="w-[180px]">Status</th>
-                  <th className="w-[200px] text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((p) => {
-                  const isPending = p.status === 'PENDING_VERIFICATION';
-                  const orderNumber = p.order?.orderNumber || p.orderId;
-                  const isBusy = isUpdating && busyId === p.id;
-                  
-                  return (
-                    <tr key={p.id} className={cn("group", isBusy && "opacity-60")}>
-                      <td className="whitespace-nowrap">
-                        <div className="space-y-0.5">
-                          <div className="font-medium" style={{ color: 'var(--rx-text)' }}>
-                            {new Date(p.createdAt).toLocaleDateString()}
-                          </div>
-                          <div className="text-xs" style={{ color: 'var(--rx-muted)' }}>
-                            {new Date(p.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap font-mono text-sm" style={{ color: 'var(--rx-text)' }}>
-                        {orderNumber}
-                      </td>
-                      <td className="whitespace-nowrap">
-                        <div className="space-y-0.5">
-                          <div className="font-medium truncate max-w-[240px]" style={{ color: 'var(--rx-text)' }} title={p.customer?.user?.name || ''}>
-                            {p.customer?.user?.name || 'Unknown Customer'}
-                          </div>
-                          <div className="text-xs truncate max-w-[240px]" style={{ color: 'var(--rx-muted)' }} title={p.customer?.user?.email || ''}>
-                            {p.customer?.user?.email || '—'}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <PrescriptionThumbnail prescriptionId={p.id} />
-                          {/* Always enable preview; signed URL is resolved on demand */}
+          <>
+            {/* Mobile Card View */}
+            <div className="md:hidden p-4 space-y-4">
+              {rows.map((p) => {
+                const isPending = p.status === 'PENDING_VERIFICATION';
+                const orderNumber = p.order?.orderNumber || p.orderId;
+                const isBusy = isUpdating && busyId === p.id;
+
+                return (
+                  <div key={p.id} className={cn("rounded-lg border p-4 space-y-3", isBusy && "opacity-60")} style={{ backgroundColor: 'var(--rx-surface)', borderColor: 'var(--rx-border)' }}>
+                    {/* Header: Date and Status */}
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-sm" style={{ color: 'var(--rx-text)' }}>
+                          {new Date(p.createdAt).toLocaleDateString()}
+                        </p>
+                        <p className="text-xs" style={{ color: 'var(--rx-muted)' }}>
+                          {new Date(p.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <StatusChip status={p.status} />
+                    </div>
+
+                    {/* Order and Customer Info */}
+                    <div className="space-y-1">
+                      <p className="font-mono text-sm" style={{ color: 'var(--rx-text)' }}>{orderNumber}</p>
+                      <p className="text-sm font-medium truncate" style={{ color: 'var(--rx-text)' }}>
+                        {p.customer?.user?.name || 'Unknown Customer'}
+                      </p>
+                      <p className="text-xs truncate" style={{ color: 'var(--rx-muted)' }}>
+                        {p.customer?.user?.email || '—'}
+                      </p>
+                    </div>
+
+                    {/* File Preview */}
+                    <div className="flex items-center gap-3 py-2 border-y" style={{ borderColor: 'var(--rx-border)' }}>
+                      <PrescriptionThumbnail prescriptionId={p.id} />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="gap-2"
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          try {
+                            const res = await fetch(`/api/prescriptions/${p.id}/files`, { credentials: 'include' });
+                            if (res.ok) {
+                              const json = await res.json();
+                              const files = json?.data?.files as Array<{ url: string; contentType?: string; key?: string | null; kind?: 'image' | 'pdf' | 'other' } | undefined>;
+                              const file = files?.[0];
+                              let url = file?.url || p.fileUrl || '';
+                              if ((file?.kind === 'pdf' || file?.contentType === 'application/pdf')) {
+                                if (file?.url) url = file.url;
+                                else if (file?.key) url = `/image-proxy/prescriptions/${encodeURIComponent(file.key)}`;
+                              }
+                              if (/\/api\/prescriptions\/.+\/file$/.test(url) || !url) {
+                                url = `/api/prescriptions/${p.id}/file/redirect`;
+                              }
+                              const hasImageCt = !!file?.contentType?.startsWith('image/');
+                              const fromFileName = (p.fileName || '').match(/\.(jpg|jpeg|png|gif|webp)$/i) != null;
+                              const fromUrl = /(\.jpg|\.jpeg|\.png|\.gif|\.webp)(\?|$)/i.test(url);
+                              let isImage = hasImageCt || fromFileName || fromUrl;
+                              if (isImage) {
+                                setViewer({ open: true, src: url, filename: p.fileName || 'prescription' });
+                              } else {
+                                const isPdf = (file?.contentType === 'application/pdf') || /\.(pdf)(\?|$)/i.test(p.fileName || '') || /(\.pdf)(\?|$)/i.test(url);
+                                if (isPdf) {
+                                  const isAbsolute = /^https?:\/\//i.test(url);
+                                  const src = isAbsolute ? url : `${url}${url.includes('?') ? '&' : '?'}nocache=${Date.now()}`;
+                                  setPdfViewer({ open: true, src, filename: p.fileName || 'document.pdf' });
+                                } else {
+                                  window.open(url, '_blank');
+                                }
+                              }
+                            } else {
+                              const fallback = `/api/prescriptions/${p.id}/file/redirect`;
+                              window.open(fallback, '_blank');
+                            }
+                          } catch (err) {
+                            toast.error('Failed to open preview');
+                          }
+                        }}
+                        disabled={isBusy}
+                      >
+                        <Eye className="size-4" />
+                        Preview
+                      </Button>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {isPending ? (
+                        <>
                           <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="gap-2"
-                              onClick={async (e) => {
-                                // Always stop propagation to prevent any parent row/link navigation
-                                e.preventDefault();
-                                e.stopPropagation();
-                                console.log('[Preview] onClick fired for', p.id);
-                                try {
-                                  // Defensive: prevent any parent <a> default navigation to JSON endpoints
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => handleApprove(p.id, orderNumber)}
+                            disabled={!canApprove || isBusy}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            variant="error"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => handleReject(p.id, orderNumber)}
+                            disabled={!canReject || isBusy}
+                          >
+                            Reject
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleClarify(p.id, orderNumber)}
+                            disabled={!canClarify || isBusy}
+                          >
+                            Clarify
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => handleViewDetails(p)}
+                          disabled={isBusy}
+                        >
+                          View Details
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="rx-table">
+                <thead>
+                  <tr>
+                    <th className="w-[160px]">Date</th>
+                    <th className="w-[160px]">Order #</th>
+                    <th className="w-[280px]">Customer</th>
+                    <th className="w-[140px]">File</th>
+                    <th className="w-[180px]">Status</th>
+                    <th className="w-[200px] text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((p) => {
+                    const isPending = p.status === 'PENDING_VERIFICATION';
+                    const orderNumber = p.order?.orderNumber || p.orderId;
+                    const isBusy = isUpdating && busyId === p.id;
+                    
+                    return (
+                      <tr key={p.id} className={cn("group", isBusy && "opacity-60")}>
+                        <td className="whitespace-nowrap">
+                          <div className="space-y-0.5">
+                            <div className="font-medium" style={{ color: 'var(--rx-text)' }}>
+                              {new Date(p.createdAt).toLocaleDateString()}
+                            </div>
+                            <div className="text-xs" style={{ color: 'var(--rx-muted)' }}>
+                              {new Date(p.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap font-mono text-sm" style={{ color: 'var(--rx-text)' }}>
+                          {orderNumber}
+                        </td>
+                        <td className="whitespace-nowrap">
+                          <div className="space-y-0.5">
+                            <div className="font-medium truncate max-w-[240px]" style={{ color: 'var(--rx-text)' }} title={p.customer?.user?.name || ''}>
+                              {p.customer?.user?.name || 'Unknown Customer'}
+                            </div>
+                            <div className="text-xs truncate max-w-[240px]" style={{ color: 'var(--rx-muted)' }} title={p.customer?.user?.email || ''}>
+                              {p.customer?.user?.email || '—'}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <PrescriptionThumbnail prescriptionId={p.id} />
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="gap-2"
+                                onClick={async (e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  console.log('[Preview] onClick fired for', p.id);
                                   try {
-                                    const anchor = (e.currentTarget as HTMLElement)?.closest('a') as HTMLAnchorElement | null;
-                                    if (anchor && /\/api\/prescriptions\/.+\/file(?!\/redirect)/.test(anchor.href)) {
-                                      console.debug('[Preview] Preventing default anchor navigation to JSON endpoint:', anchor.href);
-                                      anchor.removeAttribute('href');
-                                    }
-                                  } catch {}
-
-                                  console.debug('[Preview] Clicked for prescription', p.id, { status: p.status, isPending });
-                                  // Ask API for all available files (handles legacy and current)
-                                  const res = await fetch(`/api/prescriptions/${p.id}/files`, { credentials: 'include' });
-                                  console.debug('[Preview] /files response status', res.status);
-                                  if (res.ok) {
-                                    const json = await res.json();
-                                    const files = json?.data?.files as Array<{ url: string; contentType?: string; key?: string | null; kind?: 'image' | 'pdf' | 'other' } | undefined>;
-                                    console.debug('[Preview] files payload', files);
-                                    const file = files?.[0];
-                                    let url = file?.url || p.fileUrl || '';
-                                    // Prefer direct signed URL for PDFs; fallback to proxy if only key is available
-                                    if ((file?.kind === 'pdf' || file?.contentType === 'application/pdf')) {
-                                      if (file?.url) {
-                                        url = file.url;
-                                      } else if (file?.key) {
-                                        url = `/image-proxy/prescriptions/${encodeURIComponent(file.key)}`;
+                                    try {
+                                      const anchor = (e.currentTarget as HTMLElement)?.closest('a') as HTMLAnchorElement | null;
+                                      if (anchor && /\/api\/prescriptions\/.+\/file(?!\/redirect)/.test(anchor.href)) {
+                                        anchor.removeAttribute('href');
                                       }
-                                    }
-                                    // If URL points to JSON endpoint, switch to redirect endpoint
-                                    if (/\/api\/prescriptions\/.+\/file$/.test(url) || !url) {
-                                      url = `/api/prescriptions/${p.id}/file/redirect`;
-                                    }
-                                    // Determine if image: contentType OR filename ext OR url ext
-                                    const hasImageCt = !!file?.contentType?.startsWith('image/');
-                                    const fromFileName = (p.fileName || '').match(/\.(jpg|jpeg|png|gif|webp)$/i) != null;
-                                    const fromUrl = /(\.jpg|\.jpeg|\.png|\.gif|\.webp)(\?|$)/i.test(url);
-                                    let isImage = hasImageCt || fromFileName || fromUrl;
-                                    console.debug('[Preview] resolved url', url, { contentType: file?.contentType, isImage, currentTabStatus: status, fileName: p.fileName });
+                                    } catch {}
 
-                                    if (!isImage && /\/api\/prescriptions\/.+\/file\/redirect$/.test(url)) {
-                                      // We only have a redirect URL; fetch JSON endpoint to inspect fileName and decide if image
+                                    const res = await fetch(`/api/prescriptions/${p.id}/files`, { credentials: 'include' });
+                                    if (res.ok) {
+                                      const json = await res.json();
+                                      const files = json?.data?.files as Array<{ url: string; contentType?: string; key?: string | null; kind?: 'image' | 'pdf' | 'other' } | undefined>;
+                                      const file = files?.[0];
+                                      let url = file?.url || p.fileUrl || '';
+                                      if ((file?.kind === 'pdf' || file?.contentType === 'application/pdf')) {
+                                        if (file?.url) {
+                                          url = file.url;
+                                        } else if (file?.key) {
+                                          url = `/image-proxy/prescriptions/${encodeURIComponent(file.key)}`;
+                                        }
+                                      }
+                                      if (/\/api\/prescriptions\/.+\/file$/.test(url) || !url) {
+                                        url = `/api/prescriptions/${p.id}/file/redirect`;
+                                      }
+                                      const hasImageCt = !!file?.contentType?.startsWith('image/');
+                                      const fromFileName = (p.fileName || '').match(/\.(jpg|jpeg|png|gif|webp)$/i) != null;
+                                      const fromUrl = /(\.jpg|\.jpeg|\.png|\.gif|\.webp)(\?|$)/i.test(url);
+                                      let isImage = hasImageCt || fromFileName || fromUrl;
+
+                                      if (!isImage && /\/api\/prescriptions\/.+\/file\/redirect$/.test(url)) {
+                                        try {
+                                          const j = await fetch(`/api/prescriptions/${p.id}/file`, { credentials: 'include', headers: { 'Accept': 'application/json' } });
+                                          if (j.ok) {
+                                            const data = await j.json();
+                                            const jsonUrl = data?.data?.url as string | undefined;
+                                            const jsonFileName = (data?.data?.fileName as string | undefined) || p.fileName || '';
+                                            const isImgByJson = /\.(jpg|jpeg|png|gif|webp)$/i.test(jsonFileName) || /(\.jpg|\.jpeg|\.png|\.gif|\.webp)(\?|$)/i.test(jsonUrl || '');
+                                            if (isImgByJson && jsonUrl) {
+                                              isImage = true;
+                                              url = jsonUrl;
+                                            }
+                                          }
+                                        } catch {}
+                                      }
+
+                                      if (isImage) {
+                                        setViewer({ open: true, src: url, filename: p.fileName || 'prescription' });
+                                      } else {
+                                        const isPdf = (file?.contentType === 'application/pdf') || /\.(pdf)(\?|$)/i.test(p.fileName || '') || /(\.pdf)(\?|$)/i.test(url);
+                                        if (isPdf) {
+                                          const isAbsolute = /^https?:\/\//i.test(url);
+                                          const src = isAbsolute ? url : `${url}${url.includes('?') ? '&' : '?'}nocache=${Date.now()}`;
+                                          setPdfViewer({ open: true, src, filename: p.fileName || 'document.pdf' });
+                                        } else {
+                                          window.open(url, '_blank');
+                                        }
+                                      }
+                                    } else {
                                       try {
                                         const j = await fetch(`/api/prescriptions/${p.id}/file`, { credentials: 'include', headers: { 'Accept': 'application/json' } });
                                         if (j.ok) {
                                           const data = await j.json();
-                                          const jsonUrl = data?.data?.url as string | undefined;
-                                          const jsonFileName = (data?.data?.fileName as string | undefined) || p.fileName || '';
-                                          const isImgByJson = /\.(jpg|jpeg|png|gif|webp)$/i.test(jsonFileName) || /(\.jpg|\.jpeg|\.png|\.gif|\.webp)(\?|$)/i.test(jsonUrl || '');
-                                          console.debug('[Preview] refined isImage via JSON /file', { jsonUrl, jsonFileName, isImgByJson });
-                                          if (isImgByJson && jsonUrl) {
-                                            isImage = true;
-                                            url = jsonUrl;
+                                          let url = data?.data?.url as string | undefined;
+                                          const fileName = (data?.data?.fileName as string | undefined) || p.fileName || '';
+                                          if (!url) {
+                                            url = `/api/prescriptions/${p.id}/file/redirect`;
                                           }
-                                        }
-                                      } catch {}
-                                    }
-
-                                    if (isImage) {
-                                      // Prefer zoom modal for all images for better UX (especially on Pending tab)
-                                      console.log('[Preview] opening image viewer', { url, fileName: p.fileName });
-                                      setViewer({ open: true, src: url, filename: p.fileName || 'prescription' });
-                                    } else {
-                                      const isPdf = (file?.contentType === 'application/pdf') || /\.(pdf)(\?|$)/i.test(p.fileName || '') || /(\.pdf)(\?|$)/i.test(url);
-                                      if (isPdf) {
-                                        console.log('[Preview] opening PDF viewer', { url, fileName: p.fileName });
-                                        // If URL is the redirect endpoint, just use it (same-origin). Otherwise use as-is.
-                                        // Do not append query params to presigned URLs (breaks signature)
-                                        const isAbsolute = /^https?:\/\//i.test(url);
-                                        const src = isAbsolute ? url : `${url}${url.includes('?') ? '&' : '?'}nocache=${Date.now()}`;
-                                        setPdfViewer({ open: true, src, filename: p.fileName || 'document.pdf' });
-                                      } else {
-                                        console.log('[Preview] opening new tab (non-image/pdf)', { url });
-                                        window.open(url, '_blank');
-                                      }
-                                    }
-                                  } else {
-                                    console.error('[Preview] /files request failed', res.status, 'attempting JSON /file endpoint');
-                                    try {
-                                      const j = await fetch(`/api/prescriptions/${p.id}/file`, { credentials: 'include', headers: { 'Accept': 'application/json' } });
-                                      if (j.ok) {
-                                        const data = await j.json();
-                                        let url = data?.data?.url as string | undefined;
-                                        const fileName = (data?.data?.fileName as string | undefined) || p.fileName || '';
-                                        if (!url) {
-                                          console.warn('[Preview] /file returned no url, falling back to redirect');
-                                          url = `/api/prescriptions/${p.id}/file/redirect`;
-                                        }
-                                        const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName) || /(\.jpg|\.jpeg|\.png|\.gif|\.webp)(\?|$)/i.test(url);
-                                        console.debug('[Preview] JSON /file resolved', { url, fileName, isImage });
-                                        if (isImage) {
-                                          console.log('[Preview] opening image viewer via /file JSON fallback', { url, fileName });
-                                          setViewer({ open: true, src: url, filename: fileName || 'prescription' });
+                                          const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName) || /(\.jpg|\.jpeg|\.png|\.gif|\.webp)(\?|$)/i.test(url);
+                                          if (isImage) {
+                                            setViewer({ open: true, src: url, filename: fileName || 'prescription' });
+                                          } else {
+                                            window.open(url, '_blank');
+                                          }
                                         } else {
-                                          console.log('[Preview] opening new tab via /file JSON fallback', { url, fileName });
-                                          window.open(url, '_blank');
+                                          const fallback = `/api/prescriptions/${p.id}/file/redirect`;
+                                          window.open(fallback, '_blank');
                                         }
-                                      } else {
-                                        console.error('[Preview] /file also failed', j.status, 'falling back to redirect');
+                                      } catch (e) {
                                         const fallback = `/api/prescriptions/${p.id}/file/redirect`;
                                         window.open(fallback, '_blank');
                                       }
-                                    } catch (e) {
-                                      console.error('[Preview] exception calling /file', e);
-                                      const fallback = `/api/prescriptions/${p.id}/file/redirect`;
-                                      window.open(fallback, '_blank');
                                     }
+                                  } catch (err) {
+                                    toast.error('Failed to open preview');
                                   }
-                                } catch (err) {
-                                  console.error('[Preview] Exception while opening preview', err);
-                                  toast.error('Failed to open preview');
-                                }
-                              }}
-                              disabled={isBusy}
-                            >
-                              Preview
-                            </Button>
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap">
-                        <StatusChip status={p.status} />
-                      </td>
-                      <td className="whitespace-nowrap text-right">
-                        <div className="flex justify-end gap-2">
-                          {isPending ? (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => handleApprove(p.id, orderNumber)}
-                                disabled={!canApprove || isBusy}
-                                title={!canApprove ? 'You don\'t have permission to approve prescriptions' : ''}
+                                }}
+                                disabled={isBusy}
                               >
-                                Approve
+                                Preview
                               </Button>
-                              <Button
-                                variant="error"
-                                size="sm"
-                                onClick={() => handleReject(p.id, orderNumber)}
-                                disabled={!canReject || isBusy}
-                                title={!canReject ? 'You don\'t have permission to reject prescriptions' : ''}
-                              >
-                                Disapprove
-                              </Button>
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap">
+                          <StatusChip status={p.status} />
+                        </td>
+                        <td className="whitespace-nowrap text-right">
+                          <div className="flex justify-end gap-2">
+                            {isPending ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleApprove(p.id, orderNumber)}
+                                  disabled={!canApprove || isBusy}
+                                  title={!canApprove ? 'You don\'t have permission to approve prescriptions' : ''}
+                                >
+                                  Approve
+                                </Button>
+                                <Button
+                                  variant="error"
+                                  size="sm"
+                                  onClick={() => handleReject(p.id, orderNumber)}
+                                  disabled={!canReject || isBusy}
+                                  title={!canReject ? 'You don\'t have permission to reject prescriptions' : ''}
+                                >
+                                  Disapprove
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleClarify(p.id, orderNumber)}
+                                  disabled={!canClarify || isBusy}
+                                  title={!canClarify ? 'You don\'t have permission to request clarification' : ''}
+                                >
+                                  Clarify
+                                </Button>
+                              </>
+                            ) : (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleClarify(p.id, orderNumber)}
-                                disabled={!canClarify || isBusy}
-                                title={!canClarify ? 'You don\'t have permission to request clarification' : ''}
+                                onClick={() => handleViewDetails(p)}
+                                disabled={isBusy}
                               >
-                                Clarify
+                                View Details
                               </Button>
-                            </>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewDetails(p)}
-                              disabled={isBusy}
-                            >
-                              View Details
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
         {hasNextPage && (
