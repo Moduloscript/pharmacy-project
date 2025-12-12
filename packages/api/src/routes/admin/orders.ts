@@ -195,37 +195,38 @@ ordersRouter.put('/:id/status', zValidator('json', updateStatusSchema), async (c
       return c.json({ error: 'Order not found' }, 404);
     }
     
-    // Validate status transition (optional - add business logic)
+    // Validate status transition - allow admins full control except for terminal states
     type OrderStatus = 'RECEIVED' | 'PROCESSING' | 'READY' | 'DISPATCHED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
-    const validTransitions: Record<OrderStatus, OrderStatus[]> = {
-      RECEIVED: ['PROCESSING', 'CANCELLED'],
-      PROCESSING: ['READY', 'CANCELLED'],
-      READY: ['DISPATCHED'],
-      DISPATCHED: ['DELIVERED'],
-      DELIVERED: [],
-      CANCELLED: [],
-      REFUNDED: []
-    };
     
     const currentStatus = order.status as OrderStatus;
     const newStatus = status as OrderStatus;
     
+    // Define terminal states that cannot be changed once reached
+    const terminalStates: OrderStatus[] = ['DELIVERED', 'CANCELLED', 'REFUNDED'];
+    
+    // Define valid non-terminal statuses that admins can set
+    const allowedStatuses: OrderStatus[] = ['RECEIVED', 'PROCESSING', 'READY', 'DISPATCHED'];
+    
     console.log('Debug Order Status Update:', { 
       orderId, 
-      dbStatus: order.status, 
       currentStatus, 
-      inputStatus: status, 
       newStatus,
-      validTransitionsKeys: Object.keys(validTransitions)
+      isTerminalState: terminalStates.includes(currentStatus),
+      isAllowedStatus: allowedStatuses.includes(newStatus)
     });
 
-    if (!validTransitions[currentStatus]) {
-      console.error(`Invalid current status in DB: ${currentStatus}`);
-      return c.json({ error: `Invalid current order status: ${currentStatus}` }, 500);
+    // Prevent changing from terminal states
+    if (terminalStates.includes(currentStatus)) {
+      return c.json({ 
+        error: `Cannot change status from ${currentStatus}. This is a final state.` 
+      }, 400);
     }
 
-    if (!validTransitions[currentStatus].includes(newStatus) && newStatus !== currentStatus) {
-      return c.json({ error: `Cannot transition from ${currentStatus} to ${newStatus}` }, 400);
+    // Validate new status is allowed
+    if (!allowedStatuses.includes(newStatus) && newStatus !== currentStatus) {
+      return c.json({ 
+        error: `Invalid status: ${newStatus}. Allowed statuses are: ${allowedStatuses.join(', ')}` 
+      }, 400);
     }
     
     // 1. Update the order status (without includes to avoid potential Prisma issues)

@@ -120,13 +120,13 @@ export async function sendPrescriptionStatusNotification(data: PrescriptionNotif
       case 'APPROVED':
         subject = `Prescription Approved - Order #${orderNumber}`
         message = `Great news! Your prescription for Order #${orderNumber} has been approved by our pharmacist${pharmacistName ? ` (${pharmacistName})` : ''}. Your order is now being processed and will be shipped soon.`
-        smsMessage = `BenPharmacy: Your prescription for Order #${orderNumber} has been approved. Your order is being processed. Track at pharmacy-project-web.vercel.app/orders`
+        smsMessage = `BenPharmacy: Your prescription for Order #${orderNumber} has been approved. Your order is being processed. Track at pharmacy-project-web.vercel.app/app/orders`
         break
 
       case 'REJECTED':
         subject = `Prescription Review - Order #${orderNumber}`
         message = `Your prescription for Order #${orderNumber} could not be approved. Reason: ${reason || 'The prescription does not meet our requirements'}. Please contact your healthcare provider for a new prescription or reach out to our support team for assistance.`
-        smsMessage = `BenPharmacy: Your prescription for Order #${orderNumber} needs attention. Please check your email or visit pharmacy-project-web.vercel.app/orders for details.`
+        smsMessage = `BenPharmacy: Your prescription for Order #${orderNumber} needs attention. Please check your email or visit pharmacy-project-web.vercel.app/app/orders for details.`
         break
 
       case 'CLARIFICATION':

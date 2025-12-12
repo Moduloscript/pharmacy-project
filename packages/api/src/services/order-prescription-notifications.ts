@@ -53,7 +53,7 @@ ${itemsList}
 
 To complete your order and begin processing, please upload your prescription by:
 
-1. Visit your order details page: https://pharmacy-project-web.vercel.app/orders/${orderId}
+1. Visit your order details page: https://pharmacy-project-web.vercel.app/app/orders/${orderId}
 2. Click on the "Upload Prescription" section
 3. Upload a clear photo or PDF of your prescription
 4. Fill in the prescribing doctor's details
@@ -74,7 +74,7 @@ Best regards,
 The BenPharmacy Team`
 
     // SMS content (shorter version)
-    const smsMessage = `BenPharmacy: Dear ${customer.user.name || 'Customer'}, for Order #${orderNumber}, a prescription is required. Please upload here: pharmacy-project-web.vercel.app/orders/${orderId}. Your order is on hold until verified. Thank you.`
+    const smsMessage = `BenPharmacy: Dear ${customer.user.name || 'Customer'}, for Order #${orderNumber}, a prescription is required. Please upload here: pharmacy-project-web.vercel.app/app/orders/${orderId}. Your order is on hold until verified. Thank you.`
 
     // Create email notification
     await db.notification.create({
@@ -92,7 +92,7 @@ The BenPharmacy Team`
           orderNumber,
           prescriptionRequired: true,
           prescriptionItems,
-          uploadUrl: `https://pharmacy-project-web.vercel.app/orders/${orderId}`
+          uploadUrl: `https://pharmacy-project-web.vercel.app/app/orders/${orderId}`
         },
         channel: NotificationChannel.EMAIL,
         priority: NotificationPriority.HIGH, // High priority since order is blocked
@@ -176,7 +176,7 @@ This is a friendly reminder that we're still waiting for your prescription for O
 
 Your order cannot be processed until we receive and verify your prescription.
 
-Upload your prescription now: https://pharmacy-project-web.vercel.app/orders/${orderId}
+Upload your prescription now: https://pharmacy-project-web.vercel.app/app/orders/${orderId}
 
 If you no longer wish to proceed with this order, you can cancel it from your order details page.
 
@@ -201,7 +201,7 @@ The BenPharmacy Team`
         prescriptionRequired: true,
         isReminder: true,
         prescriptionItems,
-        uploadUrl: `https://pharmacy-project-web.vercel.app/orders/${orderId}`
+        uploadUrl: `https://pharmacy-project-web.vercel.app/app/orders/${orderId}`
       },
       channel: NotificationChannel.EMAIL,
       priority: NotificationPriority.NORMAL,
@@ -218,7 +218,7 @@ The BenPharmacy Team`
 
   // Send SMS reminder if enabled and phone number exists
   if (preferences?.smsEnabled !== false && customer.phone) {
-    const smsMessage = `BenPharmacy: Reminder for ${customer.user.name || 'Customer'}. We are still waiting for your prescription for Order #${orderNumber}. Upload now to avoid delay: pharmacy-project-web.vercel.app/orders/${orderId}`
+    const smsMessage = `BenPharmacy: Reminder for ${customer.user.name || 'Customer'}. We are still waiting for your prescription for Order #${orderNumber}. Upload now to avoid delay: pharmacy-project-web.vercel.app/app/orders/${orderId}`
 
     await db.notification.create({
       data: {

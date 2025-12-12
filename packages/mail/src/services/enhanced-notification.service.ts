@@ -243,7 +243,7 @@ export class EnhancedNotificationService {
       const customerName = customer.user.name || 'Customer';
 
       // Professional SMS Message
-      const smsMessage = `BenPharmacy: Dear ${customerName}, update for Order #${data.orderNumber}. Status: ${statusLabel}.${data.notes ? ` Note: ${data.notes}` : ''} Track here: https://pharmacy-project-web.vercel.app/orders/${data.id}`;
+      const smsMessage = `BenPharmacy: Dear ${customerName}, update for Order #${data.orderNumber}. Status: ${statusLabel}.${data.notes ? ` Note: ${data.notes}` : ''} Track here: https://pharmacy-project-web.vercel.app/app/orders/${data.id}`;
 
       // Send to all enabled channels
       await Promise.all(channels.map(async (channel) => {
@@ -286,7 +286,7 @@ export class EnhancedNotificationService {
             status_label: statusLabel,
             notes: data.notes,
             eta_or_notes: data.notes,
-            tracking_url: `https://pharmacy-project-web.vercel.app/orders/${data.id}`,
+            tracking_url: `https://pharmacy-project-web.vercel.app/app/orders/${data.id}`,
             order_items: orderItems,
           },
           priority: 'normal',
