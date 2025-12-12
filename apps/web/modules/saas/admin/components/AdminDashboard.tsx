@@ -125,8 +125,8 @@ export function AdminDashboard({ className }: AdminDashboardProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-            <DashboardIcon className="size-8 mr-3" />
+          <h1 className="flex items-center text-xl font-bold text-gray-900 lg:text-3xl">
+            <DashboardIcon className="mr-3 size-6 lg:size-8" />
             Admin Dashboard
           </h1>
           <p className="text-gray-600 mt-1">

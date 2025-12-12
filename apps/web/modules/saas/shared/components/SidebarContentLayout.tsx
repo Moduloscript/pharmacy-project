@@ -7,7 +7,7 @@ export function SidebarContentLayout({
 	return (
 		<div className="relative">
 			<div className="flex flex-col items-start gap-4 lg:flex-row lg:gap-8">
-				<div className="top-4 w-full lg:sticky lg:max-w-[180px]">
+				<div className="top-4 hidden w-full lg:sticky lg:block lg:max-w-[180px]">
 					{sidebar}
 				</div>
 

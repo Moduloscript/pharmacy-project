@@ -4,6 +4,7 @@ import { SettingsMenu } from "@saas/settings/components/SettingsMenu";
 import { PageHeader } from "@saas/shared/components/PageHeader";
 import { SidebarContentLayout } from "@saas/shared/components/SidebarContentLayout";
 import { Logo } from "@shared/components/Logo";
+import { MobileBottomNav } from "@saas/admin/components/MobileBottomNav";
 import { 
 	Building2Icon, 
 	UsersIcon, 
@@ -111,11 +112,12 @@ export default async function AdminLayout({ children }: PropsWithChildren) {
 								})(),
 							},
 						]}
-					/>
-				}
-			>
-				{children}
-			</SidebarContentLayout>
-		</>
-	);
+				/>
+			}
+		>
+			{children}
+		</SidebarContentLayout>
+		<MobileBottomNav />
+	</>
+);
 }

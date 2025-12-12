@@ -33,23 +33,23 @@ export function SettingsMenu({
 						</h2>
 					</div>
 
-					<ul className="mt-2 flex list-none flex-row gap-6 lg:mt-4 lg:flex-col lg:gap-2">
+					<ul className="mt-2 flex w-full list-none flex-row gap-2 overflow-x-auto pb-2 no-scrollbar lg:mt-4 lg:flex-col lg:gap-2 lg:overflow-visible lg:pb-0">
 						{item.items.map((subitem, k) => (
-							<li key={k}>
+							<li key={k} className="shrink-0">
 								<Link
 									href={subitem.href}
 									className={cn(
-										"lg:-ml-0.5 flex items-center gap-2 border-b-2 py-1.5 text-sm lg:border-b-0 lg:border-l-2 lg:pl-2",
+										"flex items-center gap-2 border-b-2 px-1 py-1.5 text-sm lg:border-b-0 lg:border-l-2 lg:px-0 lg:pl-2",
 										isActiveMenuItem(subitem.href)
 											? "border-primary font-bold"
-											: "border-transparent",
+											: "border-transparent text-muted-foreground",
 									)}
 									data-active={isActiveMenuItem(subitem.href)}
 								>
 									<span className="shrink-0">
 										{subitem.icon}
 									</span>
-									<span>{subitem.title}</span>
+									<span className="whitespace-nowrap">{subitem.title}</span>
 								</Link>
 							</li>
 						))}
