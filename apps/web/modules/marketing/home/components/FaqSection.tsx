@@ -28,6 +28,7 @@ import {
     Syringe
 } from "./BrutalistAssets";
 import { BrutalistStickyScroll } from "@/components/ui/sticky-scroll-reveal";
+import { VelocityText } from "@/components/ui/velocity-text";
 
 
 export function FaqSection({ className }: { className?: string }) {
@@ -110,6 +111,15 @@ export function FaqSection({ className }: { className?: string }) {
 
             {/* Background Layers */}
             <div className="absolute inset-0 pattern-grid pointer-events-none opacity-[0.4]" />
+            
+            {/* Top Velocity Text */}
+            <div className="relative z-10 py-12 opacity-30 pointer-events-none scale-110">
+                <VelocityText>
+                    <span className="text-5xl font-black uppercase leading-[0.85] md:text-7xl md:leading-[0.85] text-black dark:text-white block px-4">
+                         FREQUENTLY ASKED QUESTIONS — FAQ — HELP CENTER — SUPPORT — 
+                    </span>
+                </VelocityText>
+            </div>
             
 			<div className="container relative z-10 max-w-[1400px] mx-auto px-6 py-24 lg:py-32">
 				
@@ -424,6 +434,15 @@ export function FaqSection({ className }: { className?: string }) {
 				/>
                 
 			</div>
+
+            {/* Bottom Velocity Text */}
+            <div className="relative z-10 py-12 opacity-30 pointer-events-none scale-110">
+                <VelocityText>
+                    <span className="text-5xl font-black uppercase leading-[0.85] md:text-7xl md:leading-[0.85] text-black dark:text-white block px-4">
+                         PERSISTENCE — DETERMINATION — PRESS ON — SOLUTIONS — FAQ — 
+                    </span>
+                </VelocityText>
+            </div>
 
 			{/* THE PIXEL CURSOR - Section-level for full coverage */}
 			<motion.div
