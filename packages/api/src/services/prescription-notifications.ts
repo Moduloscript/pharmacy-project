@@ -89,8 +89,20 @@ export async function sendPrescriptionStatusNotification(data: PrescriptionNotif
         }
       }
     })
-    if (!customer || !customer.user) {
-      console.error('Customer not found for prescription notification:', customerId)
+    
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      include: {
+        orderItems: {
+          include: {
+            product: true
+          }
+        }
+      }
+    })
+
+    if (!customer || !customer.user || !order) {
+      console.error('Customer or Order not found for prescription notification:', { customerId, orderId })
       return
     }
 
@@ -200,11 +212,17 @@ export async function sendPrescriptionStatusNotification(data: PrescriptionNotif
         template: `prescription_${status.toLowerCase()}`,
         templateParams: {
           customerName: customer.user.name,
+          customer_name: customer.user.name, // For SMS templates
           orderNumber,
+          order_number: orderNumber, // For SMS templates
           pharmacistName,
           reason,
           clarificationRequest,
-          businessName: customer.businessName
+          businessName: customer.businessName,
+          medicationList: order.orderItems.map(item => item.product.name).join(', '),
+          medication_list: order.orderItems.map(item => item.product.name).join(', '),
+          dashboardUrl: 'https://pharmacy-project-web.vercel.app/app/orders',
+          dashboard_url: 'https://pharmacy-project-web.vercel.app/app/orders'
         },
         priority: priority as any
       }

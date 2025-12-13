@@ -38,6 +38,12 @@ export const notificationTemplates: NotificationTemplate[] = [
 		requiredParams: ['business_name', 'status'],
 		preview: 'Business verification for {{business_name}}: {{status}}. Contact support if needed - BenPharm'
 	},
+	{
+		name: 'prescription_clarification_sms',
+		channel: 'sms',
+		requiredParams: ['order_number', 'clarificationRequest'],
+		preview: 'Action Required: Order #{{order_number}} needs clarification. {{clarificationRequest}} - BenPharm'
+	},
 
 	// Email templates (secondary channel)
 	{
@@ -70,7 +76,9 @@ export const templateMessages = {
 			`ALERT: ${params.product_name} low stock (${params.current_stock}). ${params.recommended_action} - BenPharm`,
 		
 		business_verification: (params: Record<string, any>) =>
-			`Business verification for ${params.business_name}: ${params.status}. Contact support if needed - BenPharm`
+			`Business verification for ${params.business_name}: ${params.status}. Contact support if needed - BenPharm`,
+
+		prescription_clarification: (params: any) => `Hi ${params.customer_name || 'there'}, BenPharm here. We need a quick update for Order #${params.order_number || params.orderNumber} to proceed. Please check your email or visit: ${params.dashboard_url || 'https://benpharm.com/app/orders'}`,
 	},
 	
 	// WhatsApp templates moved to ./whatsapp-future.ts for Phase 2 implementation
