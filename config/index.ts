@@ -24,6 +24,8 @@ export const config = {
 		// The name of the cookie that is used to determine the locale
 		localeCookieName: "NEXT_LOCALE",
 	},
+	appName: "BenPharma",
+	appDescription: "BenPharma Application",
 	// Organizations
 	organizations: {
 		// Whether organizations are enabled in general

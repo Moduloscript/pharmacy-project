@@ -89,7 +89,7 @@ export const BrutalistStickyScroll = ({
       <div className="relative flex items-start px-8 lg:px-12 py-10 w-full lg:w-[55%]">
         <div className="max-w-xl">
           {content.map((item, index) => (
-            <div key={item.title + index} className="my-20 first:mt-10">
+            <div key={item.title + index} className="my-12 first:mt-6">
               {/* Number badge */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
@@ -138,14 +138,29 @@ export const BrutalistStickyScroll = ({
                 transition={{ duration: 0.4, ease: "easeOut" }}
                 className="h-1 bg-black mt-6"
               />
+
+              {/* Combined Visual Block - Shown Inline on MOBILE ONLY */}
+               <div className="block lg:hidden mt-12 mb-12">
+                 <div
+                  className={cn(
+                    "relative flex items-center justify-center w-full aspect-square sm:aspect-video max-w-[500px]",
+                    "overflow-hidden rounded-2xl mx-0", 
+                    "bg-white/20 backdrop-blur-sm",
+                    "border-2 border-black shadow-[8px_8px_0px_#000]",
+                    contentClassName
+                  )}
+                 >
+                    {item.content}
+                 </div>
+               </div>
             </div>
           ))}
           {/* Spacer for scroll */}
-          <div className="h-60" />
+          <div className="h-96" />
         </div>
       </div>
-
-      {/* Sticky visual side */}
+      
+      {/* Sticky visual side - RESTORED FOR DESKTOP */}
       <div
         className={cn(
           "sticky top-10 right-0 hidden lg:flex items-center justify-center",
@@ -172,6 +187,7 @@ export const BrutalistStickyScroll = ({
           </motion.div>
         </AnimatePresence>
       </div>
+
     </motion.div>
   );
 };

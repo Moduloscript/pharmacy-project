@@ -57,8 +57,8 @@ export const DecimalJsLikeSchema: z.ZodType<Prisma.DecimalJsLike> = z.object({
   d: z.array(z.number()),
   e: z.number(),
   s: z.number(),
-  toFixed: z.any(),
-})
+  toFixed: z.function().args().returns(z.string()),
+}) as z.ZodType<Prisma.DecimalJsLike>
 
 export const DECIMAL_STRING_REGEX = /^(?:-?Infinity|NaN|-?(?:0[bB][01]+(?:\.[01]+)?(?:[pP][-+]?\d+)?|0[oO][0-7]+(?:\.[0-7]+)?(?:[pP][-+]?\d+)?|0[xX][\da-fA-F]+(?:\.[\da-fA-F]+)?(?:[pP][-+]?\d+)?|(?:\d+|\d*\.\d+)(?:[eE][-+]?\d+)?))$/;
 
@@ -367,7 +367,7 @@ export type Invitation = z.infer<typeof InvitationSchema>
 
 export const PurchaseSchema = z.object({
   type: PurchaseTypeSchema,
-  id: z.cuid(),
+  id: z.string().cuid(),
   organizationId: z.string().nullable(),
   userId: z.string().nullable(),
   customerId: z.string(),
@@ -385,7 +385,7 @@ export type Purchase = z.infer<typeof PurchaseSchema>
 /////////////////////////////////////////
 
 export const AiChatSchema = z.object({
-  id: z.cuid(),
+  id: z.string().cuid(),
   organizationId: z.string().nullable(),
   userId: z.string().nullable(),
   title: z.string().nullable(),
@@ -406,7 +406,7 @@ export type AiChat = z.infer<typeof AiChatSchema>
 export const CustomerSchema = z.object({
   customerType: CustomerTypeSchema,
   verificationStatus: BusinessVerificationStatusSchema,
-  id: z.cuid(),
+  id: z.string().cuid(),
   userId: z.string(),
   phone: z.string(),
   address: z.string().nullable(),
@@ -437,7 +437,7 @@ export type Customer = z.infer<typeof CustomerSchema>
 
 export const ProductSchema = z.object({
   category: ProductCategorySchema,
-  id: z.cuid(),
+  id: z.string().cuid(),
   name: z.string(),
   description: z.string().nullable(),
   genericName: z.string().nullable(),
@@ -482,7 +482,7 @@ export type Product = z.infer<typeof ProductSchema>
 /////////////////////////////////////////
 
 export const CartItemSchema = z.object({
-  id: z.cuid(),
+  id: z.string().cuid(),
   customerId: z.string(),
   productId: z.string(),
   quantity: z.number().int(),
@@ -502,7 +502,7 @@ export const OrderSchema = z.object({
   deliveryMethod: DeliveryMethodSchema,
   paymentStatus: PaymentStatusSchema,
   paymentMethod: PaymentMethodSchema.nullable(),
-  id: z.cuid(),
+  id: z.string().cuid(),
   orderNumber: z.string(),
   customerId: z.string(),
   deliveryAddress: z.string(),
@@ -533,7 +533,7 @@ export type Order = z.infer<typeof OrderSchema>
 /////////////////////////////////////////
 
 export const OrderItemSchema = z.object({
-  id: z.cuid(),
+  id: z.string().cuid(),
   orderId: z.string(),
   productId: z.string(),
   quantity: z.number().int(),
@@ -553,7 +553,7 @@ export type OrderItem = z.infer<typeof OrderItemSchema>
 
 export const OrderTrackingSchema = z.object({
   status: OrderStatusSchema,
-  id: z.cuid(),
+  id: z.string().cuid(),
   orderId: z.string(),
   notes: z.string().nullable(),
   timestamp: z.coerce.date(),
@@ -569,7 +569,7 @@ export type OrderTracking = z.infer<typeof OrderTrackingSchema>
 export const PaymentSchema = z.object({
   method: PaymentMethodSchema,
   status: PaymentStatusSchema,
-  id: z.cuid(),
+  id: z.string().cuid(),
   customerId: z.string(),
   orderId: z.string().nullable(),
   amount: z.instanceof(Prisma.Decimal, { message: "Field 'amount' must be a Decimal. Location: ['Models', 'Payment']"}),
@@ -635,7 +635,7 @@ export type PaymentRetryLog = z.infer<typeof PaymentRetryLogSchema>
 /////////////////////////////////////////
 
 export const ProductBatchSchema = z.object({
-  id: z.cuid(),
+  id: z.string().cuid(),
   productId: z.string(),
   batchNumber: z.string(),
   qty: z.number().int(),
@@ -652,7 +652,7 @@ export type ProductBatch = z.infer<typeof ProductBatchSchema>
 /////////////////////////////////////////
 
 export const InventoryMovementSchema = z.object({
-  id: z.cuid(),
+  id: z.string().cuid(),
   productId: z.string(),
   type: z.string(),
   quantity: z.number().int(),
@@ -695,7 +695,7 @@ export const NotificationSchema = z.object({
   channel: NotificationChannelSchema,
   status: NotificationStatusSchema,
   priority: NotificationPrioritySchema,
-  id: z.cuid(),
+  id: z.string().cuid(),
   customerId: z.string().nullable(),
   orderId: z.string().nullable(),
   recipient: z.string(),
@@ -729,7 +729,7 @@ export type Notification = z.infer<typeof NotificationSchema>
 /////////////////////////////////////////
 
 export const NotificationPreferencesSchema = z.object({
-  id: z.cuid(),
+  id: z.string().cuid(),
   customerId: z.string(),
   smsEnabled: z.boolean(),
   whatsappEnabled: z.boolean(),
@@ -765,7 +765,7 @@ export type NotificationPreferences = z.infer<typeof NotificationPreferencesSche
 export const NotificationOptOutSchema = z.object({
   channel: NotificationChannelSchema,
   type: NotificationOptOutTypeSchema.nullable(),
-  id: z.cuid(),
+  id: z.string().cuid(),
   customerId: z.string(),
   reason: z.string().nullable(),
   createdAt: z.coerce.date(),
@@ -778,7 +778,7 @@ export type NotificationOptOut = z.infer<typeof NotificationOptOutSchema>
 /////////////////////////////////////////
 
 export const NotificationRateLimitSchema = z.object({
-  id: z.cuid(),
+  id: z.string().cuid(),
   customerId: z.string(),
   notificationType: z.string(),
   windowStart: z.coerce.date(),
@@ -797,7 +797,7 @@ export type NotificationRateLimit = z.infer<typeof NotificationRateLimitSchema>
 /////////////////////////////////////////
 
 export const DocumentSchema = z.object({
-  id: z.cuid(),
+  id: z.string().cuid(),
   userId: z.string().nullable(),
   organizationId: z.string().nullable(),
   name: z.string(),
@@ -830,7 +830,7 @@ export type NigerianLocation = z.infer<typeof NigerianLocationSchema>
 
 export const PrescriptionSchema = z.object({
   status: PrescriptionStatusSchema,
-  id: z.cuid(),
+  id: z.string().cuid(),
   orderId: z.string(),
   imageUrl: z.string().nullable(),
   documentKey: z.string().nullable(),
@@ -860,7 +860,7 @@ export type Prescription = z.infer<typeof PrescriptionSchema>
 
 export const PrescriptionAuditLogSchema = z.object({
   action: PrescriptionAuditActionSchema,
-  id: z.cuid(),
+  id: z.string().cuid(),
   prescriptionId: z.string().nullable(),
   userId: z.string().nullable(),
   userEmail: z.string().nullable(),

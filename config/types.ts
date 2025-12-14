@@ -6,6 +6,8 @@ export type Config = {
 		defaultCurrency: string;
 		localeCookieName: string;
 	};
+	appName: string;
+	appDescription: string;
 	organizations: {
 		enable: boolean;
 		enableBilling: boolean;

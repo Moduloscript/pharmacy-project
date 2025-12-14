@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from "react";
 import { cn } from "@ui/lib";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { 
 	Upload, 
@@ -160,18 +161,20 @@ export function FaqSection({ className }: { className?: string }) {
                         </p>
                         
                         {/* Brutalist Button Group - Enhanced for visibility */}
-                        <div className="relative z-10 flex items-stretch ml-1 shadow-[6px_6px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1 active:translate-x-1 active:shadow-[2px_2px_0px_rgba(0,0,0,1)] cursor-pointer group/btn">
-                            <div className="bg-[#F2F0E9] text-black px-8 py-4 font-mono font-bold text-xl flex items-center group-hover/btn:bg-white transition-colors border-2 border-black">
-                                Contact
+                        <Link href="/contact" className="relative z-10 block w-fit">
+                            <div className="flex items-stretch ml-1 shadow-[6px_6px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1 active:translate-x-1 active:shadow-[2px_2px_0px_rgba(0,0,0,1)] cursor-pointer group/btn">
+                                <div className="bg-[#F2F0E9] text-black px-8 py-4 font-mono font-bold text-xl flex items-center group-hover/btn:bg-white transition-colors border-2 border-black">
+                                    Contact
+                                </div>
+                                <div className="bg-[#4A90E2] text-black w-14 flex items-center justify-center border-y-2 border-r-2 border-black group-hover/btn:bg-[#357ABD] transition-colors">
+                                    <ArrowUpRight className="w-6 h-6" />
+                                </div>
                             </div>
-                            <div className="bg-[#4A90E2] text-black w-14 flex items-center justify-center border-y-2 border-r-2 border-black group-hover/btn:bg-[#357ABD] transition-colors">
-                                <ArrowUpRight className="w-6 h-6" />
-                            </div>
-                        </div>
+                        </Link>
                     </div>
 
                     {/* --- RIGHT SIDE: The "Overflow" 3D Scene --- */}
-                    <div className="relative w-full lg:w-[55%] min-h-[500px] lg:min-h-full overflow-hidden border-l-0 lg:border-l-2 border-black dark:border-neutral-700 bg-[#F2F0E9] dark:bg-[#1a1a1a]">
+                    <div className="relative w-full lg:w-[55%] min-h-[320px] lg:min-h-full overflow-hidden border-l-0 lg:border-l-2 border-black dark:border-neutral-700 bg-[#F2F0E9] dark:bg-[#1a1a1a]">
                         
                         {/* Grid Background - Using CSS Mask or simply dark mode variant */}
                         <div className="absolute inset-0 opacity-100 transition-colors"
@@ -181,8 +184,8 @@ export function FaqSection({ className }: { className?: string }) {
                                 '--grid-color': '#4A90E2'
                             } as any}
                         />
-                        {/* Dark mode grid overlay adjustment (optional) */}
-                        <div className="absolute inset-0 bg-transparent dark:bg-black/80 pointer-events-none" />
+                        {/* Dark mode grid overlay adjustment (reduced opacity for visibility) */}
+                        <div className="absolute inset-0 bg-transparent dark:bg-black/20 pointer-events-none" />
 
                         {/* The "Pile" of Keycaps - Using SVG-based Keycap3D 
                             Matches Sui Overflow's home-hero__visual-inner structure:
@@ -194,26 +197,25 @@ export function FaqSection({ className }: { className?: string }) {
                         >
                             {/* Main visual container - BIGGER & BOLDER */}
                             <div 
-                                className="relative"
+                                className="relative scale-[0.55] sm:scale-[0.8] lg:scale-[1.15]"
                                 ref={constraintsRef}
                                 style={{ 
                                     width: '550px', 
                                     height: '480px',
-                                    transform: 'scale(1.15)',
                                     transformOrigin: 'center center'
                                 }}
                             >
                                 {/* === DECORATIVE ELEMENTS === */}
                                 
                                 {/* Stars - reduced size */}
-                                <Star3D rotate="-15deg" className="absolute -top-8 -left-4 z-[5] text-yellow-400 drop-shadow-[2px_2px_0px_#000] w-6 h-6" />
-                                <Star3D rotate="20deg" className="absolute top-[200px] -left-8 z-[2] text-neutral-300 w-4 h-4" />
+                                <Star3D rotate="-15deg" className="hidden lg:block absolute -top-8 -left-4 z-[5] text-yellow-400 drop-shadow-[2px_2px_0px_#000] w-6 h-6" />
+                                <Star3D rotate="20deg" className="hidden lg:block absolute top-[200px] -left-8 z-[2] text-neutral-300 w-4 h-4" />
 
                                 {/* Mail - top right - reduced size */}
-                                <MailBlock rotate="10deg" className="absolute -top-4 right-4 z-[8] scale-[0.5]" />
+                                <MailBlock rotate="10deg" className="hidden lg:block absolute -top-4 right-4 z-[8] scale-[0.5]" />
                                 
                                 {/* Phone - far right - reduced size */}
-                                <PhoneBlock rotate="18deg" className="absolute top-16 -right-8 z-[2] scale-[0.5]" />
+                                <PhoneBlock rotate="18deg" className="hidden lg:block absolute top-16 -right-8 z-[2] scale-[0.5]" />
 
                                 {/* === KEYCAP PILE - CENTERED READABLE LAYOUT === */}
                                 {/* 
@@ -309,7 +311,7 @@ export function FaqSection({ className }: { className?: string }) {
                                     dragConstraints={constraintsRef}
                                     onHoverStart={() => setIsHoveringKey(true)}
                                     onHoverEnd={() => setIsHoveringKey(false)}
-                                    className="absolute w-[120px] z-[38]"
+                                    className="hidden lg:block absolute w-[120px] z-[38]"
                                     style={{ 
                                         top: '165px', 
                                         left: '360px',
@@ -324,7 +326,7 @@ export function FaqSection({ className }: { className?: string }) {
                                     dragConstraints={constraintsRef}
                                     onHoverStart={() => setIsHoveringKey(true)}
                                     onHoverEnd={() => setIsHoveringKey(false)}
-                                    className="absolute w-[110px] z-[28]"
+                                    className="hidden lg:block absolute w-[110px] z-[28]"
                                     style={{ 
                                         top: '290px', 
                                         left: '180px',
@@ -337,16 +339,16 @@ export function FaqSection({ className }: { className?: string }) {
                                 {/* === DECORATIVE ASSETS === */}
 
                                 {/* Chat Bubble - Moved to bottom-middle (red X) */}
-                                <ChatBubble rotate="-8deg" className="absolute top-[340px] left-[280px] z-[25] scale-[0.6]" />
+                                <ChatBubble rotate="-8deg" className="hidden lg:block absolute top-[340px] left-[280px] z-[25] scale-[0.6]" />
 
                                 {/* Syringe - right-middle - reduced size */}
-                                <Syringe className="absolute top-[220px] right-[-20px] z-[25] scale-[0.45]" rotate="-15deg" />
+                                <Syringe className="hidden lg:block absolute top-[220px] right-[-20px] z-[25] scale-[0.45]" rotate="-15deg" />
 
                                 {/* Stethoscope - Bottom Left - reduced size */}
-                                <Stethoscope className="absolute top-[300px] left-[20px] z-[55] scale-[0.4]" rotate="-15deg" />
+                                <Stethoscope className="hidden lg:block absolute top-[300px] left-[20px] z-[55] scale-[0.4]" rotate="-15deg" />
 
                                 {/* First Aid Kit - Bottom Right - reduced size */}
-                                <FirstAidKit className="absolute top-[280px] right-[-10px] z-[55] scale-[0.4]" rotate="12deg" />
+                                <FirstAidKit className="hidden lg:block absolute top-[280px] right-[-10px] z-[55] scale-[0.4]" rotate="12deg" />
 
 
 

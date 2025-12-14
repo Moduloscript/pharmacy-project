@@ -24,8 +24,8 @@ export function Star3D({ className, rotate = "0deg", delay = 0 }: AssetProps) {
         <path
           d="M50 0C50 0 55 25 75 35C95 45 100 50 100 50C100 50 75 55 65 75C55 95 50 100 50 100C50 100 45 75 25 65C5 55 0 50 0 50C0 50 25 45 35 25C45 5 50 0 50 0Z"
           fill="#FFF" // White/Cream star
-          stroke="black"
           strokeWidth="3"
+          className="stroke-black dark:stroke-white transition-colors"
         />
         {/* Inner shadow/depth line for 3D feel */}
         <path
@@ -53,8 +53,8 @@ export function MailBlock({ className, rotate = "0deg" }: AssetProps) {
             <div className="absolute inset-0 bg-black rounded-2xl transform translate-y-2 translate-x-2" />
             
             {/* Main Face */}
-            <div className="absolute inset-0 bg-white border-[3px] border-black rounded-2xl flex items-center justify-center transition-transform active:translate-y-1 active:translate-x-1">
-                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <div className="absolute inset-0 bg-white border-[3px] border-black dark:border-white rounded-2xl flex items-center justify-center transition-transform active:translate-y-1 active:translate-x-1">
+                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" className="stroke-black dark:stroke-black" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <rect width="20" height="16" x="2" y="4" rx="2" />
                     <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                  </svg>
@@ -76,9 +76,9 @@ export function PrescriptionBlock({ className, rotate = "0deg" }: AssetProps) {
               <div className="absolute inset-0 bg-black rounded-xl transform translate-y-2 translate-x-2" />
               
               {/* Main Face */}
-              <div className="absolute inset-0 bg-white border-[3px] border-black rounded-xl overflow-hidden flex flex-col transition-transform active:translate-y-1 active:translate-x-1">
+              <div className="absolute inset-0 bg-white border-[3px] border-black dark:border-white rounded-xl overflow-hidden flex flex-col transition-transform active:translate-y-1 active:translate-x-1">
                    {/* Header Bar */}
-                   <div className="h-6 w-full border-b-[3px] border-black bg-green-100 flex items-center px-2 gap-1 justify-between">
+                   <div className="h-6 w-full border-b-[3px] border-black dark:border-neutral-200 bg-green-100 flex items-center px-2 gap-1 justify-between">
                         <div className="flex gap-1">
                             <div className="w-2 h-2 rounded-full bg-black" />
                             <div className="w-2 h-2 rounded-full bg-black" />
@@ -114,7 +114,7 @@ export function PhoneBlock({ className, rotate = "0deg" }: AssetProps) {
                 <div className="absolute inset-0 bg-black rounded-2xl transform translate-x-2 translate-y-3" />
                 
                 {/* Main Face */}
-                <div className="absolute inset-0 bg-white border-[3px] border-black rounded-2xl p-2 flex flex-col items-center justify-between transition-transform duration-300 group-hover:-translate-y-2">
+                <div className="absolute inset-0 bg-white border-[3px] border-black dark:border-white rounded-2xl p-2 flex flex-col items-center justify-between transition-transform duration-300 group-hover:-translate-y-2">
                      <div className="w-8 h-1 bg-black rounded-full mt-1" />
                      {/* Screen */}
                      <div className="w-full h-full my-2 bg-neutral-100 border-2 border-dashed border-black/20 rounded-lg" />
@@ -144,12 +144,12 @@ export function ChatBubble({ className, rotate = "0deg" }: AssetProps) {
                  </svg>
 
                  {/* Main Bubble */}
-                 <svg width="140" height="80" viewBox="0 0 140 80" className="relative fill-white stroke-black stroke-[3px] transition-transform active:translate-y-1 active:translate-x-1">
+                 <svg width="140" height="80" viewBox="0 0 140 80" className="relative fill-white stroke-black dark:stroke-white stroke-[3px] transition-transform active:translate-y-1 active:translate-x-1">
                      <path d="M20 1.5H120C130.217 1.5 138.5 9.78273 138.5 20V50C138.5 60.2173 130.217 68.5 120 68.5H50.5L20.5 78.5L30.5 68.5H20C9.78273 68.5 1.5 60.2173 1.5 50V20C1.5 9.78273 9.78273 1.5 20 1.5Z" />
                      {/* Dots */}
-                     <circle cx="45" cy="35" r="5" fill="none" stroke="black" strokeWidth="2" />
-                     <circle cx="70" cy="35" r="5" fill="none" stroke="black" strokeWidth="2" />
-                     <circle cx="95" cy="35" r="5" fill="none" stroke="black" strokeWidth="2" />
+                     <circle cx="45" cy="35" r="5" fill="none" className="stroke-black dark:stroke-black" strokeWidth="2" />
+                     <circle cx="70" cy="35" r="5" fill="none" className="stroke-black dark:stroke-black" strokeWidth="2" />
+                     <circle cx="95" cy="35" r="5" fill="none" className="stroke-black dark:stroke-black" strokeWidth="2" />
                  </svg>
              </div>
         </div>
@@ -173,7 +173,7 @@ export function CylinderBlock({ color, label, className, rotate = "0deg" }: Asse
                  
                  {/* Top */}
                  <div 
-                    className="absolute inset-0 rounded-2xl border-[3px] border-black flex items-center justify-center px-4 transition-transform active:translate-y-1 active:translate-x-0"
+                    className="absolute inset-0 rounded-2xl border-[3px] border-black dark:border-white flex items-center justify-center px-4 transition-transform active:translate-y-1 active:translate-x-0"
                     style={{ backgroundColor: colorMap[color] || color }}
                  >
                      <span className="font-bold font-mono text-xl md:text-2xl pt-1 select-none">{label}</span>
@@ -214,7 +214,7 @@ export function Stethoscope({ className, rotate = "0deg" }: AssetProps) {
                 <path d="M30 15 C30 15 20 60 50 70 C80 80 85 30 85 30" stroke="black" strokeWidth="12" fill="none" strokeLinecap="round" transform="translate(4,4)" opacity="0.3" />
                 
                 {/* Tubing Outline */}
-                <path d="M30 15 C30 15 20 60 50 70 C80 80 85 30 85 30" stroke="black" strokeWidth="14" fill="none" strokeLinecap="round" />
+                <path d="M30 15 C30 15 20 60 50 70 C80 80 85 30 85 30" className="stroke-black dark:stroke-white transition-colors" strokeWidth="14" fill="none" strokeLinecap="round" />
                 {/* Tubing Color */}
                 <path d="M30 15 C30 15 20 60 50 70 C80 80 85 30 85 30" stroke="#B388FF" strokeWidth="8" fill="none" strokeLinecap="round" />
                 
@@ -255,9 +255,9 @@ export function Syringe({ className, rotate = "0deg" }: AssetProps) {
                 <path d="M33 80 H50" stroke="black" strokeWidth="2" />
                 
                 {/* Needle Base */}
-                <rect x="45" y="90" width="10" height="6" fill="black" />
+                <rect x="45" y="90" width="10" height="6" className="fill-black dark:fill-white" />
                 {/* Needle */}
-                <rect x="48" y="96" width="4" height="24" fill="#C0C0C0" stroke="black" strokeWidth="1" />
+                <rect x="48" y="96" width="4" height="24" fill="#C0C0C0" className="stroke-black dark:stroke-white" strokeWidth="1" />
              </svg>
         </div>
     )
