@@ -2,16 +2,21 @@ import { Logo } from "@shared/components/Logo";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
+import { TextCarousel } from "@/modules/shared/components/TextCarousel";
+
 export function Footer() {
+  const carouselItems = [
+    "Whether it's chronic medication, urgent prescriptions, or daily wellness needs, we've got you covered.",
+    "We match our speed to your urgency, helping you prioritize your health without the hassle."
+  ];
+
 	return (
 		<footer className="w-full text-black border-t border-black font-mono">
 			<div className="flex flex-col lg:flex-row w-full min-h-[500px]">
 				
 				{/* LEFT COLUMN - Quote */}
 				<div className="w-full lg:w-1/2 p-8 lg:p-16 border-b lg:border-b-0 lg:border-r border-black flex flex-col justify-center bg-[#F8FAFC]">
-					<blockquote className="text-2xl md:text-3xl lg:text-4xl leading-tight font-serif tracking-tight">
-						"Whether it's chronic medication, urgent prescriptions, or daily wellness needs, we've got you covered. We match our speed to your urgency, helping you prioritize your health without the hassle."
-					</blockquote>
+          <TextCarousel items={carouselItems} />
 				</div>
 
 				{/* RIGHT COLUMN - Links & Info */}
@@ -21,7 +26,7 @@ export function Footer() {
 					<div className="p-8 lg:p-16 pb-0">
 						<div className="mb-12">
 							<p className="text-xl mb-4 font-serif">
-								"Questions, comments or want your recipe site to be featured? Email us at:
+								Questions, comments or need assistance with your prescription? Email us at:
 							</p>
 							<a href="mailto:hello@benpharma.com" className="text-xl underline decoration-black decoration-1 underline-offset-4 hover:decoration-2">
 								hello@benpharma.com

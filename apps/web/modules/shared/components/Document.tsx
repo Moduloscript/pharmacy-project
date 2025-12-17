@@ -28,6 +28,7 @@ export function Document({
 	return (
 		<html lang={locale} suppressHydrationWarning>
 			<body
+				suppressHydrationWarning
 				className={cn(
 					"min-h-screen bg-background font-body text-foreground antialiased",
 					headingFont.variable,
