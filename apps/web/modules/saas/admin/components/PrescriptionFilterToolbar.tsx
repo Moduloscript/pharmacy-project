@@ -7,6 +7,14 @@ import { cn } from '@ui/lib';
 import { Search, X, Calendar, FileText } from 'lucide-react';
 import type { PrescriptionStatus } from '../lib/prescriptions';
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@ui/components/select';
+
 interface PrescriptionFilterToolbarProps {
   status: PrescriptionStatus;
   onStatusChange: (status: PrescriptionStatus) => void;
@@ -73,6 +81,16 @@ export function PrescriptionFilterToolbar({
     onDateRangeChange?.({ startDate: null, endDate: null });
   };
 
+  const getStatusCount = (value: PrescriptionStatus) => {
+    if (!totalCounts) return undefined;
+    return {
+      'PENDING_VERIFICATION': totalCounts.pending,
+      'NEEDS_CLARIFICATION': totalCounts.clarification,
+      'APPROVED': totalCounts.approved,
+      'REJECTED': totalCounts.rejected,
+    }[value];
+  };
+
   return (
     <div className="space-y-4 rounded-lg border p-4" style={{ 
       backgroundColor: 'var(--rx-surface)', 
@@ -84,7 +102,7 @@ export function PrescriptionFilterToolbar({
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
-            value={searchValue}
+            value={searchValue ?? ''}
             onChange={(e) => setSearchValue(e.target.value)}
             onFocus={() => setIsSearchFocused(true)}
             onBlur={() => setIsSearchFocused(false)}
@@ -134,11 +152,11 @@ export function PrescriptionFilterToolbar({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div className="flex items-center gap-2">
             <label className="text-sm" style={{ color: 'var(--rx-muted)' }}>From</label>
-            <Input type="date" value={localStart} onChange={(e) => setLocalStart(e.target.value)} />
+            <Input type="date" value={localStart ?? ''} onChange={(e) => setLocalStart(e.target.value)} />
           </div>
           <div className="flex items-center gap-2">
             <label className="text-sm" style={{ color: 'var(--rx-muted)' }}>To</label>
-            <Input type="date" value={localEnd} onChange={(e) => setLocalEnd(e.target.value)} />
+            <Input type="date" value={localEnd ?? ''} onChange={(e) => setLocalEnd(e.target.value)} />
           </div>
           <div className="flex items-center gap-2">
             <Button size="sm" onClick={handleApplyDates}>Apply</Button>
@@ -147,16 +165,38 @@ export function PrescriptionFilterToolbar({
         </div>
       )}
 
-      {/* Status tabs */}
-      <div className="flex gap-1 rounded-lg p-1" style={{ backgroundColor: 'var(--rx-elevated)' }}>
+      {/* Status Selection - Mobile */}
+      <div className="md:hidden">
+        <Select 
+          value={status} 
+          onValueChange={(val) => onStatusChange(val as PrescriptionStatus)}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select Status" />
+          </SelectTrigger>
+          <SelectContent>
+            {statusTabs.map((tab) => {
+              const count = getStatusCount(tab.value);
+              return (
+                <SelectItem key={tab.value} value={tab.value}>
+                  <div className="flex items-center gap-2">
+                    {tab.label}
+                    {count !== undefined && (
+                      <span className="text-xs text-muted-foreground ml-1">({count})</span>
+                    )}
+                  </div>
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Status tabs - Desktop */}
+      <div className="hidden md:flex gap-1 rounded-lg p-1" style={{ backgroundColor: 'var(--rx-elevated)' }}>
         {statusTabs.map((tab) => {
           const isActive = status === tab.value;
-          const count = totalCounts ? {
-            'PENDING_VERIFICATION': totalCounts.pending,
-            'NEEDS_CLARIFICATION': totalCounts.clarification,
-            'APPROVED': totalCounts.approved,
-            'REJECTED': totalCounts.rejected,
-          }[tab.value] : undefined;
+          const count = getStatusCount(tab.value);
 
           return (
             <button

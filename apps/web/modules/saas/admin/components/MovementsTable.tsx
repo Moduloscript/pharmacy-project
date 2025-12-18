@@ -119,31 +119,20 @@ export default function MovementsTable({
 						No movements found.
 					</div>
 				) : (
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>Date</TableHead>
-								<TableHead>Type</TableHead>
-								<TableHead className="text-right">
-									Qty
-								</TableHead>
-								<TableHead>From → To</TableHead>
-								<TableHead>Reason</TableHead>
-								<TableHead>Batch</TableHead>
-								<TableHead>Expiry</TableHead>
-								<TableHead>Notes</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
+					<>
+						{/* Mobile Card View */}
+						<div className="md:hidden space-y-3">
 							{items.map((m) => (
-								<TableRow
+								<div
 									key={m.id}
-									className="hover:bg-muted/6 transition-colors"
+									className="rounded-lg border p-4 space-y-2"
+									style={{
+										backgroundColor: "var(--rx-surface)",
+										borderColor: "var(--rx-border)",
+									}}
 								>
-									<TableCell className="whitespace-nowrap">
-										{new Date(m.createdAt).toLocaleString()}
-									</TableCell>
-									<TableCell>
+									{/* Header: Type Badge + Date */}
+									<div className="flex items-center justify-between">
 										<Badge
 											status={
 												m.type === "IN"
@@ -155,34 +144,127 @@ export default function MovementsTable({
 										>
 											{m.type}
 										</Badge>
-									</TableCell>
-									<TableCell className="text-right font-medium">
-										{m.quantity}
-									</TableCell>
-									<TableCell>
-										{m.previousStock} → {m.newStock}
-									</TableCell>
-									<TableCell>{m.reason || "—"}</TableCell>
-									<TableCell>
-										{m.batchNumber || "—"}
-									</TableCell>
-									<TableCell>
-										{m.expiryDate
-											? new Date(
-													m.expiryDate,
-												).toLocaleDateString()
-											: "—"}
-									</TableCell>
-									<TableCell
-										className="max-w-[400px] truncate"
-										title={m.notes || undefined}
-									>
-										{m.notes || "—"}
-									</TableCell>
-								</TableRow>
+										<span className="text-xs text-muted-foreground">
+											{new Date(m.createdAt).toLocaleString()}
+										</span>
+									</div>
+
+									{/* Quantity - Large Display */}
+									<div className="flex items-baseline gap-2">
+										<span className="text-2xl font-bold" style={{ color: "var(--rx-text)" }}>
+											{m.type === "OUT" ? "-" : m.type === "IN" ? "+" : ""}
+											{Math.abs(m.quantity)}
+										</span>
+										<span className="text-sm text-muted-foreground">
+											{m.previousStock} → {m.newStock}
+										</span>
+									</div>
+
+									{/* Details Grid */}
+									<div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+										{m.reason && (
+											<>
+												<span className="text-muted-foreground">Reason</span>
+												<span style={{ color: "var(--rx-text)" }}>{m.reason}</span>
+											</>
+										)}
+										{m.batchNumber && (
+											<>
+												<span className="text-muted-foreground">Batch</span>
+												<span style={{ color: "var(--rx-text)" }}>{m.batchNumber}</span>
+											</>
+										)}
+										{m.expiryDate && (
+											<>
+												<span className="text-muted-foreground">Expiry</span>
+												<span style={{ color: "var(--rx-text)" }}>
+													{new Date(m.expiryDate).toLocaleDateString()}
+												</span>
+											</>
+										)}
+									</div>
+
+									{/* Notes - Truncated */}
+									{m.notes && (
+										<p
+											className="text-xs text-muted-foreground truncate"
+											title={m.notes}
+										>
+											{m.notes}
+										</p>
+									)}
+								</div>
 							))}
-						</TableBody>
-					</Table>
+						</div>
+
+						{/* Desktop Table View */}
+						<div className="hidden md:block">
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead>Date</TableHead>
+										<TableHead>Type</TableHead>
+										<TableHead className="text-right">
+											Qty
+										</TableHead>
+										<TableHead>From → To</TableHead>
+										<TableHead>Reason</TableHead>
+										<TableHead>Batch</TableHead>
+										<TableHead>Expiry</TableHead>
+										<TableHead>Notes</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody>
+									{items.map((m) => (
+										<TableRow
+											key={m.id}
+											className="hover:bg-muted/6 transition-colors"
+										>
+											<TableCell className="whitespace-nowrap">
+												{new Date(m.createdAt).toLocaleString()}
+											</TableCell>
+											<TableCell>
+												<Badge
+													status={
+														m.type === "IN"
+															? "success"
+															: m.type === "OUT"
+																? "error"
+																: "info"
+													}
+												>
+													{m.type}
+												</Badge>
+											</TableCell>
+											<TableCell className="text-right font-medium">
+												{m.quantity}
+											</TableCell>
+											<TableCell>
+												{m.previousStock} → {m.newStock}
+											</TableCell>
+											<TableCell>{m.reason || "—"}</TableCell>
+											<TableCell>
+												{m.batchNumber || "—"}
+											</TableCell>
+											<TableCell>
+												{m.expiryDate
+													? new Date(
+															m.expiryDate,
+														).toLocaleDateString()
+													: "—"}
+											</TableCell>
+											<TableCell
+												className="max-w-[400px] truncate"
+												title={m.notes || undefined}
+											>
+												{m.notes || "—"}
+											</TableCell>
+										</TableRow>
+									))}
+								</TableBody>
+							</Table>
+						</div>
+					</>
 				)}
 			</div>
 		</Card>

@@ -86,6 +86,12 @@ customersRouter.get('/', zValidator('query', customersQuerySchema), async (c) =>
             emailVerified: true,
             createdAt: true,
           }
+        },
+        orders: {
+          select: {
+            total: true,
+            createdAt: true,
+          }
         }
       },
       orderBy: {
@@ -96,38 +102,58 @@ customersRouter.get('/', zValidator('query', customersQuerySchema), async (c) =>
     });
     
     // Format customers for frontend
-    const formattedCustomers = customers.map(customer => ({
-      id: customer.id,
-      userId: customer.userId,
-      userName: customer.user.name,
-      userEmail: customer.user.email,
-      emailVerified: customer.user.emailVerified,
-      type: customer.customerType,
-      phone: customer.phone,
-      // Personal information
-      address: customer.address,
-      city: customer.city,
-      state: customer.state,
-      lga: customer.lga,
-      // Business information
-      businessName: customer.businessName,
-      businessAddress: customer.businessAddress,
-      businessPhone: customer.businessPhone,
-      businessEmail: customer.businessEmail,
-      pharmacyLicense: customer.pharmacyLicense,
-      taxId: customer.taxId,
+    const formattedCustomers = customers.map(customer => {
+      // Calculate derived stats
+      const totalOrders = customer.orders.length;
+      const totalSpent = customer.orders.reduce((sum, order) => sum + Number(order.total), 0);
+      
+      // Find the most recent order date
+      let lastOrderDate: string | null = null;
+      if (customer.orders.length > 0) {
+        // Sort explicitly to be safe or Math.max
+        const timestamps = customer.orders.map(o => o.createdAt.getTime());
+        lastOrderDate = new Date(Math.max(...timestamps)).toISOString();
+      }
 
-      // Verification details
-      verificationStatus: customer.verificationStatus,
-      verificationDocuments: customer.verificationDocuments,
-      rejectionReason: (customer as any).rejectionReason ?? null,
-      verifiedAt: (customer as any).verifiedAt?.toISOString() || null,
-      creditLimit: customer.creditLimit ? Number(customer.creditLimit) : null,
-      // Timestamps
-      createdAt: customer.createdAt.toISOString(),
-      updatedAt: customer.updatedAt.toISOString(),
-      userCreatedAt: customer.user.createdAt.toISOString(),
-    }));
+      return {
+        id: customer.id,
+        userId: customer.userId,
+        userName: customer.user.name,
+        userEmail: customer.user.email,
+        emailVerified: customer.user.emailVerified,
+        type: customer.customerType,
+        phone: customer.phone,
+        // Personal information
+        address: customer.address,
+        city: customer.city,
+        state: customer.state,
+        lga: customer.lga,
+        // Business information
+        businessName: customer.businessName,
+        businessAddress: customer.businessAddress,
+        businessPhone: customer.businessPhone,
+        businessEmail: customer.businessEmail,
+        pharmacyLicense: customer.pharmacyLicense,
+        taxId: customer.taxId,
+
+        // Verification details
+        verificationStatus: customer.verificationStatus,
+        verificationDocuments: customer.verificationDocuments,
+        rejectionReason: (customer as any).rejectionReason ?? null,
+        verifiedAt: (customer as any).verifiedAt?.toISOString() || null,
+        creditLimit: customer.creditLimit ? Number(customer.creditLimit) : null,
+        
+        // Calculated Stats
+        totalOrders,
+        totalSpent,
+        lastOrderDate,
+
+        // Timestamps
+        createdAt: customer.createdAt.toISOString(),
+        updatedAt: customer.updatedAt.toISOString(),
+        userCreatedAt: customer.user.createdAt.toISOString(),
+      };
+    });
     
     // Calculate pagination info
     const totalPages = Math.ceil(totalCount / limit);

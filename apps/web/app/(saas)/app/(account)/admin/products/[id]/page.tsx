@@ -7,10 +7,7 @@ import { Card } from "@ui/components/card";
 import { Button } from "@ui/components/button";
 import { Badge } from "@ui/components/badge";
 import ProductHeader from "@saas/admin/components/ProductHeader";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ui/components/tabs";
-import { ProductAdjustStockForm } from "@saas/admin/components/ProductAdjustStockForm";
-import { ProductBatchesList } from "@saas/admin/components/ProductBatchesList";
-import { ProductMovementsList } from "@/modules/saas/admin/components/ProductMovementsList";
+import { ProductTabs } from "@saas/admin/components/ProductTabs";
 
 export const metadata: Metadata = {
 	title: "Product Details",
@@ -77,70 +74,7 @@ export default async function AdminProductShowPage({
 					<ProductHeader product={product} id={id} />
 				</div>
 				<div className="md:col-span-8">
-					<Tabs defaultValue="details">
-						<TabsList>
-							<TabsTrigger value="details">Details</TabsTrigger>
-							<TabsTrigger value="adjust">
-								Adjust Stock
-							</TabsTrigger>
-							<TabsTrigger value="batches">Batches</TabsTrigger>
-							<TabsTrigger value="movements">
-								Movements
-							</TabsTrigger>
-						</TabsList>
-
-						<TabsContent value="details">
-							<Card className="p-6">
-								<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-									<div className="space-y-2">
-										<h2 className="font-medium">Stock</h2>
-										<p className="text-2xl font-bold">
-											{product.stockQuantity}
-										</p>
-										<div className="text-sm text-muted-foreground">
-											Min level:{" "}
-											{product.minStockLevel ??
-												product.lowStockThreshold ??
-												10}
-										</div>
-									</div>
-									<div className="space-y-2">
-										<h2 className="font-medium">Prices</h2>
-										<p>
-											Retail: ₦
-											{Number(
-												product.retailPrice || 0,
-											).toLocaleString()}
-										</p>
-										<p className="text-muted-foreground text-sm">
-											Wholesale: ₦
-											{Number(
-												product.wholesalePrice || 0,
-											).toLocaleString()}
-										</p>
-									</div>
-									<div className="space-y-2">
-										<h2 className="font-medium">Status</h2>
-										<div>
-											<Badge status="info">
-												{product.category}
-											</Badge>
-										</div>
-									</div>
-								</div>
-							</Card>
-						</TabsContent>
-
-						<TabsContent value="adjust">
-							<ProductAdjustStockForm productId={id} />
-						</TabsContent>
-						<TabsContent value="batches">
-							<ProductBatchesList productId={id} />
-						</TabsContent>
-						<TabsContent value="movements">
-							<ProductMovementsList productId={id} />
-						</TabsContent>
-					</Tabs>
+					<ProductTabs product={product} id={id} />
 				</div>
 			</div>
 		</div>

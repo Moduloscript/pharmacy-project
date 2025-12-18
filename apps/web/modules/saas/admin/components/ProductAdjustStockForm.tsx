@@ -107,11 +107,11 @@ export function ProductAdjustStockForm({ productId }: { productId: string }) {
         {error && <div className="text-sm text-red-600">{error}</div>}
         {message && <div className="text-sm text-green-600">{message}</div>}
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-4 gap-y-5">
           <div>
             <Label>Type</Label>
             <Select value={type} onValueChange={(v) => setType(v as any)}>
-              <SelectTrigger>
+              <SelectTrigger className="h-11 md:h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -123,25 +123,25 @@ export function ProductAdjustStockForm({ productId }: { productId: string }) {
           </div>
           <div>
             <Label>Quantity *</Label>
-            <Input type="number" min={1} value={qty} onChange={(e) => setQty(e.target.value)} />
+            <Input type="number" min={1} value={qty} onChange={(e) => setQty(e.target.value)} className="h-11 md:h-9" />
           </div>
           <div>
             <Label>Batch Number (optional)</Label>
-            <Input value={batchNumber} onChange={(e) => setBatchNumber(e.target.value)} placeholder="e.g., BN-2025-001" />
+            <Input value={batchNumber} onChange={(e) => setBatchNumber(e.target.value)} placeholder="e.g., BN-2025-001" className="h-11 md:h-9" />
           </div>
           <div>
             <Label>Idempotency Key (optional)</Label>
-            <Input value={idempotencyKey} onChange={(e) => setIdempotencyKey(e.target.value)} placeholder="Unique request key" />
+            <Input value={idempotencyKey} onChange={(e) => setIdempotencyKey(e.target.value)} placeholder="Unique request key" className="h-11 md:h-9" />
           </div>
           <div className="md:col-span-2">
             <Label>Reason (optional)</Label>
-            <Textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Additional details..." />
+            <Textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Additional details..." className="min-h-[60px]" />
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button type="submit" disabled={loading}>{loading ? 'Saving…' : 'Create Adjustment'}</Button>
-          <Button type="button" variant="outline" onClick={() => { setQty(''); setReason(''); setBatchNumber(''); setIdempotencyKey(''); }}>
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
+          <Button type="submit" disabled={loading} className="h-11 md:h-9">{loading ? 'Saving…' : 'Create Adjustment'}</Button>
+          <Button type="button" variant="outline" onClick={() => { setQty(''); setReason(''); setBatchNumber(''); setIdempotencyKey(''); }} className="h-11 md:h-9">
             Clear
           </Button>
         </div>
