@@ -106,7 +106,7 @@ export class NotificationService {
 					templateParams: {
 						order_number: order.orderNumber,
 						total_amount: order.total,
-						tracking_url: `${process.env.NEXT_PUBLIC_SITE_URL}/track/${order.id}`,
+						tracking_url: `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/track/${order.id}`,
 					}
 				});
 
@@ -127,7 +127,7 @@ export class NotificationService {
 						order_number: order.orderNumber,
 						total_amount: order.total,
 						delivery_address: order.deliveryAddress,
-						tracking_url: `${process.env.NEXT_PUBLIC_SITE_URL}/orders/${order.id}`
+						tracking_url: `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/orders/${order.id}`
 					}
 				});
 
@@ -148,7 +148,7 @@ export class NotificationService {
 						order_number: order.orderNumber,
 						total_amount: order.total,
 						delivery_address: order.deliveryAddress,
-						tracking_url: `${process.env.NEXT_PUBLIC_SITE_URL}/orders/${order.id}`
+						tracking_url: `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/orders/${order.id}`
 					}
 				});
 

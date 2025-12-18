@@ -114,7 +114,7 @@ export const config = {
 		// whether the contact form should be enabled
 		enabled: true,
 		// the email to which the contact form messages should be sent
-		to: "tundesalawo@gmail.com",
+		to: "maduemeka254@gmail.com",
 		// the subject of the email
 		subject: "Contact form message",
 	},
