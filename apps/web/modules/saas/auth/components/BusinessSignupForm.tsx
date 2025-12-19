@@ -469,6 +469,7 @@ export function BusinessSignupForm({
                     <div className="ml-4 w-64">
                       <DocumentUpload
                         multiple={false}
+                        bypassAuth={true}
                         accept={{
                           'application/pdf': ['.pdf'],
                           'image/jpeg': ['.jpg', '.jpeg'],

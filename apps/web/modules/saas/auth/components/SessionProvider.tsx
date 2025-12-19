@@ -12,14 +12,14 @@ export function SessionProvider({
 }) {
 	const queryClient = useQueryClient();
 
-	const { data: session } = useSessionQuery();
-	const [loaded, setLoaded] = useState(!!session);
+	const { data: session, isLoading } = useSessionQuery();
+	const [loaded, setLoaded] = useState(false);
 
 	useEffect(() => {
-		if (session && !loaded) {
+		if (!isLoading) {
 			setLoaded(true);
 		}
-	}, [session]);
+	}, [isLoading]);
 
 	return (
 		<SessionContext.Provider

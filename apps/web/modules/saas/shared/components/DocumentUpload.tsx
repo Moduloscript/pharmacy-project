@@ -23,6 +23,8 @@ export function DocumentUpload(props: {
   accept?: { [mime: string]: string[] };
   onUploaded?: (result: DocumentUploadResult) => void;
   className?: string;
+  /** Skip real-time session checking (used during onboarding when session may not yet be fully hydrated) */
+  bypassAuth?: boolean;
 }) {
   const {
     bucket = config.storage.bucketNames.documents,
@@ -36,7 +38,8 @@ export function DocumentUpload(props: {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
     },
     onUploaded,
-    className
+    className,
+    bypassAuth = false,
   } = props;
 
   const { user, loaded } = useSession();
@@ -99,14 +102,17 @@ export function DocumentUpload(props: {
     }
   }, [bucket, getSignedUploadUrlMutation, ownerId, onUploaded, prefix]);
 
+  const authRequired = !bypassAuth;
+  const canUpload = bypassAuth || !!user;
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple,
     accept,
-    disabled: !user,
+    disabled: !canUpload,
   });
 
-  if (!loaded) {
+  if (authRequired && !loaded) {
     return (
       <div className={
         'rounded-md border border-dashed p-4 text-sm ' +
@@ -117,7 +123,7 @@ export function DocumentUpload(props: {
     );
   }
 
-  if (!user) {
+  if (authRequired && !user) {
     return (
       <div className={
         'rounded-md border border-dashed p-4 text-sm bg-muted/30 ' +

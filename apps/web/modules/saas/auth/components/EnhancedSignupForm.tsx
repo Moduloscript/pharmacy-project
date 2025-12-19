@@ -39,7 +39,6 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { withQuery } from 'ufo';
 import { CustomerTypeSelector, type CustomerType } from './CustomerTypeSelector';
-import { BusinessSignupForm } from './BusinessSignupForm';
 import { SocialSigninButton } from './SocialSigninButton';
 import {
   type OAuthProvider,
@@ -65,6 +64,19 @@ const personalAddressSchema = z.object({
 
 type BasicSignupFormData = z.infer<typeof basicSignupSchema>;
 type PersonalAddressFormData = z.infer<typeof personalAddressSchema>;
+
+// Business address schema (simplified - no document uploads during signup)
+const businessAddressSchema = z.object({
+  businessName: z.string().min(2, 'Business name is required'),
+  businessPhone: z.string().regex(/^(\+234|0)[789]\d{9}$/, 'Please enter a valid Nigerian phone number'),
+  businessEmail: z.string().email('Please enter a valid email address'),
+  businessAddress: z.string().min(10, 'Please enter a complete business address'),
+  state: z.string().min(1, 'Please select your state'),
+  lga: z.string().min(1, 'Please select your Local Government Area'),
+  licenseNumber: z.string().optional(),
+});
+
+type BusinessAddressFormData = z.infer<typeof businessAddressSchema>;
 
 interface EnhancedSignupFormProps {
   prefillEmail?: string;
@@ -120,7 +132,6 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
     },
   });
 
-  // Nigerian states and LGAs (same as in BusinessSignupForm)
   const NIGERIAN_STATES_AND_LGAS = {
     'Edo': ['Akoko-Edo', 'Egor', 'Esan Central', 'Esan North-East', 'Esan South-East', 'Esan West', 'Etsako Central', 'Etsako East', 'Etsako West', 'Igueben', 'Ikpoba Okha', 'Oredo', 'Orhionmwon', 'Ovia North-East', 'Ovia South-West', 'Owan East', 'Owan West', 'Uhunmwonde'],
     'Lagos': ['Agege', 'Ajeromi-Ifelodun', 'Alimosho', 'Amuwo-Odofin', 'Apapa', 'Badagry', 'Epe', 'Eti Osa', 'Ibeju-Lekki', 'Ifako-Ijaiye', 'Ikeja', 'Ikorodu', 'Kosofe', 'Lagos Island', 'Lagos Mainland', 'Mushin', 'Ojo', 'Oshodi-Isolo', 'Shomolu', 'Surulere'],
@@ -128,6 +139,20 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
     'Kano': ['Ajingi', 'Albasu', 'Bagwai', 'Bebeji', 'Bichi', 'Bunkure', 'Dala', 'Dambatta', 'Dawakin Kudu', 'Dawakin Tofa', 'Doguwa', 'Fagge', 'Gabasawa', 'Garko', 'Garun Mallam', 'Gaya', 'Gezawa', 'Gwale', 'Gwarzo', 'Kabo', 'Kano Municipal', 'Karaye', 'Kibiya', 'Kiru', 'Kumbotso', 'Kunchi', 'Kura', 'Madobi', 'Makoda', 'Minjibir', 'Nasarawa', 'Rano', 'Rimin Gado', 'Rogo', 'Shanono', 'Sumaila', 'Takai', 'Tarauni', 'Tofa', 'Tsanyawa', 'Tudun Wada', 'Ungogo', 'Warawa', 'Wudil'],
     'Rivers': ['Abua/Odual', 'Ahoada East', 'Ahoada West', 'Akuku-Toru', 'Andoni', 'Asari-Toru', 'Bonny', 'Degema', 'Eleme', 'Emohua', 'Etche', 'Gokana', 'Ikwerre', 'Khana', 'Obio/Akpor', 'Ogba/Egbema/Ndoni', 'Ogu/Bolo', 'Okrika', 'Omuma', 'Opobo/Nkoro', 'Oyigbo', 'Port Harcourt', 'Tai']
   };
+
+  // Business address form (for business customers - simplified, no uploads)
+  const businessForm = useForm<BusinessAddressFormData>({
+    resolver: zodResolver(businessAddressSchema, { errorMap: zodErrorMap }),
+    defaultValues: {
+      businessName: '',
+      businessPhone: '',
+      businessEmail: '',
+      businessAddress: '',
+      state: '',
+      lga: '',
+      licenseNumber: '',
+    },
+  });
 
   // Step handlers
   const handleBasicFormSubmit = (data: BasicSignupFormData) => {
@@ -149,9 +174,10 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
     handleFinalSubmission();
   };
 
-  const handleBusinessSubmit = async (businessData: any) => {
-    // Combine basic form data with business data and submit
-    await handleFinalSubmission(businessData);
+  const handleBusinessSubmit = async (data: BusinessAddressFormData) => {
+    // Submit business data without document uploads
+    // Documents will be collected during onboarding after authentication
+    await handleFinalSubmission(data);
   };
 
   const handleFinalSubmission = async (businessData?: any) => {
@@ -567,25 +593,179 @@ export function EnhancedSignupForm({ prefillEmail }: EnhancedSignupFormProps) {
         </Card>
       )}
 
-      {/* Step 3b: Business Information (for business customers) */}
+      {/* Step 3b: Business Information (for business customers) - Simplified, no uploads */}
       {currentStep === 3 && selectedCustomerType !== 'RETAIL' && (
-        <div className="space-y-6">
-          <div className="flex justify-start">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentStep(2)}
-              className="h-12"
-            >
-              <ArrowLeftIcon className="mr-2 size-4" />
-              Back to Account Type
-            </Button>
+        <Card className="border shadow-sm">
+          <div className="p-8">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-50 rounded-full mb-4">
+                <UserIcon className="size-8 text-blue-600" />
+              </div>
+              <h2 className="text-2xl font-semibold text-foreground mb-2">Business Information</h2>
+              <p className="text-muted-foreground">
+                Provide your business details. You'll upload verification documents after signing in.
+              </p>
+            </div>
+
+            <Form {...businessForm}>
+              <form onSubmit={businessForm.handleSubmit(handleBusinessSubmit)} className="space-y-6">
+                <FormField
+                  control={businessForm.control}
+                  name="businessName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Business Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your business name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={businessForm.control}
+                    name="businessPhone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Business Phone *</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <PhoneIcon className="absolute left-3 top-3 size-4 text-gray-400" />
+                            <Input placeholder="+234 808 123 4567" className="pl-10" {...field} />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={businessForm.control}
+                    name="businessEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Business Email *</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="business@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={businessForm.control}
+                  name="businessAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Business Address *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter complete business address" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={businessForm.control}
+                    name="state"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>State *</FormLabel>
+                        <FormControl>
+                          <select
+                            {...field}
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            <option value="">Select State</option>
+                            {Object.keys(NIGERIAN_STATES_AND_LGAS).map((state) => (
+                              <option key={state} value={state}>{state}</option>
+                            ))}
+                          </select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={businessForm.control}
+                    name="lga"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Local Government Area *</FormLabel>
+                        <FormControl>
+                          <select
+                            {...field}
+                            disabled={!businessForm.watch('state')}
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                          >
+                            <option value="">Select LGA</option>
+                            {businessForm.watch('state') &&
+                              NIGERIAN_STATES_AND_LGAS[businessForm.watch('state') as keyof typeof NIGERIAN_STATES_AND_LGAS]?.map((lga) => (
+                                <option key={lga} value={lga}>{lga}</option>
+                              ))}
+                          </select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {selectedCustomerType === 'PHARMACY' && (
+                  <FormField
+                    control={businessForm.control}
+                    name="licenseNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pharmacy License Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="PCN License Number (optional for now)" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Your PCN license. You can also provide this during the verification step after signup.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Note:</strong> After creating your account, you'll be asked to upload verification documents (CAC certificate, pharmacy license, etc.) to complete your business verification.
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4 sm:justify-between mt-8">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setCurrentStep(2)}
+                    className="order-2 sm:order-1 h-12"
+                  >
+                    <ArrowLeftIcon className="mr-2 size-4" />
+                    Back
+                  </Button>
+                  <Button
+                    type="submit"
+                    loading={isSubmitting}
+                    className="order-1 sm:order-2 h-12 text-base font-medium"
+                  >
+                    <CheckIcon className="mr-2 size-5" />
+                    Create Account
+                  </Button>
+                </div>
+              </form>
+            </Form>
           </div>
-          <BusinessSignupForm
-            customerType={selectedCustomerType}
-            onSubmit={handleBusinessSubmit}
-            isSubmitting={isSubmitting}
-          />
-        </div>
+        </Card>
       )}
 
       {/* Login link */}
