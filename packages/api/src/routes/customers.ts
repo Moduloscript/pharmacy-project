@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authMiddleware } from '../middleware/auth';
 import { 
   createCustomerProfile, 
+  upsertCustomerProfile,
   updateCustomerVerificationStatus,
   getCustomersByVerificationStatus,
   userNeedsCustomerProfile 
@@ -50,11 +51,11 @@ customersRouter.post('/profile', authMiddleware, zValidator('json', createCustom
       return c.json({ error: 'Authentication required' }, 401);
     }
 
-    // Check if customer profile already exists
-    const needsProfile = await userNeedsCustomerProfile(user.id);
-    if (!needsProfile) {
-      return c.json({ error: 'Customer profile already exists' }, 400);
-    }
+    // Check for existing profile only to log or debug, but proceed with upsert
+    // const needsProfile = await userNeedsCustomerProfile(user.id);
+    // if (!needsProfile) {
+    //   // Instead of erroring, we proceed to upsert
+    // }
 
     // Validate business fields for business customers
     if (data.customerType !== 'RETAIL') {
@@ -79,8 +80,8 @@ customersRouter.post('/profile', authMiddleware, zValidator('json', createCustom
       }
     }
 
-    // Create customer profile
-    const result = await createCustomerProfile({
+    // Create or update customer profile
+    const result = await upsertCustomerProfile({
       userId: user.id,
       ...data,
     });

@@ -746,6 +746,8 @@ enum CustomerType {
   RETAIL
   WHOLESALE
   ADMIN
+  PHARMACY
+  CLINIC
 }
 
 enum ProductCategory {

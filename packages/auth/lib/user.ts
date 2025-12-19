@@ -88,6 +88,63 @@ export async function createCustomerProfile(data: CreateCustomerProfileData) {
 	}
 }
 
+export async function upsertCustomerProfile(data: CreateCustomerProfileData) {
+	try {
+		const customer = await db.customer.upsert({
+			where: { userId: data.userId },
+			create: {
+				userId: data.userId,
+				customerType: data.customerType,
+				phone: data.phone,
+				address: data.address,
+				city: data.city,
+				state: data.state,
+				lga: data.lga,
+				businessName: data.businessName,
+				businessAddress: data.businessAddress,
+				businessPhone: data.businessPhone,
+				businessEmail: data.businessEmail,
+				pharmacyLicense: data.pharmacyLicense,
+				taxId: data.taxId,
+				verificationStatus: data.customerType === 'RETAIL' 
+					? BusinessVerificationStatus.VERIFIED 
+					: BusinessVerificationStatus.PENDING,
+				verificationDocuments: data.verificationDocuments 
+					? JSON.stringify(data.verificationDocuments) 
+					: null,
+				creditLimit: data.customerType === 'WHOLESALE' ? 50000 : null,
+				creditTermDays: data.customerType === 'WHOLESALE' ? 30 : null,
+			},
+			update: {
+				customerType: data.customerType,
+				phone: data.phone,
+				address: data.address,
+				city: data.city,
+				state: data.state,
+				lga: data.lga,
+				businessName: data.businessName,
+				businessAddress: data.businessAddress,
+				businessPhone: data.businessPhone,
+				businessEmail: data.businessEmail,
+				pharmacyLicense: data.pharmacyLicense,
+				taxId: data.taxId,
+				// Rerun verification logic on update if type changes or docs change
+				verificationStatus: data.customerType === 'RETAIL' 
+					? BusinessVerificationStatus.VERIFIED 
+					: BusinessVerificationStatus.PENDING,
+				verificationDocuments: data.verificationDocuments 
+					? JSON.stringify(data.verificationDocuments) 
+					: null,
+			},
+		});
+
+		return { customer, error: null };
+	} catch (error) {
+		console.error('Error upserting customer profile:', error);
+		return { customer: null, error: 'Failed to create or update customer profile' };
+	}
+}
+
 export async function updateCustomerVerificationStatus(
 	customerId: string, 
 	status: BusinessVerificationStatus,

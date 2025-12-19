@@ -166,7 +166,7 @@ export const PurchaseTypeSchema = z.enum(['SUBSCRIPTION','ONE_TIME']);
 
 export type PurchaseTypeType = `${z.infer<typeof PurchaseTypeSchema>}`
 
-export const CustomerTypeSchema = z.enum(['RETAIL','WHOLESALE','ADMIN']);
+export const CustomerTypeSchema = z.enum(['RETAIL','WHOLESALE','ADMIN','PHARMACY','CLINIC']);
 
 export type CustomerTypeType = `${z.infer<typeof CustomerTypeSchema>}`
 
