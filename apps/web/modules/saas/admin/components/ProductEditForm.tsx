@@ -375,41 +375,43 @@ export function ProductEditForm({ product }: ProductEditFormProps) {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
           <Link href="/app/admin/inventory">
             <Button variant="outline" size="sm" disabled={isSaving}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Inventory
+              <span className="md:hidden">Back</span>
+              <span className="hidden md:inline">Back to Inventory</span>
             </Button>
           </Link>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">{product.name}</h2>
-            <p className="text-sm text-gray-600">SKU: {product.sku}</p>
+            <h2 className="text-2xl font-bold text-foreground">{product.name}</h2>
+            <p className="text-sm text-muted-foreground">SKU: {product.sku}</p>
             {isDirty && saveStatus === 'idle' && (
               <p className="text-xs text-amber-600 mt-1">● Unsaved changes</p>
             )}
           </div>
         </div>
         
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 w-full md:w-auto justify-end">
           {/* Save Status Indicator */}
           {saveStatus === 'saving' && (
             <div className="flex items-center space-x-2 text-blue-600">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm">Saving...</span>
+              <span className="text-sm hidden sm:inline">Saving...</span>
             </div>
           )}
           {saveStatus === 'success' && (
             <div className="flex items-center space-x-2 text-green-600">
               <CheckCircle className="h-4 w-4" />
-              <span className="text-sm">Saved successfully</span>
+              <span className="text-sm hidden sm:inline">Saved successfully</span>
             </div>
           )}
           {saveStatus === 'error' && (
             <div className="flex items-center space-x-2 text-red-600">
               <AlertCircle className="h-4 w-4" />
-              <span className="text-sm">Save failed</span>
+              <span className="text-sm hidden sm:inline">Save failed</span>
             </div>
           )}
           

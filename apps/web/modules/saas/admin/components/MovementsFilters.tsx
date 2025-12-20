@@ -12,7 +12,7 @@ import {
 	SelectValue,
 } from "@ui/components/select";
 import { DatePicker } from "@ui/components/date-picker";
-import { Filter, ChevronDown, ChevronUp } from "lucide-react";
+import { Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 export type MovementType = "all" | "IN" | "OUT" | "ADJUSTMENT";
 
@@ -60,7 +60,7 @@ export default function MovementsFilters({
 	return (
 		<Card className="p-3 bg-muted/8 rounded-lg space-y-3">
 			{/* Primary Row: Type Filter + Expand Toggle (Mobile) or Full Filters (Desktop) */}
-			<div className="flex flex-wrap items-center gap-3">
+			<div className="flex flex-col md:flex-row items-start md:items-center gap-3">
 				{/* Type Filter - Always visible */}
 				<div className="flex items-center gap-2 min-w-[160px]">
 					<Label className="!mb-0">Type</Label>
@@ -228,26 +228,30 @@ export default function MovementsFilters({
 
 			{/* Pagination Row */}
 			<div className="flex flex-col md:flex-row items-center justify-between gap-2 pt-2 border-t" style={{ borderColor: "var(--rx-border)" }}>
-				<div className="text-xs text-muted-foreground">
+				<div className="text-xs text-muted-foreground order-2 md:order-1">
 					Page {page} of {totalPages} • Showing {rangeStart}–
 					{rangeEnd} of {total}
 				</div>
-				<div className="flex gap-2">
+				<div className="flex gap-1 order-1 md:order-2 w-full md:w-auto justify-end">
 					<Button
 						variant="outline"
 						onClick={() => setPage(1)}
 						disabled={page <= 1}
-						className="h-9"
+						className="h-9 px-2 md:px-4"
+						title="First Page"
 					>
-						First
+						<span className="sr-only md:not-sr-only">First</span>
+						<ChevronsLeft className="h-4 w-4 md:hidden" />
 					</Button>
 					<Button
 						variant="outline"
 						onClick={() => setPage(Math.max(1, page - 1))}
 						disabled={page <= 1}
-						className="h-9"
+						className="h-9 px-2 md:px-4"
+						title="Previous Page"
 					>
-						Prev
+						<span className="sr-only md:not-sr-only">Prev</span>
+						<ChevronLeft className="h-4 w-4 md:hidden" />
 					</Button>
 					<Button
 						variant="outline"
@@ -255,17 +259,21 @@ export default function MovementsFilters({
 							setPage(Math.min(totalPages, page + 1))
 						}
 						disabled={page >= totalPages}
-						className="h-9"
+						className="h-9 px-2 md:px-4"
+						title="Next Page"
 					>
-						Next
+						<span className="sr-only md:not-sr-only">Next</span>
+						<ChevronRight className="h-4 w-4 md:hidden" />
 					</Button>
 					<Button
 						variant="outline"
 						onClick={() => setPage(totalPages)}
 						disabled={page >= totalPages}
-						className="h-9"
+						className="h-9 px-2 md:px-4"
+						title="Last Page"
 					>
-						Last
+						<span className="sr-only md:not-sr-only">Last</span>
+						<ChevronsRight className="h-4 w-4 md:hidden" />
 					</Button>
 				</div>
 			</div>

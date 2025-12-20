@@ -316,20 +316,22 @@ export function ProductImageManager({
   return (
     <div className={cn('space-y-6', className)}>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h3 className="text-lg font-semibold">Product Images</h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             Manage images for {productName} ({images.length}/10 images)
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2 w-full md:w-auto">
           {images.length > 0 && (
             <Button
               variant="outline"
               size="sm"
               onClick={() => refreshUrlsMutation.mutate()}
               disabled={refreshUrlsMutation.isPending}
+              className="flex-1 md:flex-none"
             >
               {refreshUrlsMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -338,7 +340,7 @@ export function ProductImageManager({
               )}
             </Button>
           )}
-          <Badge status={images.length === 0 ? "error" : "info"}>
+          <Badge status={images.length === 0 ? "error" : "info"} className="whitespace-nowrap">
             {images.length === 0 ? 'No images' : `${images.length} image${images.length === 1 ? '' : 's'}`}
           </Badge>
         </div>
@@ -350,20 +352,20 @@ export function ProductImageManager({
           {...getRootProps()}
           className={cn(
             "border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer",
-            isDragActive ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-gray-400",
+            isDragActive ? "border-primary bg-primary/10" : "border-border hover:border-muted-foreground/50",
             uploadMutation.isPending && "opacity-50 cursor-not-allowed"
           )}
         >
           <input {...getInputProps()} />
-          <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
           <div className="space-y-2">
             <p className="text-lg font-medium">
               {isDragActive ? 'Drop images here...' : 'Upload product images'}
             </p>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Drag and drop images here, or click to browse
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Supports JPEG, PNG, WebP, GIF up to 10MB each. Maximum 10 images per product.
             </p>
           </div>
@@ -401,7 +403,7 @@ export function ProductImageManager({
         <Card className="p-4">
           <div className="flex items-center justify-between mb-4">
             <h4 className="font-medium">Current Images</h4>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Drag to reorder • First image will be the primary display
             </p>
           </div>

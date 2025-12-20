@@ -100,16 +100,16 @@ export default function EditProductPage({ params }: PageProps) {
   return (
     <div className="container mx-auto px-6 py-8">
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-2">
           <div className="flex items-center space-x-4">
-            <h1 className="text-3xl font-bold text-gray-900">Edit Product</h1>
+            <h1 className="text-3xl font-bold text-foreground">Edit Product</h1>
           </div>
           <div className="flex items-center gap-2">
-            <a href={`/app/admin/products/${id}`} className="text-blue-600 hover:underline">View</a>
-            <a href={`/app/admin/products/${id}/movements`} className="text-blue-600 hover:underline">Movements</a>
+            <a href={`/app/admin/products/${id}`} className="text-primary hover:underline">View</a>
+            <a href={`/app/admin/products/${id}/movements`} className="text-primary hover:underline">Movements</a>
           </div>
         </div>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           Update product information, manage stock levels, and handle product images.
         </p>
       </div>

@@ -61,13 +61,13 @@ export function ProductBatchesList({ productId }: { productId: string }) {
 
   return (
     <Card>
-      <div className="p-4 border-b flex items-center justify-between gap-4">
+      <div className="p-4 border-b flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h3 className="font-semibold">Batches</h3>
           <p className="text-sm text-muted-foreground">Page {page}</p>
           <p className="text-xs text-muted-foreground mt-1">Tip: Export CSV to audit batch quantities and expiries.</p>
         </div>
-        <div className="flex items-end gap-2">
+        <div className="flex flex-col md:flex-row md:items-end gap-2 w-full md:w-auto">
           <div>
             <Label className="text-xs">Search</Label>
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search batch #" className="h-8" />
@@ -76,7 +76,7 @@ export function ProductBatchesList({ productId }: { productId: string }) {
             <Label className="text-xs">Page size</Label>
             <Input type="number" min={5} max={100} value={pageSize} onChange={(e) => setPageSize(parseInt(e.target.value) || 20)} className="h-8 w-24" />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Prev</Button>
             <Button variant="outline" onClick={() => setPage((p) => p + 1)}>Next</Button>
             <Button variant="outline" onClick={fetchBatches} disabled={loading}>Refresh</Button>
@@ -114,26 +114,28 @@ export function ProductBatchesList({ productId }: { productId: string }) {
         ) : rows.length === 0 ? (
           <div className="text-sm text-muted-foreground">No batches found.</div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Batch Number</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
-                <TableHead>Expiry</TableHead>
-                <TableHead>Created</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map(b => (
-                <TableRow key={b.id}>
-                  <TableCell>{b.batchNumber}</TableCell>
-                  <TableCell className="text-right">{b.qty}</TableCell>
-                  <TableCell>{b.expiryDate ? new Date(b.expiryDate).toLocaleDateString() : '—'}</TableCell>
-                  <TableCell>{new Date(b.createdAt).toLocaleDateString()}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Batch Number</TableHead>
+                    <TableHead className="text-right">Quantity</TableHead>
+                    <TableHead>Expiry</TableHead>
+                    <TableHead>Created</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map(b => (
+                    <TableRow key={b.id}>
+                      <TableCell>{b.batchNumber}</TableCell>
+                      <TableCell className="text-right">{b.qty}</TableCell>
+                      <TableCell>{b.expiryDate ? new Date(b.expiryDate).toLocaleDateString() : '—'}</TableCell>
+                      <TableCell>{new Date(b.createdAt).toLocaleDateString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
         )}
       </div>
     </Card>
