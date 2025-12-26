@@ -42,8 +42,6 @@ export default function PdfDoc({ fileUrl }: PdfDocProps) {
 
   useEffect(() => {
     configurePdfWorker();
-    // Helpful diagnostic
-    console.debug('[PdfDoc] mount', { fileUrl });
   }, [fileUrl]);
 
   const options = useMemo(() => ({
@@ -59,25 +57,64 @@ export default function PdfDoc({ fileUrl }: PdfDocProps) {
     setLoadError(null);
   }
 
-  const fileDescriptor = useMemo(() => ({
-    url: fileUrl,
-    withCredentials: false,
-    // Reduce HEADs & chunking issues
-    // @ts-ignore
-    disableRange: true,
-    // @ts-ignore
-    disableStream: true,
-    // @ts-ignore
-    disableWorker: false,
-    // @ts-ignore  
-    isEvalSupported: false,
-    // @ts-ignore
-    rangeChunkSize: 0,
-    // @ts-ignore
-    disableAutoFetch: true,
-    // @ts-ignore
-    length: 0,
-  }) as const, [fileUrl]);
+  // Pre-fetch the PDF as ArrayBuffer to bypass PDF.js URL handling issues
+  // PDF.js sometimes makes internal requests that strip query parameters,
+  // causing cache misses or hitting stale 204 responses
+  const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [isFetching, setIsFetching] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    
+    async function fetchPdf() {
+      setIsFetching(true);
+      setFetchError(null);
+      setPdfData(null);
+      
+      try {
+        // Add cache buster to the fetch URL
+        const urlObj = new URL(fileUrl, window.location.href);
+        urlObj.searchParams.set('t', String(Date.now()));
+        
+        const response = await fetch(urlObj.toString());
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        
+        if (arrayBuffer.byteLength === 0) {
+          throw new Error('Received empty PDF file');
+        }
+        
+        if (!cancelled) {
+          setPdfData(arrayBuffer);
+        }
+      } catch (err: any) {
+        if (!cancelled) {
+          setFetchError(err?.message || 'Failed to fetch PDF');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsFetching(false);
+        }
+      }
+    }
+    
+    fetchPdf();
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [fileUrl]);
+
+  // Pass the raw ArrayBuffer data to react-pdf instead of a URL
+  const fileDescriptor = useMemo(() => {
+    if (!pdfData) return null;
+    return { data: pdfData };
+  }, [pdfData]);
 
   // Compute effective base dimensions given rotation
   const effectiveBase = useMemo(() => {
@@ -164,72 +201,145 @@ export default function PdfDoc({ fileUrl }: PdfDocProps) {
   }, [numPages, applyFitWidth, applyFitPage]);
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <button onClick={() => { setScale((s) => Math.max(0.25, s - 0.1)); setFitMode('none'); }} className="px-2 py-1 border rounded">-</button>
-        <span className="text-sm w-14 text-center">{Math.round(scale * 100)}%</span>
-        <button onClick={() => { setScale((s) => Math.min(4, s + 0.1)); setFitMode('none'); }} className="px-2 py-1 border rounded">+</button>
-        <button onClick={() => setRotation((r) => (r + 90) % 360)} className="px-2 py-1 border rounded">Rotate</button>
-        <button onClick={applyFitWidth} className="px-2 py-1 border rounded">Fit width</button>
-        <button onClick={applyFitPage} className="px-2 py-1 border rounded">Fit page</button>
-        <div className="flex-1" />
-        {numPages ? (
+    <div className="flex flex-col h-full bg-zinc-900/50">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-zinc-950/90 border-b border-zinc-800 backdrop-blur-md z-10 shrink-0 shadow-lg">
+        <div className="flex items-center gap-2">
+          {/* Zoom Controls (Segmented) */}
+          <div className="flex items-center h-9 ml-2 bg-white rounded-md shadow-sm ring-1 ring-zinc-200 overflow-hidden">
+            <button 
+              onClick={() => { setScale((s) => Math.max(0.25, s - 0.1)); setFitMode('none'); }} 
+              className="h-full px-3 hover:bg-zinc-50 active:bg-zinc-100 text-zinc-700 transition-colors border-r border-zinc-200 font-medium text-lg leading-none"
+              title="Zoom Out"
+            >
+              -
+            </button>
+            <div className="h-full min-w-[3.5rem] flex items-center justify-center bg-white text-xs font-semibold text-zinc-900 select-none">
+              {Math.round(scale * 100)}%
+            </div>
+            <button 
+              onClick={() => { setScale((s) => Math.min(4, s + 0.1)); setFitMode('none'); }} 
+              className="h-full px-3 hover:bg-zinc-50 active:bg-zinc-100 text-zinc-700 transition-colors border-l border-zinc-200 font-medium text-lg leading-none"
+              title="Zoom In"
+            >
+              +
+            </button>
+          </div>
+
+          <div className="w-px h-6 bg-zinc-800 mx-2 opacity-50" />
+
+          {/* View Controls */}
           <div className="flex items-center gap-2">
-            <button onClick={() => setPageNumber((p) => Math.max(1, p - 1))} className="px-2 py-1 border rounded">Prev</button>
-            <span className="text-sm tabular-nums">Page</span>
-            <input
-              type="number"
-              min={1}
-              max={numPages}
-              value={pageNumber}
-              onChange={(e) => setPageNumber(() => {
-                const v = Number(e.target.value);
-                if (Number.isFinite(v)) {
-                  return Math.min(Math.max(1, v), numPages!);
-                }
-                return 1;
-              })}
-              className="w-16 px-1 py-1 border rounded text-sm text-center"
-            />
-            <span className="text-sm tabular-nums">of {numPages}</span>
-            <button onClick={() => setPageNumber((p) => Math.min(numPages!, p + 1))} className="px-2 py-1 border rounded">Next</button>
+            <button 
+              onClick={() => setRotation((r) => (r + 90) % 360)} 
+              className="h-9 px-4 bg-white hover:bg-zinc-50 text-zinc-900 text-xs font-semibold rounded-md transition-all shadow-sm ring-1 ring-zinc-200 active:translate-y-px"
+            >
+              Rotate
+            </button>
+            <button 
+              onClick={applyFitWidth} 
+              className={`h-9 px-4 text-xs font-semibold rounded-md transition-all shadow-sm ring-1 ring-zinc-200 active:translate-y-px ${fitMode === 'width' ? 'bg-[#D9F903] text-black ring-[#D9F903] hover:bg-[#cbe802]' : 'bg-white text-zinc-900 hover:bg-zinc-50'}`}
+            >
+              Fit Width
+            </button>
+            <button 
+              onClick={applyFitPage} 
+              className={`h-9 px-4 text-xs font-semibold rounded-md transition-all shadow-sm ring-1 ring-zinc-200 active:translate-y-px ${fitMode === 'page' ? 'bg-[#D9F903] text-black ring-[#D9F903] hover:bg-[#cbe802]' : 'bg-white text-zinc-900 hover:bg-zinc-50'}`}
+            >
+              Fit Page
+            </button>
+          </div>
+        </div>
+
+        {/* Pagination */}
+        {numPages ? (
+          <div className="flex items-center gap-2 mr-2">
+            <button 
+              onClick={() => setPageNumber((p) => Math.max(1, p - 1))} 
+              className="h-9 px-4 bg-white text-zinc-900 text-xs font-semibold rounded-md hover:bg-zinc-50 transition-all shadow-sm ring-1 ring-zinc-200 disabled:opacity-40 disabled:hover:bg-white disabled:cursor-not-allowed active:translate-y-px disabled:active:translate-y-0"
+              disabled={pageNumber <= 1}
+            >
+              Previous
+            </button>
+            
+            <div className="flex items-center gap-2 h-9 px-3 bg-zinc-900 rounded-md border border-zinc-800 shadow-inner">
+              <span className="text-xs text-zinc-400 font-medium text-nowrap">Page</span>
+              <input
+                type="number"
+                min={1}
+                max={numPages}
+                value={pageNumber}
+                onChange={(e) => setPageNumber(() => {
+                  const v = Number(e.target.value);
+                  if (Number.isFinite(v)) {
+                    return Math.min(Math.max(1, v), numPages!);
+                  }
+                  return 1;
+                })}
+                className="w-8 h-full bg-transparent text-center text-sm font-bold text-white focus:outline-none appearance-none"
+              />
+              <span className="text-xs text-zinc-500 font-medium text-nowrap">/ {numPages}</span>
+            </div>
+
+            <button 
+              onClick={() => setPageNumber((p) => Math.min(numPages!, p + 1))} 
+              className="h-9 px-4 bg-white text-zinc-900 text-xs font-semibold rounded-md hover:bg-zinc-50 transition-all shadow-sm ring-1 ring-zinc-200 disabled:opacity-40 disabled:hover:bg-white disabled:cursor-not-allowed active:translate-y-px disabled:active:translate-y-0"
+              disabled={pageNumber >= numPages}
+            >
+              Next
+            </button>
           </div>
         ) : null}
       </div>
 
-      <div ref={containerRef} className="w-full h-[70vh] overflow-auto flex items-center justify-center bg-black/5">
-        <Document
-          key={fileUrl}
-          file={fileDescriptor}
-          options={options}
-          onLoadSuccess={onLoadSuccess}
-          onLoadProgress={(p) => console.debug('[PdfDoc] loading', p?.loaded, '/', p?.total)}
-          onLoadError={(e: any) => {
-            console.error('[PdfDoc] onLoadError', e);
-            setLoadError(String(e?.message || e));
-          }}
-          onSourceError={(e: any) => {
-            console.error('[PdfDoc] onSourceError', e);
-            setLoadError(String(e?.message || e));
-          }}
-          loading={<p>Loading PDF...</p>}
-          error={<p className="text-sm text-red-500">{loadError ? `Failed to load PDF: ${loadError}` : 'Failed to load PDF'}</p>}
-        >
-          <Page
-            pageNumber={pageNumber}
-            scale={scale}
-            rotate={rotation}
-            renderTextLayer
-            renderAnnotationLayer
-            onLoadSuccess={(page) => {
-              try {
-                const v = page.getViewport({ scale: 1, rotation });
-                setBasePageWidth(v.width);
-                setBasePageHeight(v.height);
-              } catch {}
+      <div ref={containerRef} className="flex-1 w-full overflow-auto flex items-center justify-center p-8">
+        {isFetching ? (
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2"></div>
+            <p className="text-zinc-400 text-sm">Loading PDF...</p>
+          </div>
+        ) : fetchError ? (
+          <p className="text-sm text-red-500">Failed to load PDF: {fetchError}</p>
+        ) : fileDescriptor ? (
+          <Document
+            key={fileUrl}
+            file={fileDescriptor}
+            options={options}
+            onLoadSuccess={onLoadSuccess}
+            onLoadError={(e: any) => {
+              setLoadError(String(e?.message || e));
             }}
-          />
-        </Document>
+            onSourceError={(e: any) => {
+              setLoadError(String(e?.message || e));
+            }}
+            loading={
+              <div className="flex flex-col items-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2"></div>
+                <p className="text-zinc-400 text-sm">Parsing PDF...</p>
+              </div>
+            }
+            error={<p className="text-sm text-red-500">{loadError ? `Failed to load PDF: ${loadError}` : 'Failed to load PDF'}</p>}
+            className="shadow-2xl"
+          >
+            <Page
+              pageNumber={pageNumber}
+              scale={scale}
+              rotate={rotation}
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
+              className="bg-white shadow-xl"
+              onLoadSuccess={(page) => {
+                try {
+                  const v = page.getViewport({ scale: 1, rotation });
+                  setBasePageWidth(v.width);
+                  setBasePageHeight(v.height);
+                } catch {}
+              }}
+            />
+          </Document>
+        ) : (
+          <p className="text-sm text-red-500">No PDF data available</p>
+        )}
       </div>
     </div>
   );

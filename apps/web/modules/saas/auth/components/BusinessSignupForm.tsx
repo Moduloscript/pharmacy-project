@@ -336,14 +336,14 @@ export function BusinessSignupForm({
                       <FormLabel>State *</FormLabel>
                       <FormControl>
                         <Select 
-                          value={field.value}
+                          value={field.value || undefined}
                           onValueChange={handleStateChange}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select State" />
                           </SelectTrigger>
                           <SelectContent>
-                            {Object.keys(NIGERIAN_STATES_AND_LGAS).map((state) => (
+                            {Object.keys(NIGERIAN_STATES_AND_LGAS).filter(s => !!s).map((state) => (
                               <SelectItem key={state} value={state}>
                                 {state}
                               </SelectItem>
@@ -364,7 +364,7 @@ export function BusinessSignupForm({
                       <FormLabel>Local Government Area *</FormLabel>
                       <FormControl>
                         <Select 
-                          value={field.value}
+                          value={field.value || undefined}
                           onValueChange={field.onChange}
                           disabled={!form.watch('state')}
                         >
@@ -372,7 +372,7 @@ export function BusinessSignupForm({
                             <SelectValue placeholder="Select LGA" />
                           </SelectTrigger>
                           <SelectContent>
-                            {getLGAOptions().map((lga) => (
+                            {getLGAOptions().filter(l => !!l).map((lga) => (
                               <SelectItem key={lga} value={lga}>
                                 {lga}
                               </SelectItem>

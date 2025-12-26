@@ -634,7 +634,7 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
                       <SelectValue placeholder="Select state" />
                     </SelectTrigger>
                     <SelectContent className="max-h-[200px] overflow-y-auto">
-                      {nigerianStates.map((state) => (
+                      {nigerianStates.filter(s => !!s).map((state) => (
                         <SelectItem key={state} value={state}>
                           {state}
                         </SelectItem>
@@ -654,7 +654,7 @@ export function EnhancedCheckoutForm({ onSuccess, onCancel }: EnhancedCheckoutFo
                       <SelectValue placeholder="Select LGA" />
                     </SelectTrigger>
                     <SelectContent className="max-h-[200px] overflow-y-auto">
-                      {form.watch('deliveryState') && getLGAs(form.watch('deliveryState')).map((lga) => (
+                      {form.watch('deliveryState') && getLGAs(form.watch('deliveryState')).filter(l => !!l).map((lga) => (
                         <SelectItem key={lga} value={lga}>
                           {lga}
                         </SelectItem>

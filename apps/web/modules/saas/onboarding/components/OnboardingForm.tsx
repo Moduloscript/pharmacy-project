@@ -1,7 +1,5 @@
 "use client";
-import { authClient } from "@repo/auth/client";
 import { useRouter } from "@shared/hooks/router";
-import { clearCache } from "@shared/lib/cache";
 import { Progress } from "@ui/components/progress";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
@@ -65,11 +63,20 @@ export function OnboardingForm() {
 
   const updateOnboardingMutation = useMutation({
     mutationFn: async () => {
-      await authClient.updateUser({ onboardingComplete: true });
+      const res = await fetch("/api/customers/profile/complete-onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || "Failed to complete onboarding");
+      }
+      return res.json();
     },
-    onSuccess: async () => {
-      await clearCache();
+    onSuccess: () => {
+      // Navigate after successful onboarding completion
       router.replace(redirectTo ?? "/app");
+      router.refresh(); // Refresh to update session data
     }
   });
 

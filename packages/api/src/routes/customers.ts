@@ -223,4 +223,31 @@ customersRouter.get('/verification-stats', authMiddleware, async (c) => {
   }
 });
 
+// POST /api/customers/profile/complete-onboarding - Mark onboarding as complete
+customersRouter.post('/profile/complete-onboarding', authMiddleware, async (c) => {
+  try {
+    const user = c.get('user');
+    
+    if (!user?.id) {
+      return c.json({ error: 'Authentication required' }, 401);
+    }
+
+    // Update user's onboarding status
+    const { db } = await import('@repo/database');
+    await db.user.update({
+      where: { id: user.id },
+      data: { onboardingComplete: true }
+    });
+
+    return c.json({ 
+      message: 'Onboarding completed successfully',
+      success: true
+    });
+
+  } catch (error) {
+    console.error('Error completing onboarding:', error);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
 export { customersRouter };

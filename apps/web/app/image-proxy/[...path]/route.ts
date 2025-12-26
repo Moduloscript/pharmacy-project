@@ -1,4 +1,5 @@
 import { config } from "@repo/config";
+export const dynamic = "force-dynamic";
 import { getSignedUrl, getObjectMetadata } from "@repo/storage";
 
 // Stream the storage object inline so previews render in-place (no new tab download)
@@ -63,8 +64,17 @@ export async function GET(
     const upstream = await fetch(signedUrl, {
       headers: rangeHeader ? { Range: rangeHeader } : undefined,
     });
-    if (!upstream.ok || !upstream.body) {
+    
+    // Handle error cases: non-2xx responses, 204 No Content, or missing body
+    if (!upstream.ok) {
+      console.error('[image-proxy GET] upstream not ok:', upstream.status, key);
       return new Response("Failed to fetch object", { status: upstream.status || 502 });
+    }
+    
+    // 204 No Content means file doesn't exist or storage returned empty
+    if (upstream.status === 204 || !upstream.body) {
+      console.error('[image-proxy GET] No content returned:', upstream.status, key);
+      return new Response("Object not found or empty", { status: 404 });
     }
 
     const originalContentType = upstream.headers.get("content-type") || guessContentTypeFromKey(key);
@@ -100,8 +110,46 @@ export async function GET(
       headers.set("Content-Disposition", "inline");
       headers.set("Content-Length", String(output.length));
 
-      return new Response(output, { status: 200, headers });
+      return new Response(output as unknown as BodyInit, { status: 200, headers });
     }
+
+    // For PDFs, buffer the response to avoid streaming issues with PDF.js
+    // PDF.js has issues with ReadableStream handling in Next.js environments
+    const ext = key.split("?")[0].split(".").pop()?.toLowerCase();
+    const isPdf = originalContentType === "application/pdf" || ext === 'pdf';
+    
+
+
+    if (isPdf) {
+      try {
+        // Buffer the entire PDF to avoid streaming issues
+        // Use Uint8Array (web-standard) instead of Node Buffer for Response body compatibility
+        const arrayBuffer = await upstream.arrayBuffer();
+        const pdfData = new Uint8Array(arrayBuffer);
+        
+
+
+        if (pdfData.byteLength === 0) {
+          console.error('[image-proxy] PDF buffer is empty!');
+          return new Response("Empty PDF file", { status: 404 });
+        }
+        
+        const headers = new Headers();
+        headers.set("Content-Type", "application/pdf");
+        headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+        headers.set("Content-Disposition", "inline");
+        headers.set("Content-Length", String(pdfData.byteLength));
+        headers.set("Accept-Ranges", "bytes");
+
+        // Uint8Array is a valid BodyInit in the web Response API
+        return new Response(pdfData, { status: 200, headers });
+      } catch (err) {
+        console.error('[image-proxy] Error buffering PDF:', err);
+        throw err;
+      }
+    }
+
+
 
     // Otherwise stream original (supporting 200 or 206)
     const headers = new Headers();
@@ -134,6 +182,7 @@ export async function HEAD(
   const { path } = await params;
   const [bucket, ...parts] = path ?? [];
   const key = parts.join("/");
+  
   if (!(bucket && key)) return new Response("Invalid path", { status: 400 });
 
   const allowedBuckets = [
@@ -156,15 +205,16 @@ export async function HEAD(
     const headers = new Headers();
     const contentType = meta.contentType || guessContentTypeFromKey(key);
     headers.set('Content-Type', contentType);
-    headers.set('Cache-Control', 'public, max-age=3600, s-maxage=3600');
+    // Disable caching for HEAD requests to prevent PDF.js from hitting stagnant 204/404 responses
+    headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     headers.set('Content-Disposition', 'inline');
     if (typeof meta.size === 'number') headers.set('Content-Length', String(meta.size));
     // We explicitly advertise range support so PDF.js can perform range requests.
     headers.set('Accept-Ranges', 'bytes');
     if (meta.lastModified) headers.set('Last-Modified', meta.lastModified.toUTCString());
 
-    // Explicit 200 to avoid default 204
-    return new Response(null, { status: 200, headers });
+    // Explicit 200 to avoid default 204. passing empty string to force 200 status.
+    return new Response('', { status: 200, headers });
   } catch (e) {
     console.error('[image-proxy HEAD] Error:', e);
     return new Response('Error probing object', { status: 500 });

@@ -38,6 +38,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui/components
 import { config } from '@repo/config';
 import { Spinner } from '@shared/components/Spinner';
 import { toast } from 'sonner';
+import dynamic from 'next/dynamic';
+
+// Dynamically import PdfDoc to avoid SSR issues with pdfjs-dist (requires browser APIs like DOMMatrix)
+const PdfDoc = dynamic(() => import('./PdfDoc'), { ssr: false });
 
 interface VerificationDocument {
   id: string;
@@ -91,80 +95,61 @@ const fetchCustomer = async (customerId: string): Promise<Customer> => {
   }
   const data = await response.json();
 
-  // Normalize verification documents (can be JSON string or array from DB)
-  let parsedDocs: VerificationDocument[] = [];
-  try {
-    const raw = (data.verificationDocuments ?? null);
-    const asArray = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    if (Array.isArray(asArray)) {
-      parsedDocs = asArray.map((d: any, idx: number) => {
-        // Case 1: The entry is already a structured object
-        if (d && typeof d === 'object' && !Array.isArray(d)) {
-          const rawUrl =
-            (typeof d.url === 'string' ? d.url : '') ||
-            (typeof d.publicUrl === 'string' ? d.publicUrl : '') ||
-            (typeof d.signedUrl === 'string' ? d.signedUrl : '') ||
-            (typeof d.link === 'string' ? d.link : '');
-          const isHttp = /^https?:\/\//.test(rawUrl);
-          const keyCandidate =
-            d.key ||
-            d.path ||
-            d.fileKey ||
-            d.documentKey ||
-            d.objectKey ||
-            (isHttp ? undefined : (rawUrl || undefined)) ||
-            d.file?.key || d.file?.path || d.source?.key || d.source?.path;
-          return ({
-            id: d.id || `doc-${idx}`,
-            type: (d.type || 'OTHER') as VerificationDocument['type'],
-            name: d.name || d.filename || d.key || `Document ${idx + 1}`,
-            url: isHttp ? rawUrl : '',
-            key: keyCandidate,
-            bucket: d.bucket || d.file?.bucket || d.source?.bucket || undefined,
-            mimeType: d.mimeType || d.contentType || d.file?.mimeType || d.source?.mimeType || undefined,
-            uploadedAt: d.uploadedAt || d.createdAt || data.createdAt || new Date().toISOString(),
-            status: (d.status || 'PENDING') as VerificationDocument['status'],
-            reviewNotes: d.reviewNotes || d.notes || undefined,
-          });
-        }
+    // Verify and parse verification documents (stored as JSON string of keys array in DB)
+    // Format: "[\"verification/type/filename.pdf\", ...]"
+    // Bucket: "documents"
+    let parsedDocs: VerificationDocument[] = [];
+    try {
+      const raw = data.verificationDocuments;
+      let keys: string[] = [];
 
-        // Case 2: The entry is a plain string – treat it as a storage key
-        if (typeof d === 'string') {
-          const key = d;
-          const name = key.split('/').pop() || `Document ${idx + 1}`;
-          return ({
-            id: `doc-${idx}`,
-            type: 'OTHER',
-            name,
-            url: '',
-            key,
-            bucket: config.storage.bucketNames.documents,
-            mimeType: undefined,
-            uploadedAt: data.createdAt || new Date().toISOString(),
-            status: 'PENDING',
-            reviewNotes: undefined,
-          });
+      if (typeof raw === 'string') {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            keys = parsed.filter(k => typeof k === 'string');
+          }
+        } catch {
+          // Fallback: if somehow not JSON, treat as single string? Unlikely based on DB data.
+          console.warn('Failed to parse verificationDocuments JSON', raw);
         }
+      } else if (Array.isArray(raw)) {
+        // If API already parsed it
+        keys = raw.filter(k => typeof k === 'string');
+      }
 
-        // Fallback
-        return ({
+      parsedDocs = keys.map((key, idx) => {
+        // Expected key format: verification/{type}/{filename}
+        // e.g., verification/clinic/file.pdf
+        const parts = key.split('/');
+        const filename = parts.length > 0 ? parts[parts.length - 1] : `Document ${idx + 1}`;
+        
+        // Infer type from path "verification/{type}/..."
+        const typeFromPath = parts.length >= 3 && parts[0] === 'verification' ? parts[1].toUpperCase() : 'OTHER';
+        
+        // Infer mime type from extension
+        const ext = filename.split('.').pop()?.toLowerCase();
+        const mimeType = ext === 'pdf' ? 'application/pdf' : 
+                         ext === 'png' ? 'image/png' :
+                         ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : undefined;
+
+        return {
           id: `doc-${idx}`,
-          type: 'OTHER',
-          name: `Document ${idx + 1}`,
-          url: '',
-          key: undefined,
-          bucket: undefined,
-          mimeType: undefined,
+          type: (typeFromPath || 'OTHER') as VerificationDocument['type'],
+          name: filename,
+          url: '', // We use key + bucket for proxy
+          key: key,
+          bucket: config.storage.bucketNames.documents, // Verified bucket 'documents'
+          mimeType,
           uploadedAt: data.createdAt || new Date().toISOString(),
-          status: 'PENDING',
+          status: 'PENDING', // Default status, real status might need a separate DB field or is per-customer
           reviewNotes: undefined,
-        });
+        };
       });
+    } catch (e) {
+      console.error('Error parsing verification documents', e);
+      parsedDocs = [];
     }
-  } catch {
-    // swallow JSON parse errors and treat as no docs
-    parsedDocs = [];
-  }
   
   // Map the backend data format to frontend format
   return {
@@ -733,35 +718,36 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                 {customer.verificationDocuments.map((doc) => (
                   <div
                     key={doc.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors bg-white dark:bg-zinc-950/50"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gray-100 rounded">
+                      <div className="p-2 bg-zinc-100 dark:bg-zinc-900 rounded text-zinc-500 dark:text-zinc-400">
                         {doc.status === 'APPROVED' ? (
-                          <FileCheckIcon className="w-5 h-5 text-green-600" />
+                          <FileCheckIcon className="w-5 h-5 text-green-600 dark:text-green-500" />
                         ) : doc.status === 'REJECTED' ? (
-                          <XCircleIcon className="w-5 h-5 text-red-600" />
+                          <XCircleIcon className="w-5 h-5 text-red-600 dark:text-red-500" />
                         ) : (
-                          <FileTextIcon className="w-5 h-5 text-muted-foreground" />
+                          <FileTextIcon className="w-5 h-5" />
                         )}
                       </div>
                       <div>
-                        <p className="font-medium text-foreground">{doc.name}</p>
+                        <p className="font-medium text-zinc-900 dark:text-zinc-100">{doc.name}</p>
                         <div className="flex items-center gap-4 mt-1">
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-sm text-zinc-500 dark:text-zinc-400">
                             {doc.type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
                           </span>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-sm text-zinc-500 dark:text-zinc-400">
                             Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}
                           </span>
                           <Badge 
                             className={`text-xs ${
                               doc.status === 'APPROVED' 
-                                ? 'bg-green-100 text-green-800' 
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 border-green-200 dark:border-green-800' 
                                 : doc.status === 'REJECTED'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-yellow-100 text-yellow-800'
+                                ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 border-red-200 dark:border-red-800'
+                                : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800'
                             }`}
+                            variant="outline"
                           >
                             {doc.status}
                           </Badge>
@@ -777,6 +763,7 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
                         onClick={() => openPreview(doc)}
                       >
                         <EyeIcon className="w-4 h-4 mr-1" />
@@ -785,6 +772,7 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
                         disabled={!canAccessDoc(doc)}
                         onClick={() => handleDownload(doc)}
                       >
@@ -836,47 +824,61 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
 
         {/* Preview Modal */}
         <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-          <DialogContent className="sm:max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>{previewDoc?.name || 'Document Preview'}</DialogTitle>
+          <DialogContent className="sm:max-w-5xl h-[90vh] p-0 gap-0 overflow-hidden flex flex-col bg-[#09090b] text-white border-zinc-800" aria-describedby={undefined}>
+            <DialogHeader className="p-4 border-b border-zinc-800 shrink-0">
+              <DialogTitle className="text-white font-mono text-sm truncate pr-8">
+                {previewDoc?.name || 'Document Preview'}
+              </DialogTitle>
             </DialogHeader>
-            <div className="mt-2">
+            <div className="flex-1 min-h-0 relative bg-zinc-950/50">
               {previewLoading ? (
-                <div className="flex items-center justify-center py-10">
-                  <Spinner className="size-6" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Spinner className="size-8 text-white" />
+                  <span className="ml-3 text-zinc-400">Loading document...</span>
                 </div>
               ) : previewError ? (
-                <div className="p-4 rounded bg-red-50 text-sm text-red-700">{previewError}</div>
+                <div className="absolute inset-0 flex items-center justify-center p-6">
+                  <div className="text-center max-w-md">
+                    <XCircleIcon className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-white mb-2">Failed to load</h3>
+                    <p className="text-zinc-400">{previewError}</p>
+                  </div>
+                </div>
               ) : previewUrl ? (
                 isPdfDoc(previewDoc, previewUrl) ? (
-                  <object data={previewUrl} type="application/pdf" width="100%" height="600">
-                    <p className="text-sm">
-                      Unable to preview PDF. You can download it instead.
-                    </p>
-                  </object>
+                  <div className="h-full w-full">
+                    <PdfDoc fileUrl={previewUrl} />
+                  </div>
                 ) : (
-                  <div className="relative w-full" style={{ minHeight: 200 }}>
+                  <div className="w-full h-full flex items-center justify-center overflow-auto p-8">
                     <Image
                       src={previewUrl}
                       alt={previewDoc?.name || 'Document'}
-                      width={1600}
-                      height={1200}
-                      sizes="100vw"
-                      className="max-h-[70vh] w-full h-auto object-contain"
+                      width={1200}
+                      height={800}
+                      className="max-w-full max-h-full object-contain shadow-2xl"
                       priority
                     />
                   </div>
                 )
               ) : null}
             </div>
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="p-4 border-t border-zinc-800 flex justify-end gap-3 shrink-0 bg-[#09090b]">
               {previewUrl && (
-                <Button variant="outline" size="sm" onClick={() => previewDoc && handleDownload(previewDoc)}>
-                  <DownloadIcon className="w-4 h-4 mr-1" />
+                <Button 
+                  className="bg-black text-white border-2 border-white hover:bg-zinc-900 rounded-none px-6 font-bold uppercase tracking-wider"
+                  onClick={() => previewDoc && handleDownload(previewDoc)}
+                >
+                  <DownloadIcon className="w-4 h-4 mr-2" />
                   Download
                 </Button>
               )}
-              <Button size="sm" onClick={() => setPreviewOpen(false)}>Close</Button>
+              <Button 
+                className="bg-[#D9F903] text-black hover:bg-[#c2e002] rounded-none px-8 font-bold uppercase tracking-wider"
+                onClick={() => setPreviewOpen(false)}
+              >
+                Close
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
