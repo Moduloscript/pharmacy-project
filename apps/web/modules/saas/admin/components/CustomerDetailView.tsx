@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@ui/components/button';
 import { Card } from '@ui/components/card';
 import { Badge } from '@ui/components/badge';
@@ -42,6 +42,29 @@ import dynamic from 'next/dynamic';
 
 // Dynamically import PdfDoc to avoid SSR issues with pdfjs-dist (requires browser APIs like DOMMatrix)
 const PdfDoc = dynamic(() => import('./PdfDoc'), { ssr: false });
+
+// Nigerian States for select
+const NIGERIAN_STATES = [
+  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno',
+  'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT', 'Gombe', 'Imo',
+  'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara', 'Lagos',
+  'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers',
+  'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
+];
+
+interface CustomerFormData {
+  name: string;
+  email: string;
+  phone: string;
+  type: 'RETAIL' | 'WHOLESALE' | 'PHARMACY' | 'CLINIC';
+  businessName: string;
+  businessAddress: string;
+  state: string;
+  lga: string;
+  licenseNumber: string;
+  taxId: string;
+  isActive: boolean;
+}
 
 interface VerificationDocument {
   id: string;
@@ -200,11 +223,46 @@ const updateCustomerVerification = async ({
   return response.json();
 };
 
+const updateCustomer = async ({
+  customerId,
+  data
+}: {
+  customerId: string;
+  data: Partial<CustomerFormData>;
+}): Promise<Customer> => {
+  const response = await fetch(`/api/admin/customers/${customerId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to update customer');
+  }
+  return response.json();
+};
+
 export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [verificationNotes, setVerificationNotes] = useState('');
+  
+  const [formData, setFormData] = useState<CustomerFormData>({
+    name: '',
+    email: '',
+    phone: '',
+    type: 'RETAIL',
+    businessName: '',
+    businessAddress: '',
+    state: '',
+    lga: '',
+    licenseNumber: '',
+    taxId: '',
+    isActive: true,
+  });
 
   // Preview modal state
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -245,6 +303,52 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
       });
     },
   });
+
+  // Update customer mutation
+  const updateMutation = useMutation({
+    mutationFn: updateCustomer,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'customer', customerId] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'customers'] });
+      setIsEditing(false);
+      toast.success('Customer updated successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to update customer', {
+        description: error.message,
+      });
+    },
+  });
+
+  // Sync form data with customer data
+  useEffect(() => {
+    if (customer) {
+      setFormData({
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone || '',
+        type: customer.type,
+        businessName: customer.businessName || '',
+        businessAddress: customer.businessAddress || '',
+        state: customer.state || '',
+        lga: customer.lga || '',
+        licenseNumber: customer.licenseNumber || '',
+        taxId: customer.taxId || '',
+        isActive: customer.isActive,
+      });
+    }
+  }, [customer, isEditing]);
+
+  const handleInputChange = (field: keyof CustomerFormData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = () => {
+    updateMutation.mutate({
+      customerId,
+      data: formData,
+    });
+  };
 
   const handleVerificationUpdate = (status: string) => {
     verificationMutation.mutate({
@@ -444,13 +548,37 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
           </div>
           
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsEditing(!isEditing)}
-            >
-              <EditIcon className="w-4 h-4 mr-2" />
-              {isEditing ? 'Cancel' : 'Edit'}
-            </Button>
+            {isEditing ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditing(false)}
+                  disabled={updateMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  disabled={updateMutation.isPending}
+                  className="min-w-[100px]"
+                >
+                  {updateMutation.isPending ? (
+                    <RefreshCwIcon className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <SaveIcon className="w-4 h-4 mr-2" />
+                  )}
+                  Save
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => setIsEditing(true)}
+              >
+                <EditIcon className="w-4 h-4 mr-2" />
+                Edit
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -467,46 +595,114 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
               </h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Full Name</Label>
-                  <div className="flex items-center gap-2 mt-1">
+              <div>
+                <Label>Full Name</Label>
+                <div className="mt-1">
+                  {isEditing ? (
+                    <Input 
+                      value={formData.name} 
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                    />
+                  ) : (
                     <span className="text-foreground">{customer.name}</span>
-                  </div>
+                  )}
                 </div>
-                
-                <div>
-                  <Label>Email Address</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <MailIcon className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-foreground">{customer.email}</span>
-                    {customer.emailVerified && (
-                      <CheckCircleIcon className="w-4 h-4 text-green-600" />
-                    )}
-                  </div>
-                </div>
-                
-                {customer.phone && (
-                  <div>
-                    <Label>Phone Number</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <PhoneIcon className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-foreground">{customer.phone}</span>
-                      {customer.phoneVerified && (
-                        <CheckCircleIcon className="w-4 h-4 text-green-600" />
+              </div>
+              
+              <div>
+                <Label>Email Address</Label>
+                <div className="mt-1 flex items-center gap-2">
+                  {isEditing ? (
+                    <Input 
+                      value={formData.email} 
+                      onChange={(e) => handleInputChange('email', e.target.value)}
+                    />
+                  ) : (
+                    <>
+                      <MailIcon className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-foreground">{customer.email}</span>
+                      {customer.emailVerified ? (
+                        <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100 border-none h-5 px-1.5">
+                          Verified
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-yellow-600 border-yellow-200 h-5 px-1.5">
+                          Unverified
+                        </Badge>
                       )}
-                    </div>
-                  </div>
-                )}
-                
-                <div>
-                  <Label>Customer Type</Label>
-                  <div className="mt-1">
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <Label>Phone Number</Label>
+                <div className="mt-1 flex items-center gap-2">
+                  {isEditing ? (
+                    <Input 
+                      value={formData.phone} 
+                      onChange={(e) => handleInputChange('phone', e.target.value)}
+                    />
+                  ) : (
+                    <>
+                      <PhoneIcon className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-foreground">{customer.phone || 'N/A'}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <Label>Customer Type</Label>
+                <div className="mt-1">
+                  {isEditing ? (
+                    <Select
+                      value={formData.type}
+                      onValueChange={(value: any) => handleInputChange('type', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="RETAIL">Retail</SelectItem>
+                        <SelectItem value="WHOLESALE">Wholesale</SelectItem>
+                        <SelectItem value="PHARMACY">Pharmacy</SelectItem>
+                        <SelectItem value="CLINIC">Clinic</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
                     <Badge className={getCustomerTypeColor(customer.type)}>
                       {customer.type}
                     </Badge>
-                  </div>
+                  )}
                 </div>
-                
+              </div>
+              
+              <div>
+                <Label>Account Status</Label>
+                <div className="mt-1">
+                   {isEditing ? (
+                    <Select
+                      value={formData.isActive ? 'active' : 'inactive'}
+                      onValueChange={(value) => handleInputChange('isActive', value === 'active')}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <span className="text-foreground">
+                      {customer.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {!isEditing && (
                 <div>
                   <Label>Member Since</Label>
                   <div className="mt-1">
@@ -519,73 +715,126 @@ export function CustomerDetailView({ customerId }: CustomerDetailViewProps) {
                     </span>
                   </div>
                 </div>
-              </div>
+              )}
+            </div>
             </div>
           </Card>
 
           {/* Business Information */}
-          {(customer.businessName || customer.type !== 'RETAIL') && (
-            <Card>
-              <div className="p-6">
-                <h2 className="text-lg font-semibold mb-4 flex items-center">
-                  <BuildingIcon className="w-5 h-5 mr-2" />
-                  Business Information
-                </h2>
+          <Card>
+            <div className="p-6">
+              <h2 className="text-lg font-semibold mb-4 flex items-center">
+                <BuildingIcon className="w-5 h-5 mr-2" />
+                Business Information
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-1">
+                  <Label>Business Name</Label>
+                  <div className="mt-1">
+                    {isEditing ? (
+                      <Input 
+                        value={formData.businessName} 
+                        onChange={(e) => handleInputChange('businessName', e.target.value)}
+                      />
+                    ) : (
+                      <span className="text-foreground">{customer.businessName || 'N/A'}</span>
+                    )}
+                  </div>
+                </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {customer.businessName && (
-                    <div>
-                      <Label>Business Name</Label>
-                      <div className="mt-1">
-                        <span className="text-foreground">{customer.businessName}</span>
+                <div className="md:col-span-1">
+                  <Label>Tax ID</Label>
+                  <div className="mt-1">
+                     {isEditing ? (
+                      <Input 
+                        value={formData.taxId} 
+                        onChange={(e) => handleInputChange('taxId', e.target.value)}
+                      />
+                    ) : (
+                      <span className="text-foreground">{customer.taxId || 'N/A'}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label>Business Address</Label>
+                  <div className="mt-1">
+                    {isEditing ? (
+                      <Textarea 
+                         value={formData.businessAddress} 
+                         onChange={(e) => handleInputChange('businessAddress', e.target.value)}
+                         rows={2}
+                      />
+                    ) : (
+                      <div className="flex items-start gap-2">
+                         <MapPinIcon className="w-4 h-4 text-muted-foreground mt-0.5" />
+                         <span className="text-foreground">{customer.businessAddress || 'N/A'}</span>
                       </div>
-                    </div>
-                  )}
-                  
-                  {customer.businessAddress && (
-                    <div className="md:col-span-2">
-                      <Label>Business Address</Label>
-                      <div className="flex items-start gap-2 mt-1">
-                        <MapPinIcon className="w-4 h-4 text-muted-foreground mt-0.5" />
-                        <span className="text-foreground">{customer.businessAddress}</span>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {(customer.state || customer.lga) && (
-                    <div>
-                      <Label>Location</Label>
-                      <div className="mt-1">
-                        <span className="text-foreground">
-                          {customer.lga && customer.state 
-                            ? `${customer.lga}, ${customer.state}`
-                            : customer.state || customer.lga}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {customer.licenseNumber && (
-                    <div>
-                      <Label>License Number</Label>
-                      <div className="mt-1">
-                        <span className="text-foreground">{customer.licenseNumber}</span>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {customer.taxId && (
-                    <div>
-                      <Label>Tax ID</Label>
-                      <div className="mt-1">
-                        <span className="text-foreground">{customer.taxId}</span>
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                </div>
+                
+                <div>
+                  <Label>State</Label>
+                  <div className="mt-1">
+                    {isEditing ? (
+                      <Select
+                        value={formData.state}
+                        onValueChange={(value) => handleInputChange('state', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {NIGERIAN_STATES.map((state) => (
+                            <SelectItem key={state} value={state}>
+                              {state}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="text-foreground">
+                        {customer.state || 'N/A'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Local Government Area</Label>
+                  <div className="mt-1">
+                    {isEditing ? (
+                      <Input 
+                        value={formData.lga} 
+                        onChange={(e) => handleInputChange('lga', e.target.value)}
+                        placeholder="Enter LGA"
+                      />
+                    ) : (
+                      <span className="text-foreground">
+                        {customer.lga || 'N/A'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="md:col-span-2">
+                  <Label>License Number</Label>
+                  <div className="mt-1">
+                     {isEditing ? (
+                      <Input 
+                        value={formData.licenseNumber} 
+                        onChange={(e) => handleInputChange('licenseNumber', e.target.value)}
+                      />
+                    ) : (
+                      <span className="text-foreground">{customer.licenseNumber || 'N/A'}</span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </Card>
-          )}
+            </div>
+          </Card>
         </div>
 
         {/* Sidebar */}
