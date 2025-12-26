@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { AdminOrderDetails } from '@/modules/saas/admin/components/AdminOrderDetails'
+import { AdminPageContainer } from '@saas/admin/components/AdminPageContainer'
 import { getSession } from '@saas/auth/lib/server'
 
 export const metadata: Metadata = {
@@ -24,6 +25,10 @@ export default async function AdminOrderDetailsPage({
 
   const { id } = await params
 
-  return <AdminOrderDetails orderId={id} />
+  return (
+    <AdminPageContainer maxWidth="6xl">
+      <AdminOrderDetails orderId={id} />
+    </AdminPageContainer>
+  )
 }
 

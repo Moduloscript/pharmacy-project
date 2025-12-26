@@ -31,8 +31,16 @@ import {
   ShoppingCartIcon,
   PhoneIcon,
   MessageSquareIcon,
-  SlidersHorizontalIcon
+  SlidersHorizontalIcon,
+  MoreHorizontalIcon,
+  FileTextIcon
 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@ui/components/tooltip";
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -364,7 +372,7 @@ export function OrdersTable({ className }: OrdersTableProps) {
       <Card className="p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 w-full sm:w-auto">
-            <div className="relative flex-1 min-w-0">
+            <div className="relative flex-1 min-w-0 max-w-lg">
               <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400" />
               <Input
                 placeholder="Search orders..."
@@ -499,31 +507,31 @@ export function OrdersTable({ className }: OrdersTableProps) {
             {/* Desktop Table View */}
             <div className="hidden lg:block overflow-x-auto">
               <div className="inline-block min-w-full align-middle">
-                <Table className="min-w-full">
+                <Table className="min-w-full table-fixed">
                   <TableHeader>
                     <TableRow className="border-b bg-muted/50">
                       {columns.orderNumber && (
-                        <TableHead className="w-[140px] font-semibold">Order #</TableHead>
+                        <TableHead className="w-[12%] font-semibold">Order #</TableHead>
                       )}
                       {columns.customer && (
-                        <TableHead className="min-w-[200px] font-semibold">Customer</TableHead>
+                        <TableHead className="w-[20%] font-semibold">Customer</TableHead>
                       )}
                       {columns.items && (
-                        <TableHead className="min-w-[150px] font-semibold">Items</TableHead>
+                        <TableHead className="w-[20%] font-semibold">Items</TableHead>
                       )}
                       {columns.total && (
-                        <TableHead className="w-[120px] font-semibold">Total</TableHead>
+                        <TableHead className="w-[10%] font-semibold">Total</TableHead>
                       )}
                       {columns.payment && (
-                        <TableHead className="w-[120px] font-semibold">Payment</TableHead>
+                        <TableHead className="w-[10%] font-semibold">Payment</TableHead>
                       )}
                       {columns.status && (
-                        <TableHead className="min-w-[140px] font-semibold">Status</TableHead>
+                        <TableHead className="w-[15%] font-semibold">Status</TableHead>
                       )}
                       {columns.date && (
-                        <TableHead className="w-[100px] font-semibold">Date</TableHead>
+                        <TableHead className="w-[10%] font-semibold">Date</TableHead>
                       )}
-                      <TableHead className="w-[140px] sticky right-0 bg-muted/50 font-semibold">Actions</TableHead>
+                      <TableHead className="w-[50px] sticky right-0 bg-muted/50 font-semibold"></TableHead>
                     </TableRow>
                   </TableHeader>
             <TableBody>
@@ -531,57 +539,59 @@ export function OrdersTable({ className }: OrdersTableProps) {
                 <TableRow key={order.id}>
                   {columns.orderNumber && (
                     <TableCell className={cn(compact ? 'py-2' : 'py-3')}>
-                      <div>
-                        <p className="font-medium truncate max-w-[120px]" title={order.orderNumber}>
+                      <div className="w-full max-w-full">
+                        <p className="font-medium truncate" title={order.orderNumber}>
                           {order.orderNumber}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
                           {order.requiresPrescription && (
-                            <Badge className="text-[10px] py-0.5 px-1.5">Rx required</Badge>
+                            <Badge className="text-[10px] py-0 px-1.5 h-5">Rx required</Badge>
                           )}
-                          {order.prescriptionStatus && (
-                            <Badge className="text-[10px] py-0.5 px-1.5">
-                              Rx: {order.prescriptionStatus}
-                            </Badge>
+                          {order.deliveryFee > 0 && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <TruckIcon className="size-3 text-gray-400" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Delivery: {formatCurrency(order.deliveryFee)}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
                         </div>
-                        {order.deliveryFee > 0 && (
-                          <p className="text-xs text-gray-500">
-                            + {formatCurrency(order.deliveryFee)} delivery
-                          </p>
-                        )}
                       </div>
                     </TableCell>
                   )}
                   
                   {columns.customer && (
                     <TableCell className={cn(compact ? 'py-2' : 'py-3')}>
-                      <div className="max-w-[220px]">
-                        <p className="font-medium truncate" title={order.customer.name}>
-                          {order.customer.name}
-                        </p>
-                        {!compact && (
-                          <p className="text-sm text-gray-600 truncate" title={order.customer.email}>
-                            {order.customer.email}
+                      <div className="flex flex-col gap-1 w-full max-w-full">
+                        <div className="flex items-center gap-2 max-w-full">
+                          <p className="font-medium truncate flex-1" title={order.customer.name}>
+                            {order.customer.name}
                           </p>
-                        )}
-                        <div className="flex items-center space-x-2 mt-1 flex-wrap">
-                          <Badge className={getCustomerTypeColor(order.customer.type)}>
+                          <Badge className={cn("text-[10px] px-1 h-5 shrink-0", getCustomerTypeColor(order.customer.type))}>
                             {order.customer.type}
                           </Badge>
-                          {order.customer.phone && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-6 px-2 text-xs"
-                              onClick={() => handleCallCustomer(order.customer.phone!, order.customer.name)}
-                              title={`Call ${order.customer.name}: ${order.customer.phone}`}
-                            >
-                              <PhoneIcon className="size-3 mr-1" />
-                              Call
-                            </Button>
-                          )}
                         </div>
+                        
+                        {!compact && (
+                          <div className="flex items-center justify-between gap-2 max-w-full">
+                            <p className="text-sm text-gray-500 truncate" title={order.customer.email}>
+                              {order.customer.email}
+                            </p>
+                            {order.customer.phone && (
+                              <button
+                                onClick={() => handleCallCustomer(order.customer.phone!, order.customer.name)}
+                                className="text-gray-400 hover:text-gray-600 shrink-0"
+                                title={`Call ${order.customer.name}`}
+                              >
+                                <PhoneIcon className="size-3" />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                   )}
@@ -614,17 +624,14 @@ export function OrdersTable({ className }: OrdersTableProps) {
                   
                   {columns.status && (
                     <TableCell className={cn(compact ? 'py-2' : 'py-3')}>
-                      <div className="space-y-1">
-                        <Badge className={getStatusColor(order.orderStatus)}>
-                          {order.orderStatus}
-                        </Badge>
-                        {order.orderStatus !== 'DELIVERED' && order.orderStatus !== 'CANCELLED' && (
+                      <div className="w-full">
+                        {order.orderStatus !== 'DELIVERED' && order.orderStatus !== 'CANCELLED' ? (
                           <Select
                             value={order.orderStatus}
                             onValueChange={(value) => handleStatusUpdate(order.id, value)}
                             disabled={updateStatusMutation.isPending || (order.requiresPrescription && order.prescriptionStatus !== 'APPROVED')}
                           >
-                            <SelectTrigger className="w-32 h-8">
+                            <SelectTrigger className={cn("h-7 text-xs w-full", getStatusColor(order.orderStatus))}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -636,6 +643,10 @@ export function OrdersTable({ className }: OrdersTableProps) {
                               <SelectItem value="CANCELLED">Cancelled</SelectItem>
                             </SelectContent>
                           </Select>
+                        ) : (
+                          <Badge className={cn("w-full justify-center", getStatusColor(order.orderStatus))}>
+                            {order.orderStatus}
+                          </Badge>
                         )}
                       </div>
                     </TableCell>
@@ -643,50 +654,47 @@ export function OrdersTable({ className }: OrdersTableProps) {
                   
                   {columns.date && (
                     <TableCell className={cn(compact ? 'py-2' : 'py-3')}>
-                      <p className="text-sm">{new Date(order.createdAt).toLocaleDateString()}</p>
-                      {!compact && (
-                        <p className="text-xs text-gray-500">
-                          {new Date(order.createdAt).toLocaleTimeString()}
-                        </p>
-                      )}
+                      <p className="text-sm whitespace-nowrap">{new Date(order.createdAt).toLocaleDateString()}</p>
                     </TableCell>
                   )}
                   
                   <TableCell className="py-3 sticky right-0 bg-background">
-                    <div className="flex items-center gap-1">
-                      <Link href={`/app/admin/orders/${order.id}`}>
-                        <Button variant="outline" size="sm">
-                          <EyeIcon className="size-4" />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontalIcon className="size-4" />
                         </Button>
-                      </Link>
-                      {order.requiresPrescription && (
-                        <Link href={`/app/admin/prescriptions`}>
-                          <Button variant="outline" size="sm">
-                            Review Rx
-                          </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <Link href={`/app/admin/orders/${order.id}`} className="w-full">
+                          <DropdownMenuCheckboxItem className="cursor-pointer">
+                            <EyeIcon className="mr-2 size-4" />
+                            View Details
+                          </DropdownMenuCheckboxItem>
                         </Link>
-                      )}
-                      
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleSendMessage(order)}
-                        title={`Send message to ${order.customer.name}`}
-                      >
-                        <MessageSquareIcon className="size-4" />
-                      </Button>
-                      
-                      {order.orderStatus === 'DISPATCHED' && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleTrackDelivery(order)}
-                          title={`Track delivery for order ${order.orderNumber}`}
-                        >
-                          <TruckIcon className="size-4" />
-                        </Button>
-                      )}
-                    </div>
+                        <DropdownMenuCheckboxItem className="cursor-pointer" onClick={() => handleSendMessage(order)}>
+                          <MessageSquareIcon className="mr-2 size-4" />
+                          Message Customer
+                        </DropdownMenuCheckboxItem>
+                        {order.requiresPrescription && (
+                          <Link href={`/app/admin/prescriptions`} className="w-full">
+                            <DropdownMenuCheckboxItem className="cursor-pointer">
+                              <FileTextIcon className="mr-2 size-4" />
+                              Review Prescription
+                            </DropdownMenuCheckboxItem>
+                          </Link>
+                        )}
+                        {order.orderStatus === 'DISPATCHED' && (
+                          <DropdownMenuCheckboxItem className="cursor-pointer" onClick={() => handleTrackDelivery(order)}>
+                            <TruckIcon className="mr-2 size-4" />
+                            Track Delivery
+                          </DropdownMenuCheckboxItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}

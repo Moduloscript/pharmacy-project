@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { AdminDashboard } from '@saas/admin/components/AdminDashboard';
+import { AdminPageContainer } from '@saas/admin/components/AdminPageContainer';
 import { getSession } from '@saas/auth/lib/server';
 import { redirect } from 'next/navigation';
 
@@ -21,8 +22,8 @@ export default async function AdminDashboardPage() {
   }
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <AdminPageContainer maxWidth="6xl">
       <AdminDashboard />
-    </div>
+    </AdminPageContainer>
   );
 }

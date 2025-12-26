@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { OrdersTable } from '@saas/admin/components/OrdersTable';
+import { AdminPageContainer } from '@saas/admin/components/AdminPageContainer';
 import { getSession } from '@saas/auth/lib/server';
 import { redirect } from 'next/navigation';
 
@@ -21,7 +22,7 @@ export default async function AdminOrdersPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-7xl">
+    <AdminPageContainer maxWidth="7xl">
       <div className="mb-10">
         <div className="flex items-center gap-2 sm:gap-3 mb-4">
           <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg transition-colors">
@@ -40,7 +41,7 @@ export default async function AdminOrdersPage() {
         </div>
         
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-xl p-4 sm:p-6 border border-blue-200 dark:border-blue-800 transition-colors">
-          <p className="text-muted-foreground text-sm sm:text-base lg:text-lg leading-relaxed mb-4">
+          <p className="text-muted-foreground text-sm sm:text-base lg:text-lg leading-relaxed mb-4 max-w-3xl">
             <span className="font-semibold text-blue-900 dark:text-blue-100">Comprehensive Order Management Hub</span> - 
             Efficiently manage all customer orders, update delivery statuses, and track pharmaceutical shipments 
             across Nigerian pharmacy operations.
@@ -69,6 +70,6 @@ export default async function AdminOrdersPage() {
       </div>
       
       <OrdersTable />
-    </div>
+    </AdminPageContainer>
   );
 }

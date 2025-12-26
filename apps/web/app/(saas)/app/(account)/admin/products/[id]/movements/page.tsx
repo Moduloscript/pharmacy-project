@@ -7,6 +7,7 @@ import { Card } from '@ui/components/card';
 import { ProductMovementsList } from '@saas/admin/components/ProductMovementsList';
 import { ProductBatchesList } from '@saas/admin/components/ProductBatchesList';
 import { ProductAdjustStockForm } from '@saas/admin/components/ProductAdjustStockForm';
+import { AdminPageContainer } from '@saas/admin/components/AdminPageContainer';
 
 export const metadata: Metadata = {
   title: 'Inventory Movements',
@@ -21,7 +22,7 @@ export default async function ProductMovementsPage({ params }: { params: Promise
   const { id } = await params;
 
   return (
-    <div className="container mx-auto px-4 md:px-6 py-6 md:py-8 space-y-4 md:space-y-6">
+    <AdminPageContainer maxWidth="5xl">
       {/* Header - stacks on mobile */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="min-w-0">
@@ -48,6 +49,6 @@ export default async function ProductMovementsPage({ params }: { params: Promise
       <ProductMovementsList productId={id} />
 
       <ProductBatchesList productId={id} />
-    </div>
+    </AdminPageContainer>
   );
 }

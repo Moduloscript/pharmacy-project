@@ -1,5 +1,6 @@
 import { auth } from "@repo/auth";
 import { OrganizationForm } from "@saas/admin/component/organizations/OrganizationForm";
+import { AdminPageContainer } from "@saas/admin/components/AdminPageContainer";
 import { getAdminPath } from "@saas/admin/lib/links";
 import { fullOrganizationQueryKey } from "@saas/organizations/lib/api";
 import { getQueryClient } from "@shared/lib/server";
@@ -36,7 +37,7 @@ export default async function OrganizationFormPage({
 
 	return (
 		<HydrationBoundary state={dehydrate(queryClient)}>
-			<div>
+			<AdminPageContainer maxWidth="5xl">
 				<div className="mb-2 flex justify-start">
 					<Button variant="link" size="sm" asChild className="px-0">
 						<Link href={backTo ?? getAdminPath("/organizations")}>
@@ -46,7 +47,7 @@ export default async function OrganizationFormPage({
 					</Button>
 				</div>
 				<OrganizationForm organizationId={id} />
-			</div>
+			</AdminPageContainer>
 		</HydrationBoundary>
 	);
 }

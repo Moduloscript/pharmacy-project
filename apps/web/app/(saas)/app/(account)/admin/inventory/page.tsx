@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { InventoryTable } from '@saas/admin/components/InventoryTable';
+import { AdminPageContainer } from '@saas/admin/components/AdminPageContainer';
 import { getSession } from '@saas/auth/lib/server';
 import { redirect } from 'next/navigation';
 
@@ -21,7 +22,7 @@ export default async function AdminInventoryPage() {
   }
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <AdminPageContainer maxWidth="6xl">
       <div className="mb-10">
         <div className="flex items-start gap-3 sm:items-center mb-4">
           <div className="p-2 sm:p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg transition-colors shrink-0">
@@ -69,6 +70,6 @@ export default async function AdminInventoryPage() {
       </div>
       
       <InventoryTable />
-    </div>
+    </AdminPageContainer>
   );
 }

@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getSession } from '@saas/auth/lib/server';
 import { CustomerDetailView } from '@saas/admin/components/CustomerDetailView';
+import { AdminPageContainer } from '@saas/admin/components/AdminPageContainer';
 
 export const metadata: Metadata = {
   title: 'Customer Detail - BenPharm',
@@ -14,5 +15,9 @@ export default async function AdminCustomerDetailPage({ params }: { params: Prom
 
   const { id } = await params;
 
-  return <CustomerDetailView customerId={id} />;
+  return (
+    <AdminPageContainer maxWidth="6xl">
+      <CustomerDetailView customerId={id} />
+    </AdminPageContainer>
+  );
 }

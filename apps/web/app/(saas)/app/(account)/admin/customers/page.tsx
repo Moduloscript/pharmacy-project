@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { CustomersTable } from '@saas/admin/components/CustomersTable';
+import { AdminPageContainer } from '@saas/admin/components/AdminPageContainer';
 import { getSession } from '@saas/auth/lib/server';
 import { redirect } from 'next/navigation';
 
@@ -21,7 +22,7 @@ export default async function AdminCustomersPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-7xl">
+    <AdminPageContainer maxWidth="6xl">
       <div className="mb-10">
         <div className="flex items-center gap-2 sm:gap-3 mb-4">
           <div className="p-2 sm:p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg transition-colors">
@@ -69,6 +70,6 @@ export default async function AdminCustomersPage() {
       </div>
       
       <CustomersTable />
-    </div>
+    </AdminPageContainer>
   );
 }

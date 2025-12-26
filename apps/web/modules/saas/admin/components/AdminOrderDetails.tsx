@@ -157,9 +157,9 @@ export function AdminOrderDetails({ orderId }: AdminOrderDetailsProps) {
       </Card>
 
       {/* Order summary */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-10 lg:grid-cols-2 items-stretch mb-10">
         {/* Customer Information */}
-        <Card>
+        <Card className="h-full">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
@@ -197,7 +197,7 @@ export function AdminOrderDetails({ orderId }: AdminOrderDetailsProps) {
         </Card>
 
         {/* Delivery Information */}
-        <Card>
+        <Card className="h-full">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Truck className="h-5 w-5" />

@@ -215,19 +215,19 @@ ordersRouter.put('/:id/status', zValidator('json', updateStatusSchema), async (c
       isAllowedStatus: allowedStatuses.includes(newStatus)
     });
 
-    // Prevent changing from terminal states
+    // Prevent changing from terminal states (finalized orders cannot be reopened easily)
     if (terminalStates.includes(currentStatus)) {
       return c.json({ 
         error: `Cannot change status from ${currentStatus}. This is a final state.` 
       }, 400);
     }
 
-    // Validate new status is allowed
-    if (!allowedStatuses.includes(newStatus) && newStatus !== currentStatus) {
-      return c.json({ 
-        error: `Invalid status: ${newStatus}. Allowed statuses are: ${allowedStatuses.join(', ')}` 
-      }, 400);
-    }
+    // Allow admins to set any valid status, including moving backwards (e.g. READY -> PROCESSING)
+    // The only restriction is handled above: cannot move OUT of a terminal state.
+    // And logically, we should check if newStatus is valid Enum value, which Zod already did.
+    
+    // Optional: add specific business rules if needed, e.g. cannot go from RECEIVED -> DELIVERED directly?
+    // For now, allow maximum flexibility for admins to fix mistakes.
     
     // 1. Update the order status (without includes to avoid potential Prisma issues)
     await db.order.update({

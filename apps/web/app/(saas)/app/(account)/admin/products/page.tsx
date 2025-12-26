@@ -1,9 +1,9 @@
 
 import { Metadata } from 'next';
 import { InventoryTable } from '@saas/admin/components/InventoryTable';
+import { AdminPageContainer } from '@saas/admin/components/AdminPageContainer';
 import { getSession } from '@saas/auth/lib/server';
 import { redirect } from 'next/navigation';
-import { PageHeader } from "@saas/shared/components/PageHeader";
 
 export const metadata: Metadata = {
   title: 'Products - BenPharm Admin',
@@ -22,7 +22,7 @@ export default async function AdminProductsPage() {
   }
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <AdminPageContainer maxWidth="6xl">
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Products</h1>
         <p className="text-muted-foreground mt-2">
@@ -31,6 +31,6 @@ export default async function AdminProductsPage() {
       </div>
       
       <InventoryTable />
-    </div>
+    </AdminPageContainer>
   );
 }

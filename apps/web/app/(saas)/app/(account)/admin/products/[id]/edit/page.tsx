@@ -4,6 +4,7 @@ import { useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { ProductEditForm } from '@saas/admin/components/ProductEditForm';
+import { AdminPageContainer } from '@saas/admin/components/AdminPageContainer';
 import { useSession } from '@saas/auth/hooks/use-session';
 import { Loader2 } from 'lucide-react';
 
@@ -63,21 +64,21 @@ export default function EditProductPage({ params }: PageProps) {
   // Loading states
   if (!loaded || productLoading) {
     return (
-      <div className="container mx-auto px-6 py-8">
+      <AdminPageContainer maxWidth="5xl">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
             <p className="text-gray-600">Loading product...</p>
           </div>
         </div>
-      </div>
+      </AdminPageContainer>
     );
   }
 
   // Error states
   if (productError) {
     return (
-      <div className="container mx-auto px-6 py-8">
+      <AdminPageContainer maxWidth="5xl">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Product Not Found</h1>
           <p className="text-gray-600 mb-6">The requested product could not be found.</p>
@@ -88,7 +89,7 @@ export default function EditProductPage({ params }: PageProps) {
             ← Back to Inventory
           </button>
         </div>
-      </div>
+      </AdminPageContainer>
     );
   }
 
@@ -98,7 +99,7 @@ export default function EditProductPage({ params }: PageProps) {
   }
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <AdminPageContainer maxWidth="5xl">
       <div className="mb-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-2">
           <div className="flex items-center space-x-4">
@@ -115,6 +116,6 @@ export default function EditProductPage({ params }: PageProps) {
       </div>
       
       {product && <ProductEditForm product={product} />}
-    </div>
+    </AdminPageContainer>
   );
 }

@@ -8,6 +8,7 @@ import { Button } from "@ui/components/button";
 import { Badge } from "@ui/components/badge";
 import ProductHeader from "@saas/admin/components/ProductHeader";
 import { ProductTabs } from "@saas/admin/components/ProductTabs";
+import { AdminPageContainer } from "@saas/admin/components/AdminPageContainer";
 
 export const metadata: Metadata = {
 	title: "Product Details",
@@ -51,7 +52,7 @@ export default async function AdminProductShowPage({
 
 	if (!data) {
 		return (
-			<div className="container mx-auto px-6 py-12">
+			<AdminPageContainer maxWidth="5xl">
 				<Card className="p-8 text-center">
 					<h1 className="text-xl font-semibold">Product not found</h1>
 					<p className="text-muted-foreground mt-2">ID: {id}</p>
@@ -61,14 +62,14 @@ export default async function AdminProductShowPage({
 						</Link>
 					</div>
 				</Card>
-			</div>
+			</AdminPageContainer>
 		);
 	}
 
 	const product = data;
 
 	return (
-		<div className="container mx-auto px-6 py-8">
+		<AdminPageContainer maxWidth="6xl">
 			<div className="grid grid-cols-1 md:grid-cols-12 gap-6">
 				<div className="md:col-span-4">
 					<ProductHeader product={product} id={id} />
@@ -77,6 +78,6 @@ export default async function AdminProductShowPage({
 					<ProductTabs product={product} id={id} />
 				</div>
 			</div>
-		</div>
+		</AdminPageContainer>
 	);
 }

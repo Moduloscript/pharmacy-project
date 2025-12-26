@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getSession } from '@saas/auth/lib/server';
 import { redirect } from 'next/navigation';
 import { CustomerEditView } from '@saas/admin/components/CustomerEditView';
+import { AdminPageContainer } from '@saas/admin/components/AdminPageContainer';
 
 interface CustomerEditPageProps {
   params: Promise<{
@@ -40,5 +41,9 @@ export default async function CustomerEditPage({
     notFound();
   }
 
-  return <CustomerEditView customerId={id} />;
+  return (
+    <AdminPageContainer maxWidth="5xl">
+      <CustomerEditView customerId={id} />
+    </AdminPageContainer>
+  );
 }
