@@ -322,7 +322,86 @@ async function persistPaymentData(verificationResult: any, reference: string, ga
     });
 
     if (existingOrderForRef) {
-      // Check if notifications have been sent for this order
+      // Check if order is already paid. If so, we're done.
+      if (existingOrderForRef.paymentStatus === 'COMPLETED') {
+        logger.info('Payment already processed and completed', { reference });
+        return { 
+          success: true, 
+          paymentId: 'existing', 
+          orderId: existingOrderForRef.id,
+          orderNumber: existingOrderForRef.orderNumber 
+        };
+      }
+
+      // Order exists but is NOT paid. This means the webhook hasn't fired yet or failed.
+      // We should process the payment here and now.
+      logger.info('Order exists but payment pending. Processing payment from callback.', {
+        reference,
+        orderId: existingOrderForRef.id
+      });
+
+      // Update the existing order and create payment record
+      // We do this in a transaction to ensure consistency
+      const result = await db.$transaction(async (prisma) => {
+        // 1. Update Order Status
+        const updatedOrder = await prisma.order.update({
+          where: { id: existingOrderForRef.id },
+          data: {
+            paymentStatus: 'COMPLETED',
+            paymentMethod: gateway as any,
+            paymentReference: reference,
+            updatedAt: new Date(),
+          }
+        });
+
+        // 2. Create Payment Record
+        // Check if payment exists first to avoid duplicate key errors (improbable if status was pending, but safe)
+        let payment = await prisma.payment.findFirst({
+          where: { transactionId: reference }
+        });
+
+        if (!payment) {
+          payment = await prisma.payment.create({
+            data: {
+              customerId: existingOrderForRef.customerId, // link to same customer
+              orderId: existingOrderForRef.id,
+              amount: verificationResult.amount,
+              currency: verificationResult.currency || 'NGN',
+              method: gateway as any,
+              status: 'COMPLETED',
+              gatewayReference: verificationResult.gatewayReference,
+              transactionId: reference,
+              gatewayResponse: JSON.stringify(verificationResult),
+              gatewayFee: verificationResult.gatewayFee || 0,
+              appFee: verificationResult.appFee || 0,
+              completedAt: new Date()
+            }
+          });
+        } else {
+           // If payment record exists but order was pending, ensure payment is marked completed
+           payment = await prisma.payment.update({
+             where: { id: payment.id },
+             data: {
+               status: 'COMPLETED',
+               completedAt: new Date(),
+               gatewayResponse: JSON.stringify(verificationResult)
+             }
+           });
+        }
+
+        // 3. Log Tracking
+        await prisma.orderTracking.create({
+          data: {
+            orderId: existingOrderForRef.id,
+            status: 'RECEIVED', // Order status is usually RECEIVED at this stage
+            notes: `Payment verified via callback (Recovered) - ${reference}`,
+          }
+        });
+
+        return { order: updatedOrder, payment };
+      });
+
+      // Send notifications for this recovered order
       const existingNotification = await db.notification.findFirst({
         where: {
           orderId: existingOrderForRef.id,
@@ -331,13 +410,7 @@ async function persistPaymentData(verificationResult: any, reference: string, ga
       });
 
       if (!existingNotification) {
-        logger.info('Order exists but notifications not sent yet. Sending now.', {
-          orderId: existingOrderForRef.id,
-          reference
-        });
-
-        // Send order confirmation notifications (email + SMS)
-        try {
+         try {
           const { enhancedNotificationService } = await import('@repo/mail');
           await enhancedNotificationService.sendOrderConfirmation({
             id: existingOrderForRef.id,
@@ -346,26 +419,22 @@ async function persistPaymentData(verificationResult: any, reference: string, ga
             total: Number(existingOrderForRef.total),
             deliveryAddress: existingOrderForRef.deliveryAddress,
           });
-          logger.info('Order confirmation notifications queued for existing order', {
+          logger.info('Order confirmation notifications queued for recovered order', {
             orderId: existingOrderForRef.id,
-            orderNumber: existingOrderForRef.orderNumber,
           });
         } catch (e) {
-          logger.error('Failed to queue order confirmation notifications for existing order', {
+          logger.error('Failed to queue notifications for recovered order', {
             reference,
-            orderId: existingOrderForRef.id,
             error: (e as Error)?.message,
           });
         }
-      } else {
-        logger.info('Payment already processed and notifications sent', { reference });
       }
 
       return { 
         success: true, 
-        paymentId: 'existing', 
-        orderId: existingOrderForRef.id,
-        orderNumber: existingOrderForRef.orderNumber 
+        paymentId: result.payment.id, 
+        orderId: result.order.id,
+        orderNumber: result.order.orderNumber 
       };
     }
 
