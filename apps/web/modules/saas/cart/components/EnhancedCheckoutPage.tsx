@@ -204,7 +204,7 @@ export function EnhancedCheckoutPage({ className, onOrderComplete }: EnhancedChe
       deliveryAddress: shippingAddress.address,
       deliveryFee: cartSummary.deliveryFee * 100,
       gateway: paymentMethod.nigerianGateway,
-      redirectUrl: `${window.location.origin}/app/orders`
+      redirectUrl: `${window.location.origin}/app/checkout/success`
     };
 
     // Call your enhanced API endpoint
