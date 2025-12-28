@@ -19,10 +19,13 @@ export function PaymentSuccessClient() {
   
   // Handle payment completion using the new service
   useEffect(() => {
+    console.log('[DEBUG-PAYMENT-SUCCESS] useEffect triggered', { status, reference, hasTriggered: hasTriggeredClearCart.current });
+    
     // Only trigger once and only for successful payments
     if (!hasTriggeredClearCart.current && 
         (status === 'successful' || status === 'success' || status === 'completed')) {
       
+      console.log('[DEBUG-PAYMENT-SUCCESS] Payment successful, clearing cart');
       hasTriggeredClearCart.current = true
       
       // Use the payment completion handler
@@ -30,11 +33,13 @@ export function PaymentSuccessClient() {
       
       if (paymentEvent && paymentEvent.status === 'success') {
         // Clear cart with payment success reason
+        console.log('[DEBUG-PAYMENT-SUCCESS] Calling clearCart via paymentEvent');
         clearCart('payment_success')
       }
       
       // Fallback: Clear cart directly if payment completion service didn't handle it
       if (!paymentEvent) {
+        console.log('[DEBUG-PAYMENT-SUCCESS] Calling clearCart via fallback');
         clearCart('payment_success')
         
         // Track successful payment
