@@ -299,12 +299,16 @@ function verifyFlutterwaveSignature(payload: any, signature?: string): boolean {
 }
 
 function verifyPaystackSignature(body: string, signature?: string): boolean {
-  if (!signature || !process.env.PAYSTACK_WEBHOOK_SECRET) {
+  // Paystack uses the same Secret Key for API calls and webhook signature verification
+  // (there is no separate webhook secret like some other providers)
+  const secretKey = process.env.PAYSTACK_SECRET_KEY;
+  
+  if (!signature || !secretKey) {
     return process.env.NODE_ENV !== 'production'; // Skip verification in development
   }
 
   const hash = crypto
-    .createHmac('sha512', process.env.PAYSTACK_WEBHOOK_SECRET)
+    .createHmac('sha512', secretKey)
     .update(body)
     .digest('hex');
 

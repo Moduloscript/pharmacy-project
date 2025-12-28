@@ -29,7 +29,7 @@ describe('PaystackProvider', () => {
   const mockConfig = {
     publicKey: 'pk_test_1234567890',
     secretKey: 'sk_test_1234567890',
-    webhookSecret: 'test-webhook-secret',
+    // Paystack uses secretKey for webhook signature verification (no separate secret)
     environment: 'sandbox' as const,
   };
 
@@ -95,9 +95,9 @@ describe('PaystackProvider', () => {
 
     test('should create provider using factory function', () => {
       // Mock environment variables
+      // Note: Paystack uses PAYSTACK_SECRET_KEY for both API calls and webhook verification
       process.env.PAYSTACK_PUBLIC_KEY = 'test-public';
       process.env.PAYSTACK_SECRET_KEY = 'test-secret';
-      process.env.PAYSTACK_WEBHOOK_SECRET = 'test-webhook';
 
       const factoryProvider = createPaystackProvider();
       expect(factoryProvider).toBeInstanceOf(PaystackProvider);
@@ -468,8 +468,9 @@ describe('PaystackProvider', () => {
 
     test('should skip signature verification if no secret configured', async () => {
       const providerNoSecret = new PaystackProvider({
-        ...mockConfig,
-        webhookSecret: undefined,
+        publicKey: 'pk_test_1234567890',
+        secretKey: '', // Empty secret key - Paystack uses this for webhook verification
+        environment: 'sandbox' as const,
       });
 
       const mockWebhookPayload = {

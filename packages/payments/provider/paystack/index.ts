@@ -27,7 +27,8 @@ import crypto from 'crypto';
 interface PaystackConfig {
   publicKey: string;
   secretKey: string;
-  webhookSecret?: string;
+  // Note: Paystack uses the same secretKey for webhook signature verification
+  // (no separate webhook secret like some other providers)
   baseUrl?: string;
   environment?: 'sandbox' | 'production';
 }
@@ -295,8 +296,8 @@ export class PaystackProvider implements NigerianPaymentProvider {
    */
   async handleWebhook(payload: any, signature?: string): Promise<WebhookResponse> {
     try {
-      // Verify webhook signature
-      if (signature && this.config.webhookSecret) {
+      // Verify webhook signature using secretKey (Paystack uses same key for API and webhooks)
+      if (signature && this.config.secretKey) {
         const isValid = this.verifyWebhookSignature(payload, signature);
         if (!isValid) {
           throw new NigerianPaymentError(
@@ -621,10 +622,11 @@ export class PaystackProvider implements NigerianPaymentProvider {
   }
 
   private verifyWebhookSignature(payload: any, signature: string): boolean {
-    if (!this.config.webhookSecret) return true; // Skip verification if no secret
+    // Paystack uses the same secret key for webhook verification
+    if (!this.config.secretKey) return true; // Skip verification if no secret
 
     const hash = crypto
-      .createHmac('sha512', this.config.webhookSecret)
+      .createHmac('sha512', this.config.secretKey)
       .update(JSON.stringify(payload))
       .digest('hex');
 
@@ -637,7 +639,7 @@ export function createPaystackProvider(config?: Partial<PaystackConfig>): Paysta
   const defaultConfig: PaystackConfig = {
     publicKey: process.env.PAYSTACK_PUBLIC_KEY!,
     secretKey: process.env.PAYSTACK_SECRET_KEY!,
-    webhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET!,
+    // Paystack uses secretKey for webhook verification (no separate webhook secret)
     environment: (process.env.NODE_ENV === 'production' ? 'production' : 'sandbox') as 'production' | 'sandbox',
     ...config,
   };

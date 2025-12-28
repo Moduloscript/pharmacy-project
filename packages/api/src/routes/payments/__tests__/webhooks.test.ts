@@ -10,7 +10,7 @@ beforeEach(() => {
   process.env = {
     ...originalEnv,
     NODE_ENV: 'test',
-    PAYSTACK_WEBHOOK_SECRET: 'test-webhook-secret',
+    PAYSTACK_SECRET_KEY: 'test-secret-key', // Paystack uses same key for API and webhook verification
   };
 });
 
