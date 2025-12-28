@@ -56,26 +56,7 @@ function perSessionCartKey(): string {
   return `benpharm-cart-items-${sessionId}-${tabId}`;
 }
 
-function shouldAllowLegacyMigrationForThisSession(): boolean {
-  try {
-    if (typeof window === 'undefined') return false;
-    const state = getRawSessionState();
-    const sessionId = state?.session?.id;
-    if (!sessionId) return false;
 
-    const legacyLockKey = 'benpharm-cart-legacy-session-id';
-    const lockedSessionId = localStorage.getItem(legacyLockKey);
-    if (!lockedSessionId) {
-      // First time: lock migration to current session id so future sessions won't import legacy
-      localStorage.setItem(legacyLockKey, sessionId);
-      return true;
-    }
-    // Allow migration only for the locked session id
-    return lockedSessionId === sessionId;
-  } catch {
-    return false;
-  }
-}
 
 // Cart types
 export interface CartSummary {
@@ -120,17 +101,7 @@ const sessionCartStorage: Storage<CartItem[]> = {
         try { localStorage.removeItem(dynKey); } catch {}
       }
 
-      // One-time legacy migration gate: only for the session that first locks legacy
-      const legacy = localStorage.getItem('benpharm-cart-items');
-      if (legacy && shouldAllowLegacyMigrationForThisSession()) {
-        try {
-          const parsed = JSON.parse(legacy);
-          sessionStorage.setItem(dynKey, JSON.stringify(parsed));
-          return parsed;
-        } catch {
-          // ignore malformed legacy
-        }
-      }
+
 
       return initialValue;
     } catch {
