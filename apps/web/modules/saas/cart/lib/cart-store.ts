@@ -36,16 +36,35 @@ function getRawSessionState(): { session?: { id: string; createdAt: string; stat
 function getSessionAndTabIds(): { sessionId: string; tabId: string } {
   const state = getRawSessionState();
   const sessionId = state?.session?.id || 'no-session';
+  
+  // Priority: session metadata tab ID is the source of truth
   let tabId = state?.metadata?.tabId;
-  if (!tabId) {
+  
+  if (tabId) {
+    // Session has a tab ID - ensure fallback storage is synchronized
     try {
-      // fallback tab id
-      tabId = sessionStorage.getItem('cart_tab_id') || `tab_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      sessionStorage.setItem('cart_tab_id', tabId);
+      const fallbackTabId = sessionStorage.getItem('cart_tab_id');
+      if (fallbackTabId !== tabId) {
+        // Synchronize fallback with session metadata
+        sessionStorage.setItem('cart_tab_id', tabId);
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  } else {
+    // No tab ID in session metadata - check fallback or create new
+    try {
+      tabId = sessionStorage.getItem('cart_tab_id') ?? undefined;
+      if (!tabId) {
+        // Generate new tab ID
+        tabId = `tab_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+        sessionStorage.setItem('cart_tab_id', tabId);
+      }
     } catch {
       tabId = 'no-tab';
     }
   }
+  
   return { sessionId, tabId };
 }
 
@@ -93,13 +112,36 @@ const sessionCartStorage: Storage<CartItem[]> = {
         return JSON.parse(fromSession);
       }
 
+      // Migration: Try to find cart items with legacy/mismatched tab IDs
+      const { sessionId } = getSessionAndTabIds();
+      if (sessionId && sessionId !== 'no-session') {
+        // Look for any cart items key matching this session ID
+        const allKeys = Object.keys(sessionStorage);
+        const legacyKey = allKeys.find(k => 
+          k.startsWith(`benpharm-cart-items-${sessionId}-`) && k !== dynKey
+        );
+        
+        if (legacyKey) {
+          const legacyData = sessionStorage.getItem(legacyKey);
+          if (legacyData != null) {
+            try {
+              const items = JSON.parse(legacyData);
+              // Migrate to new key
+              sessionStorage.setItem(dynKey, legacyData);
+              // Clean up old key
+              sessionStorage.removeItem(legacyKey);
+              console.log(`Migrated cart from ${legacyKey} to ${dynKey}`);
+              return items;
+            } catch {}
+          }
+        }
+      }
+
       // If a legacy mirror exists in localStorage, remove it (we no longer mirror there)
       const fromLocalDyn = localStorage.getItem(dynKey);
       if (fromLocalDyn != null) {
         try { localStorage.removeItem(dynKey); } catch {}
       }
-
-
 
       return initialValue;
     } catch {

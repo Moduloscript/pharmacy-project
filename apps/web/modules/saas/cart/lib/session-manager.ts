@@ -74,9 +74,20 @@ export class SessionManager {
    * Create session metadata
    */
   static createMetadata(): SessionMetadata {
+    const tabId = this.generateTabId();
+    
+    // Synchronize tab ID with fallback storage
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('cart_tab_id', tabId);
+      }
+    } catch {
+      // Ignore storage errors
+    }
+    
     return {
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'server',
-      tabId: this.generateTabId(),
+      tabId,
       version: 1,
     };
   }
@@ -296,7 +307,6 @@ export const initializeSessionAtom = atom(
     const currentState = get(cartSessionStateAtom);
 
     // If there's no session or it's not active, start a fresh one
-    // If there's no session or it's not active, start a fresh one
     if (!currentState || !('session' in currentState) || !SessionManager.isActive(currentState.session)) {
       // Clean up any legacy localStorage mirrors and stale keys
       SessionManager.cleanupExpiredSessions();
@@ -308,8 +318,21 @@ export const initializeSessionAtom = atom(
       return;
     }
 
-    // Otherwise just update activity
+    // Otherwise just update activity and ensure tab ID is synchronized
     if (!('session' in currentState)) return;
+    
+    // Synchronize tab ID with fallback storage
+    try {
+      if (typeof sessionStorage !== 'undefined' && currentState.metadata?.tabId) {
+        const fallbackTabId = sessionStorage.getItem('cart_tab_id');
+        if (fallbackTabId !== currentState.metadata.tabId) {
+          sessionStorage.setItem('cart_tab_id', currentState.metadata.tabId);
+        }
+      }
+    } catch {
+      // Ignore storage errors
+    }
+    
     const updatedSession = SessionManager.updateActivity(currentState.session);
     set(cartSessionStateAtom, {
       ...currentState,
