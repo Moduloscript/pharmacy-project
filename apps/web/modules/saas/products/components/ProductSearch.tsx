@@ -243,11 +243,11 @@ export function ProductSearch({
                         </p>
                         <p className={cn(
                           'text-xs',
-                          product.stock_quantity > 0 
+                          (product.stockQuantity ?? product.stock_quantity ?? 0) > 0 
                             ? 'text-green-600' 
                             : 'text-red-600'
                         )}>
-                          {product.stock_quantity > 0 ? 'In Stock' : 'Out of Stock'}
+                          {(product.stockQuantity ?? product.stock_quantity ?? 0) > 0 ? 'In Stock' : 'Out of Stock'}
                         </p>
                         <div className="mt-1">
                           {(product as any)._count?.bulkPriceRules > 0 || (product as any).hasBulkRules ? (

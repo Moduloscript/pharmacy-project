@@ -34,7 +34,8 @@ export function ProductCardTailwind({
   const [bulkTooltip, setBulkTooltip] = React.useState<string>('');
   const [hasFetchedRules, setHasFetchedRules] = React.useState(false);
 
-  const stockQuantity = product?.stock_quantity ?? 0;
+  // Normalize fields
+  const stockQuantity = product?.stockQuantity ?? product?.stock_quantity ?? 0;
   const stockStatus = getStockStatus(stockQuantity);
   
   const wholesalePrice = product?.wholesale_price ?? 0;

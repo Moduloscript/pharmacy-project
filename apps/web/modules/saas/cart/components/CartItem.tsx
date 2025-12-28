@@ -79,8 +79,8 @@ export function CartItem({
   const [, removeItem] = useAtom(removeFromCartAtom);
 
   const handleQuantityChange = async (newQuantity: number) => {
-    const minQty = item.product?.min_order_qty || 1;
-    const stockQty = item.product?.stock_quantity || 0;
+    const minQty = item.product?.minOrderQuantity || item.product?.min_order_qty || 1;
+    const stockQty = item.product?.stockQuantity || item.product?.stock_quantity || 0;
     
     if (newQuantity < minQty || newQuantity > stockQty) {
       return; // Don't update if invalid
@@ -98,10 +98,14 @@ export function CartItem({
     removeItem(item.id);
   };
 
-  const isOutOfStock = (item.product?.stock_quantity || 0) === 0;
-  const isLowStock = (item.product?.stock_quantity || 0) > 0 && (item.product?.stock_quantity || 0) < 10;
-  const exceedsStock = item.quantity > (item.product?.stock_quantity || 0);
-  const belowMinimum = item.quantity < (item.product?.min_order_qty || 1);
+  // Helper to get stock quantity with fallback
+  const stockQuantity = item.product?.stockQuantity || item.product?.stock_quantity || 0;
+  const minOrderQty = item.product?.minOrderQuantity || item.product?.min_order_qty || 1;
+
+  const isOutOfStock = stockQuantity === 0;
+  const isLowStock = stockQuantity > 0 && stockQuantity < 10;
+  const exceedsStock = item.quantity > stockQuantity;
+  const belowMinimum = item.quantity < minOrderQty;
   const hasValidationError = exceedsStock || belowMinimum;
 
   const itemTotal = item.unitPrice * item.quantity;
@@ -182,15 +186,15 @@ export function CartItem({
               {item.product.name}
             </h3>
             
-            {item.product.generic_name && (
+            {item.product.genericName || item.product.generic_name && (
               <p className="text-sm text-muted-foreground mt-1">
-                Generic: {item.product.generic_name}
+                Generic: {item.product.genericName || item.product.generic_name}
               </p>
             )}
 
             {/* Badges */}
             <div className="flex flex-wrap gap-2 mt-2">
-              {item.product.requires_prescription && (
+              {(item.product.isPrescriptionRequired || item.product.requires_prescription || item.product.is_prescription_required) && (
                 <Badge status="warning" className="text-xs">
                   <ShieldCheckIcon className="size-3 mr-1" />
                   Prescription required
@@ -209,9 +213,9 @@ export function CartItem({
                 </Badge>
               )}
 
-              {item.product.nafdacNumber && (
+              {(item.product.nafdacNumber || item.product.nafdac_reg_number) && (
                 <Badge variant="outline" className="text-xs">
-                  NAFDAC: {item.product.nafdacNumber}
+                  NAFDAC: {item.product.nafdacNumber || item.product.nafdac_reg_number}
                 </Badge>
               )}
             </div>
@@ -262,11 +266,11 @@ export function CartItem({
                 ) : isLowStock ? (
                   <div className="flex items-center text-highlight text-sm">
                     <AlertCircleIcon className="size-4 mr-1" />
-                    Low stock ({item.product.stock_quantity} left)
+                    Low stock ({stockQuantity} left)
                   </div>
                 ) : (
                   <span className="text-sm text-muted-foreground">
-                    {item.product.stock_quantity} available
+                    {stockQuantity} available
                   </span>
                 )}
               </div>
@@ -295,7 +299,7 @@ export function CartItem({
                   size="sm"
                   aria-label="Decrease quantity"
                   onClick={() => handleQuantityChange(item.quantity - 1)}
-                  disabled={isUpdating || item.quantity <= (item.product?.min_order_qty || 1)}
+                  disabled={isUpdating || item.quantity <= minOrderQty}
                   className="size-12 p-0"
                 >
                   <MinusIcon className="size-5" />
@@ -306,19 +310,17 @@ export function CartItem({
                   value={item.quantity}
                   onChange={(e) => {
                     const raw = parseInt(e.target.value);
-                      const minQty = item.product?.min_order_qty || 1;
-                      const stockQty = item.product?.stock_quantity || 0;
                       const clamped = isNaN(raw)
-                        ? minQty
+                        ? minOrderQty
                         : Math.min(
-                            Math.max(raw, minQty),
-                            stockQty,
+                            Math.max(raw, minOrderQty),
+                            stockQuantity,
                           );
                       handleQuantityChange(clamped);
                     }}
                     className="w-20 h-12 text-center"
-                    min={item.product?.min_order_qty || 1}
-                    max={item.product?.stock_quantity || 100}
+                    min={minOrderQty}
+                    max={stockQuantity || 100}
                   disabled={isUpdating}
                 />
 
@@ -327,7 +329,7 @@ export function CartItem({
                   size="sm"
                   aria-label="Increase quantity"
                   onClick={() => handleQuantityChange(item.quantity + 1)}
-                  disabled={isUpdating || item.quantity >= item.product.stock_quantity}
+                  disabled={isUpdating || item.quantity >= stockQuantity}
                   className="size-12 p-0"
                 >
                   <PlusIcon className="size-5" />
@@ -336,7 +338,7 @@ export function CartItem({
 
               {/* Min/Max Info */}
               <div className="text-xs text-muted-foreground">
-                Min: {item.product.min_order_qty} | Max: {item.product.stock_quantity}
+                Min: {minOrderQty} | Max: {stockQuantity}
               </div>
             </div>
 
@@ -358,10 +360,10 @@ export function CartItem({
               <AlertTitle>Item constraints</AlertTitle>
               <AlertDescription>
                 {exceedsStock && (
-                  <p>Only {item.product.stock_quantity} units available</p>
+                  <p>Only {stockQuantity} units available</p>
                 )}
                 {belowMinimum && (
-                  <p>Minimum order quantity is {item.product.min_order_qty}</p>
+                  <p>Minimum order quantity is {minOrderQty}</p>
                 )}
               </AlertDescription>
             </Alert>
