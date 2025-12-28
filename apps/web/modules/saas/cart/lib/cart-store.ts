@@ -537,7 +537,23 @@ export const clearCartAtom = atom(
     
     // Handle session based on clear reason
     if (reason === 'payment_success' || reason === 'order_completed') {
-      // Mark session as completed for successful flow
+      // NUCLEAR OPTION: Actively destroy old cart data from storage
+      if (typeof window !== 'undefined') {
+        try {
+          const keys = Object.keys(sessionStorage);
+          keys.forEach(key => {
+             if (key.startsWith('benpharm-cart-items-')) {
+               sessionStorage.removeItem(key);
+             }
+          });
+          // Also clear metadata to ensure clean break
+          sessionStorage.removeItem('benpharm-cart-session');
+        } catch (e) {
+          console.error('Failed to clear session storage:', e);
+        }
+      }
+
+      // Mark session as completed for successful flow (updates in memory)
       set(completeSessionAtom);
       // Create new session for future shopping
       set(initializeSessionAtom);
