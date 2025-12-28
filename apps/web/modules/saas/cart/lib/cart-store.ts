@@ -25,11 +25,9 @@ import {
 function getRawSessionState(): { session?: { id: string; createdAt: string; status: string }; metadata?: { tabId?: string } } | null {
   try {
     if (typeof window === 'undefined') return null;
-    // Prefer sessionStorage (tab-scoped), fallback to legacy localStorage
+    // Use sessionStorage only (tab-scoped) - no localStorage fallback
     const rawSession = sessionStorage.getItem('benpharm-cart-session');
-    if (rawSession) return JSON.parse(rawSession);
-    const rawLocal = localStorage.getItem('benpharm-cart-session');
-    return rawLocal ? JSON.parse(rawLocal) : null;
+    return rawSession ? JSON.parse(rawSession) : null;
   } catch {
     return null;
   }

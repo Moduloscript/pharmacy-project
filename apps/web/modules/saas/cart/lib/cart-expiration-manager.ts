@@ -495,8 +495,8 @@ export class CartExpirationManager {
     if (typeof window === 'undefined') return 0
     
     try {
-      // Use per-session/per-tab cart key to count items
-      const stateRaw = localStorage.getItem('benpharm-cart-session')
+      // Use per-session/per-tab cart key to count items (sessionStorage ONLY)
+      const stateRaw = sessionStorage.getItem('benpharm-cart-session')
       const state = stateRaw ? JSON.parse(stateRaw) : null
       const sessionId = state?.session?.id
       const tabId = state?.metadata?.tabId || sessionStorage.getItem('cart_tab_id')
@@ -509,12 +509,8 @@ export class CartExpirationManager {
         const cart = JSON.parse(fromSession)
         return Array.isArray(cart) ? cart.length : cart.items?.length || 0
       }
-
-      const fromLocal = localStorage.getItem(dynKey)
-      if (fromLocal) {
-        const cart = JSON.parse(fromLocal)
-        return Array.isArray(cart) ? cart.length : cart.items?.length || 0
-      }
+      
+      // No longer falling back to localStorage
     } catch (error) {
       console.error('Error reading cart item count:', error)
     }

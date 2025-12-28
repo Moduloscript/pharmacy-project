@@ -240,17 +240,7 @@ const sessionStateStorage: Storage<CartSessionState | null> = {
       if (typeof window === 'undefined') return initialValue
       const fromSession = sessionStorage.getItem('benpharm-cart-session')
       if (fromSession != null) return JSON.parse(fromSession)
-      // fallback to legacy localStorage once
-      const fromLocal = localStorage.getItem('benpharm-cart-session')
-      if (fromLocal != null) {
-        try {
-          const parsed = JSON.parse(fromLocal)
-          sessionStorage.setItem('benpharm-cart-session', JSON.stringify(parsed))
-          return parsed
-        } catch {
-          return initialValue
-        }
-      }
+      // No longer falling back to localStorage - sessions are strictly per-tab now
       return initialValue
     } catch {
       return initialValue
