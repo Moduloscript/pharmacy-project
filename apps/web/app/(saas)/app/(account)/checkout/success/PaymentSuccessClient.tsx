@@ -22,8 +22,10 @@ export function PaymentSuccessClient() {
     console.log('[DEBUG-PAYMENT-SUCCESS] useEffect triggered', { status, reference, hasTriggered: hasTriggeredClearCart.current });
     
     // Only trigger once and only for successful payments
+    // Convert status to lowercase for case-insensitive comparison
+    const normalizedStatus = status?.toLowerCase();
     if (!hasTriggeredClearCart.current && 
-        (status === 'successful' || status === 'success' || status === 'completed')) {
+        (normalizedStatus === 'successful' || normalizedStatus === 'success' || normalizedStatus === 'completed')) {
       
       console.log('[DEBUG-PAYMENT-SUCCESS] Payment successful, clearing cart');
       hasTriggeredClearCart.current = true
