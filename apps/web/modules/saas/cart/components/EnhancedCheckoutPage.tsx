@@ -232,7 +232,7 @@ export function EnhancedCheckoutPage({ className, onOrderComplete }: EnhancedChe
     const newOrderId = `ORD-${Date.now()}`;
     setOrderId(newOrderId);
     setOrderComplete(true);
-    clearCart();
+    clearCart('order_completed');
 
     if (onOrderComplete) {
       onOrderComplete(newOrderId);

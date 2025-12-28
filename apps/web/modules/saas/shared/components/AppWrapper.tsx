@@ -32,7 +32,12 @@ function cleanupLegacyCartStorage() {
 	}
 }
 
+import { useCartSync } from "@saas/cart/hooks/use-cart-sync";
+
 export function AppWrapper({ children }: PropsWithChildren) {
+	// Enable automatic cart synchronization
+	useCartSync();
+
 	// Cleanup legacy cart storage on app mount
 	useEffect(() => {
 		cleanupLegacyCartStorage();
