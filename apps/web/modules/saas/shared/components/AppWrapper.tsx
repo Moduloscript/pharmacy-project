@@ -1,10 +1,42 @@
+"use client";
+
 import { config } from "@repo/config";
 import { NavBar } from "@saas/shared/components/NavBar";
 import { VerificationBanners } from "@saas/shared/components/VerificationBanners";
 import { cn } from "@ui/lib";
-import type { PropsWithChildren } from "react";
+import { useEffect, type PropsWithChildren } from "react";
+
+/**
+ * Clean up legacy localStorage cart keys that may cause persistence issues.
+ * This runs once on mount to ensure users start with a clean session-based cart.
+ */
+function cleanupLegacyCartStorage() {
+	if (typeof window === "undefined") return;
+
+	try {
+		// Remove the legacy base key that was causing cart persistence
+		localStorage.removeItem("benpharm-cart-items");
+
+		// Also remove any legacy session key that might have been mirrored
+		localStorage.removeItem("benpharm-cart-session");
+
+		// Clean up any dynamically-keyed legacy mirrors
+		const keysToRemove = Object.keys(localStorage).filter(
+			(key) =>
+				key.startsWith("benpharm-cart-items-") ||
+				key.startsWith("benpharm-cart-master-")
+		);
+		keysToRemove.forEach((key) => localStorage.removeItem(key));
+	} catch (error) {
+		console.warn("Failed to cleanup legacy cart storage:", error);
+	}
+}
 
 export function AppWrapper({ children }: PropsWithChildren) {
+	// Cleanup legacy cart storage on app mount
+	useEffect(() => {
+		cleanupLegacyCartStorage();
+	}, []);
 	return (
 		<div
 			className={cn(
