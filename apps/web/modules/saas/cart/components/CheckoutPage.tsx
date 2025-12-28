@@ -181,7 +181,6 @@ export function CheckoutPage({ className, onOrderComplete }: CheckoutPageProps) 
         }
         
         setOrderComplete(true);
-        console.log('[DEBUG-CHECKOUT] Calling clearCart with "order_completed"');
         clearCart('order_completed');
         cartToast.showSuccess('Order placed successfully!');
 

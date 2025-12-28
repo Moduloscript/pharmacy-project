@@ -232,7 +232,6 @@ export function EnhancedCheckoutPage({ className, onOrderComplete }: EnhancedChe
     const newOrderId = `ORD-${Date.now()}`;
     setOrderId(newOrderId);
     setOrderComplete(true);
-    console.log('[DEBUG-ENHANCED] Calling clearCart with "order_completed"');
     clearCart('order_completed');
 
     if (onOrderComplete) {

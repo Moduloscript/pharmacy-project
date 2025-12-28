@@ -533,35 +533,24 @@ export const clearCartAtom = atom(
     set,
     reason: 'manual' | 'payment_success' | 'order_completed' | 'session_expired' = 'manual'
   ) => {
-    console.log('[DEBUG] clearCartAtom called with reason:', reason);
-    if (typeof window !== 'undefined') {
-        console.log('[DEBUG] Current sessionStorage keys:', Object.keys(sessionStorage));
-    }
-
     set(cartItemsAtom, []);
     
     // Handle session based on clear reason
     if (reason === 'payment_success' || reason === 'order_completed') {
-      console.log('[DEBUG] Triggering NUCLEAR CLEANUP for reason:', reason);
       // NUCLEAR OPTION: Actively destroy old cart data from storage
       if (typeof window !== 'undefined') {
         try {
           const keys = Object.keys(sessionStorage);
-          let deletedCount = 0;
           keys.forEach(key => {
              if (key.startsWith('benpharm-cart-items-')) {
-               console.log('[DEBUG] Destroying key:', key);
                sessionStorage.removeItem(key);
-               deletedCount++;
              }
           });
-          console.log('[DEBUG] Destroyed', deletedCount, 'cart item keys');
           
           // Also clear metadata to ensure clean break
-          console.log('[DEBUG] Removing session metadata');
           sessionStorage.removeItem('benpharm-cart-session');
         } catch (e) {
-          console.error('[DEBUG] Failed to clear session storage:', e);
+          console.error('Failed to clear session storage:', e);
         }
       }
 
