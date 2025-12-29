@@ -4,6 +4,10 @@ import { useSession } from "@saas/auth/hooks/use-session";
 import { OrganizationsGrid } from "@saas/organizations/components/OrganizationsGrid";
 import { Card } from "@ui/components/card";
 import { Button } from "@ui/components/button";
+import { QuickReorderPanel } from "@saas/dashboard/components/QuickReorderPanel";
+import { ActiveOrderTracker } from "@saas/dashboard/components/ActiveOrderTracker";
+import { CreditBalanceWidget } from "@saas/dashboard/components/CreditBalanceWidget";
+import { PromotionsBanner } from "@saas/dashboard/components/PromotionsBanner";
 import { Badge } from "@ui/components/badge";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -65,78 +69,93 @@ export default function UserStart() {
 		else setGreeting("Good evening");
 	}, []);
 
-	// BenPharm Nigerian Pharmaceutical Dashboard - Enhanced UX with Dark Mode Support
+	// BenPharm Nigerian Pharmaceutical Dashboard - Enhanced UX with Dark Mode Support -> NOW PROFESSIONAL BRUTALIST (Swiss/Architectural)
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-			{/* Main Container with Proper Padding */}
-			<div className="max-w-7xl mx-auto px-6 py-8 lg:px-8 lg:py-10 space-y-10 animate-in fade-in duration-500">
-				{/* Enhanced Hero Welcome Section with Dark Mode */}
-				<div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-blue-500 to-teal-400 dark:from-blue-800 dark:via-blue-700 dark:to-teal-700 p-10 lg:p-12 text-white shadow-2xl dark:shadow-black/50">
-					{/* Animated background pattern */}
-					<div className="absolute inset-0 opacity-10">
-						<div className="absolute -left-4 -top-4 h-72 w-72 animate-pulse rounded-full bg-white/20 blur-3xl" />
-						<div className="absolute -bottom-8 -right-8 h-96 w-96 animate-pulse rounded-full bg-white/20 blur-3xl delay-700" />
+		<div className="theme-ujjo relative min-h-screen w-full overflow-hidden bg-background text-foreground font-sans">
+			{/* Grid Background - High Contrast Architectural */}
+			<div className="absolute inset-0 z-0 opacity-[0.05] pointer-events-none"
+				style={{
+					backgroundImage: `linear-gradient(to right, #000 1px, transparent 1px),
+					linear-gradient(to bottom, #000 1px, transparent 1px)`,
+					backgroundSize: "40px 40px",
+				}}
+			/>
+
+			{/* Main Container */}
+			<div className="relative z-10 max-w-7xl mx-auto px-6 py-8 lg:px-8 lg:py-12 space-y-16 animate-in fade-in duration-500">
+				
+				{/* 1. HERO SECTION: Ujjo-Style Poster */}
+				<div className="w-full bg-[#8B83F6] border-2 border-black p-8 md:p-12 shadow-hard relative overflow-hidden">
+					{/* Decorative Elements */}
+					<div className="absolute top-4 right-4 animate-spin-slow opacity-20">
+						<SparklesIcon className="w-24 h-24 text-black" />
 					</div>
-					
-					<div className="relative z-10">
-						<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-							<div className="flex-1">
-								{/* Animated greeting */}
-								<div className="mb-2 flex items-center gap-2">
-									<SparklesIcon className="h-5 w-5 animate-pulse text-yellow-300" />
-									<span className="text-sm font-medium text-blue-100">
-										{greeting}, {user?.name?.split(' ')[0] || 'there'}!
-									</span>
+
+					<div className="flex flex-col lg:flex-row items-center justify-between gap-12 relative z-10">
+						<div className="flex-1 space-y-6 text-center lg:text-left">
+							{/* Greeting Badge - Brutalist Pill */}
+							<div className="inline-flex items-center gap-2 bg-white border-2 border-black px-4 py-1.5 text-sm font-bold uppercase tracking-wider text-black shadow-sm transform -rotate-1 hover:rotate-0 transition-transform">
+								<span className="w-3 h-3 rounded-full bg-[#FF4500] animate-pulse border border-black"></span>
+								<span>{greeting}, {user?.name?.split(' ')[0] || 'User'}</span>
+							</div>
+							
+							<h1 className="text-5xl md:text-7xl font-display font-black tracking-tighter text-black leading-[0.9] uppercase drop-shadow-sm">
+								PRECISION <br />
+								<span className="text-white text-stroke-black">IN EVERY PILL</span>
+							</h1>
+							
+							<p className="max-w-xl text-xl font-medium text-black/80 leading-relaxed mx-auto lg:mx-0">
+								The "Oh Sh*t" moment for your pharmacy logistics. <br/>
+								<span className="bg-black text-white px-1">Verified.</span> <span className="bg-black text-white px-1">Secure.</span> <span className="bg-black text-white px-1">Fast.</span>
+							</p>
+							
+							{/* Stats Indicators */}
+							<div className="flex flex-wrap justify-center lg:justify-start gap-4 pt-4">
+								<div className="flex items-center gap-2 px-3 py-1 bg-white border border-black rounded-full text-sm font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+									<TruckIcon className="h-4 w-4 text-black" />
+									<span className="uppercase">Same-day Dispatch</span>
 								</div>
-								
-								<h1 className="mb-3 text-4xl font-bold tracking-tight drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]">
-									Welcome to BenPharm
-								</h1>
-								<p className="max-w-lg text-lg text-blue-100">
-									Your trusted partner for pharmaceutical excellence in Nigeria. 
-									Fast delivery, authentic medicines, best prices.
-								</p>
-								
-								{/* Quick stats */}
-								<div className="mt-6 flex flex-wrap gap-6">
-									<div className="flex items-center gap-2">
-										<TruckIcon className="h-5 w-5 text-green-300" />
-										<span className="text-sm">Same-day delivery</span>
-									</div>
-									<div className="flex items-center gap-2">
-										<ShieldCheckIcon className="h-5 w-5 text-green-300" />
-										<span className="text-sm">100% Authentic</span>
-									</div>
-									<div className="flex items-center gap-2">
-										<StarIcon className="h-5 w-5 text-yellow-300" />
-										<span className="text-sm">Trusted by 5000+ pharmacies</span>
+								<div className="flex items-center gap-2 px-3 py-1 bg-white border border-black rounded-full text-sm font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+									<ShieldCheckIcon className="h-4 w-4 text-black" />
+									<span className="uppercase">NAFDAC Certified</span>
+								</div>
+							</div>
+						</div>
+						
+						{/* Account Status Box - Sticker Style */}
+						<div className="w-full lg:w-auto min-w-[320px] bg-white border-2 border-black p-6 shadow-hard transform rotate-1 hover:rotate-0 transition-all duration-300">
+							<div className="flex items-start justify-between mb-6 border-b-2 border-black pb-4">
+								<div className="p-3 bg-[#FF4500] border-2 border-black">
+									<UserIcon className="h-6 w-6 text-white" />
+								</div>
+								<div className="text-right">
+									<div className="text-[10px] font-black uppercase text-black">Status</div>
+									<div className="flex items-center justify-end gap-2 mt-1">
+										<div className="h-2 w-2 rounded-full bg-green-500 border border-black animate-pulse" />
+										<span className="text-sm font-black uppercase tracking-widest text-black">Active</span>
 									</div>
 								</div>
 							</div>
 							
-						{/* User info card */}
-						<div className="rounded-xl bg-white/10 backdrop-blur-sm p-5 border border-white/20">
-								<div className="flex items-center gap-4">
-									<div className="relative">
-										<div className="h-14 w-14 rounded-full bg-white/20 flex items-center justify-center">
-											<UserIcon className="h-8 w-8" />
-										</div>
-										{hasNewOrders && (
-											<div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 animate-pulse" />
+							<div className="space-y-4">
+								<div>
+									<div className="text-[10px] font-black uppercase text-zinc-500 mb-1">Account Type</div>
+									<div className="font-bold text-lg text-black uppercase">
+										{(user as any)?.customer?.customerType === 'WHOLESALE' ? (
+											<span className="bg-[#FFFCF7] text-black border border-black px-2 py-0.5">Wholesale Partner</span>
+										) : (
+											<span className="bg-blue-100 text-black border border-black px-2 py-0.5">Retail Customer</span>
 										)}
 									</div>
+								</div>
+								<div className="grid grid-cols-2 gap-4 pt-4 border-t-2 border-black">
 									<div>
-										<div className="text-xs text-blue-200 uppercase tracking-wider">Account Type</div>
-										<div className="font-semibold text-lg">
-											{(user as any)?.customer?.customerType === 'WHOLESALE' ? (
-												<Badge className="bg-yellow-400 text-yellow-900">Wholesale Partner</Badge>
-											) : (
-												<Badge className="bg-blue-400 text-blue-900">Retail Customer</Badge>
-											)}
-										</div>
-										<div className="mt-1 text-xs text-blue-200">
-											Member since {new Date().getFullYear()}
-										</div>
+										<div className="text-[10px] font-black uppercase text-zinc-500">Member ID</div>
+										<div className="font-mono text-sm font-bold text-black border-b border-black inline-block">{`BP-${new Date().getFullYear()}-01`}</div>
+									</div>
+									<div>
+										<div className="text-[10px] font-black uppercase text-zinc-500">Region</div>
+										<div className="font-mono text-sm font-bold text-black border-b border-black inline-block">Lagos, NG</div>
 									</div>
 								</div>
 							</div>
@@ -144,426 +163,150 @@ export default function UserStart() {
 					</div>
 				</div>
 
-				{/* Quick Actions Section with Enhanced UX */}
-				<div className="space-y-8">
-					{/* Section Header with Better Alignment */}
-					<div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl px-6 py-4 shadow-sm border border-gray-200 dark:border-gray-700">
-						<div className="flex items-center gap-3">
-							<div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-								<ZapIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-							</div>
-							<h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Quick Actions</h2>
-						</div>
+				{/* 1.5 PROMOTIONS BANNER (Tier 2) */}
+				<PromotionsBanner />
+
+				{/* 2. STATUS & TRACKING (Tier 1) */}
+				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					<div className="h-full">
+						<CreditBalanceWidget />
+					</div>
+					<div className="h-full">
+						<ActiveOrderTracker />
+					</div>
+				</div>
+
+				{/* 3. QUICK ACTIONS: Retro Control Panel */}
+				<div>
+					<div className="flex items-end justify-between mb-8 pb-4 border-b-4 border-black dark:border-white">
+						<h2 className="text-3xl font-display font-black uppercase tracking-tighter text-black dark:text-white flex items-center gap-3">
+							<ZapIcon className="h-8 w-8 text-[#FF4500]" />
+							System Actions
+						</h2>
 						{cartItemCount > 0 && (
-							<Badge className="bg-orange-500 dark:bg-orange-600 text-white font-semibold px-3 py-1.5 text-sm border-0 shadow-md">
-								{cartItemCount} ITEMS IN CART
-							</Badge>
+							<span className="bg-black text-white px-3 py-1 text-sm font-bold border-2 border-transparent hover:bg-white hover:text-black hover:border-black transition-colors cursor-default">
+								CART: {cartItemCount}
+							</span>
 						)}
 					</div>
 
-					{/* Action Cards Grid with Better Spacing */}
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-						{/* Browse Products - Primary Action */}
-						<Link href="/app/products">
-							<Card 
-								className={cn(
-									"group relative overflow-hidden border-2 bg-white dark:bg-gray-800 transition-all duration-300 hover:border-green-400 dark:hover:border-green-500 hover:shadow-xl dark:border-gray-700",
-									hoveredCard === 'products' && 'scale-105 shadow-xl border-green-400 dark:border-green-500'
-								)}
-								onMouseEnter={() => setHoveredCard('products')}
-								onMouseLeave={() => setHoveredCard(null)}
-							>
-								{/* Gradient background on hover */}
-								<div className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-								
-								<div className="relative p-7">
-									<div className="flex items-start justify-between mb-4">
-										<div className="p-3 bg-gradient-to-br from-green-400 to-emerald-500 dark:from-green-600 dark:to-emerald-700 rounded-xl shadow-lg">
-											<PackageIcon className="h-7 w-7 text-white" />
-										</div>
-										<ArrowRightIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors" />
-									</div>
-									<h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">Browse Products</h3>
-									<p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-										Explore 10,000+ authentic medicines
-									</p>
-									<div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400 font-medium">
-										<SparklesIcon className="h-3 w-3" />
-										New arrivals daily
-									</div>
-								</div>
-							</Card>
-						</Link>
-
-						{/* Shopping Cart with Item Count */}
-						<Link href="/app/cart">
-							<Card 
-								className={cn(
-									"group relative overflow-hidden border-2 bg-white dark:bg-gray-800 transition-all duration-300 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-xl dark:border-gray-700",
-									hoveredCard === 'cart' && 'scale-105 shadow-xl border-blue-400 dark:border-blue-500'
-								)}
-								onMouseEnter={() => setHoveredCard('cart')}
-								onMouseLeave={() => setHoveredCard(null)}
-							>
-								<div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-								
-								<div className="relative p-6">
-									<div className="flex items-start justify-between mb-4">
-										<div className="relative">
-											<div className="p-3 bg-gradient-to-br from-blue-400 to-indigo-500 dark:from-blue-600 dark:to-indigo-700 rounded-xl shadow-lg">
-												<ShoppingCartIcon className="h-7 w-7 text-white" />
-											</div>
-											{cartItemCount > 0 && (
-												<div className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 dark:bg-red-600 rounded-full flex items-center justify-center animate-bounce">
-													<span className="text-xs text-white font-bold">{cartItemCount}</span>
-												</div>
-											)}
-										</div>
-										<ArrowRightIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
-									</div>
-									<h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">Shopping Cart</h3>
-									<p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-										Review and checkout items
-									</p>
-									{cartItemCount > 0 ? (
-										<div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
-											<ActivityIcon className="h-3 w-3" />
-											Ready to checkout
-										</div>
-									) : (
-										<div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500">
-											Cart is empty
-										</div>
-									)}
-								</div>
-							</Card>
-						</Link>
-
-						{/* Order History with Notification */}
-						<Link href="/app/orders">
-							<Card 
-								className={cn(
-									"group relative overflow-hidden border-2 bg-white dark:bg-gray-800 transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-xl dark:border-gray-700",
-									hoveredCard === 'orders' && 'scale-105 shadow-xl border-purple-400 dark:border-purple-500'
-								)}
-								onMouseEnter={() => setHoveredCard('orders')}
-								onMouseLeave={() => setHoveredCard(null)}
-							>
-								<div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-								
-								<div className="relative p-6">
-									<div className="flex items-start justify-between mb-4">
-										<div className="relative">
-											<div className="p-3 bg-gradient-to-br from-purple-400 to-pink-500 dark:from-purple-600 dark:to-pink-700 rounded-xl shadow-lg">
-												<ClipboardListIcon className="h-7 w-7 text-white" />
-											</div>
-											{hasNewOrders && (
-												<div className="absolute -top-2 -right-2">
-													<div className="h-2 w-2 bg-red-500 dark:bg-red-400 rounded-full animate-ping absolute" />
-													<div className="h-2 w-2 bg-red-500 dark:bg-red-400 rounded-full" />
-												</div>
-											)}
-										</div>
-										<ArrowRightIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" />
-									</div>
-									<h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">Order History</h3>
-									<p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-										Track all your orders
-									</p>
-									{hasNewOrders && (
-										<div className="flex items-center gap-2 text-xs text-purple-600 dark:text-purple-400 font-medium">
-											<BellIcon className="h-3 w-3" />
-											New order update
-										</div>
-									)}
-								</div>
-							</Card>
-						</Link>
-
-						{/* Quick Search */}
-						<Link href="/app/search">
-							<Card 
-								className={cn(
-									"group relative overflow-hidden border-2 bg-white dark:bg-gray-800 transition-all duration-300 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xl dark:border-gray-700",
-									hoveredCard === 'search' && 'scale-105 shadow-xl border-amber-400 dark:border-amber-500'
-								)}
-								onMouseEnter={() => setHoveredCard('search')}
-								onMouseLeave={() => setHoveredCard(null)}
-							>
-								<div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-								
-								<div className="relative p-6">
-									<div className="flex items-start justify-between mb-4">
-										<div className="p-3 bg-gradient-to-br from-amber-400 to-yellow-500 dark:from-amber-600 dark:to-yellow-700 rounded-xl shadow-lg">
-											<SearchIcon className="h-7 w-7 text-white" />
-										</div>
-										<ArrowRightIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors" />
-									</div>
-									<h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">Quick Search</h3>
-									<p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-										Find medicines instantly
-									</p>
-									<div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 font-medium">
-										<ZapIcon className="h-3 w-3" />
-										AI-powered search
-									</div>
-								</div>
-							</Card>
-						</Link>
-
-						{/* Account Settings */}
-						<Link href="/app/settings">
-							<Card 
-								className={cn(
-									"group relative overflow-hidden border-2 bg-white dark:bg-gray-800 transition-all duration-300 hover:border-gray-400 dark:hover:border-gray-500 hover:shadow-xl dark:border-gray-700",
-									hoveredCard === 'settings' && 'scale-105 shadow-xl border-gray-400 dark:border-gray-500'
-								)}
-								onMouseEnter={() => setHoveredCard('settings')}
-								onMouseLeave={() => setHoveredCard(null)}
-							>
-								<div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-700/20 dark:to-slate-700/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-								
-								<div className="relative p-6">
-									<div className="flex items-start justify-between mb-4">
-										<div className="p-3 bg-gradient-to-br from-gray-400 to-slate-500 dark:from-gray-600 dark:to-slate-700 rounded-xl shadow-lg">
-											<UserIcon className="h-7 w-7 text-white" />
-										</div>
-										<ArrowRightIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors" />
-									</div>
-									<h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">My Account</h3>
-									<p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-										Profile & preferences
-									</p>
-									<div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 font-medium">
-										<ShieldCheckIcon className="h-3 w-3" />
-										Secure & private
-									</div>
-								</div>
-							</Card>
-						</Link>
-
-						{/* Admin Panel - Special Card */}
-						{user?.role === 'admin' && (
-							<Link href="/app/admin">
-								<Card 
-									className={cn(
-										"group relative overflow-hidden border-2 border-red-200 bg-gradient-to-br from-red-50 to-pink-50 transition-all duration-300 hover:border-red-400 hover:shadow-xl",
-										hoveredCard === 'admin' && 'scale-105 shadow-xl border-red-400'
-									)}
-									onMouseEnter={() => setHoveredCard('admin')}
-									onMouseLeave={() => setHoveredCard(null)}
-								>
-									<div className="absolute top-2 right-2">
-										<Badge className="bg-red-100 text-red-700">Admin</Badge>
-									</div>
-									
-									<div className="relative p-6">
-										<div className="flex items-start justify-between mb-4">
-											<div className="p-3 bg-gradient-to-br from-red-400 to-pink-500 rounded-xl shadow-lg">
-												<SettingsIcon className="h-7 w-7 text-white animate-spin-slow" />
-											</div>
-											<ArrowRightIcon className="h-5 w-5 text-red-400 group-hover:text-red-600 transition-colors" />
-										</div>
-										<h3 className="font-bold text-lg text-gray-900 mb-1">Admin Center</h3>
-										<p className="text-sm text-gray-600 mb-3">
-											Manage entire platform
-										</p>
-										<div className="flex items-center gap-2 text-xs text-red-600 font-medium">
-											<ActivityIcon className="h-3 w-3" />
-											Full control access
-										</div>
-									</div>
-								</Card>
-							</Link>
-						)}
-					</div>
-				</div>
-
-				{/* Featured Products Section with Enhanced UX */}
-				<div className="space-y-8">
-					{/* Section Header with Professional Styling */}
-					<div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl px-6 py-4 shadow-sm border border-gray-200 dark:border-gray-700">
-						<div className="flex items-center gap-3">
-							<div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-								<StarIcon className="h-5 w-5 text-amber-600 dark:text-amber-500" />
-							</div>
-							<h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Featured Today</h2>
-						</div>
-						<Link 
-							href="/app/products" 
-							className="group flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium text-sm transition-all duration-200 border border-gray-200 dark:border-gray-600"
-						>
-							View all
-							<ArrowRightIcon className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-						</Link>
-					</div>
-					
-					{/* Featured Product Cards Grid with Better Spacing */}
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+						{/* Reusable Card Style */}
 						{[
-							{ name: "Paracetamol 500mg", price: "₦250", oldPrice: "₦295", discount: "15%", category: "Pain Relief", stock: "In Stock", color: "from-slate-200 to-blue-200 dark:from-slate-700 dark:to-blue-900" },
-							{ name: "Vitamin C 1000mg", price: "₦1,200", oldPrice: "₦1,500", discount: "20%", category: "Vitamins", stock: "Limited", color: "from-amber-100 to-orange-200 dark:from-amber-900 dark:to-orange-900" },
-							{ name: "Amoxicillin 500mg", price: "₦800", oldPrice: "₦890", discount: "10%", category: "Antibiotics", stock: "In Stock", color: "from-emerald-100 to-teal-200 dark:from-emerald-900 dark:to-teal-900" },
-							{ name: "Insulin Pen", price: "₦5,500", oldPrice: "₦5,790", discount: "5%", category: "Diabetes Care", stock: "Available", color: "from-purple-100 to-indigo-200 dark:from-purple-900 dark:to-indigo-900" }
-						].map((product, index) => (
-							<Card 
-								key={index} 
-								className="group relative overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-lg transition-all duration-300 cursor-pointer"
-							>
-								{/* Discount Badge - Refined */}
-								<div className="absolute top-3 right-3 z-10">
-									<Badge className="bg-rose-500 dark:bg-rose-600 text-white font-semibold px-2 py-0.5 text-xs shadow-sm">
-										<PercentIcon className="h-3 w-3 mr-1 inline" />
-										{product.discount}
-									</Badge>
-								</div>
-
-								{/* Stock Indicator */}
-								<div className="absolute top-3 left-3 z-10">
-									<Badge className={cn(
-										"text-xs font-medium px-2 py-0.5",
-										product.stock === "Limited" 
-											? "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
-											: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
-									)}>
-										{product.stock}
-									</Badge>
-								</div>
-								
-								<div className="p-6">
-									{/* Product Image Placeholder with Subtle Professional Design */}
-									<div className={cn(
-										"h-32 w-full rounded-xl mb-4 flex items-center justify-center group-hover:scale-[1.02] transition-transform bg-gradient-to-br",
-										product.color
-									)}>
-										<div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full p-4 shadow-sm">
-											<PillIcon className="h-12 w-12 text-gray-600 dark:text-gray-400" />
+							{ title: "Catalog", subtitle: "Browse inventory", icon: PackageIcon, color: "bg-[#8B83F6]", href: "/app/products" },
+							{ title: "Cart", subtitle: cartItemCount > 0 ? "Ready for checkout" : "No items", icon: ShoppingCartIcon, color: "bg-[#FF4500]", href: "/app/cart", textwhite: true },
+							{ title: "Orders", subtitle: "Track shipments", icon: ClipboardListIcon, color: "bg-[#E6E0FF]", href: "/app/orders" },
+							{ title: "Search", subtitle: "Global lookup", icon: SearchIcon, color: "bg-[#F5F3FF]", href: "/app/search" }
+						].map((item, i) => (
+							<Link key={i} href={item.href} className="group relative block h-full">
+								<div className={cn(
+									"absolute inset-0 border-2 border-black translate-x-1 translate-y-1 transition-transform group-hover:translate-x-2 group-hover:translate-y-2 bg-black"
+								)} />
+								<div className={cn(
+									"relative h-full bg-white border-2 border-black p-6 flex flex-col justify-between transition-transform transform group-hover:-translate-y-1 group-hover:-translate-x-1",
+									item.color
+								)}>
+									<div className="flex justify-between items-start mb-6">
+										<div className="p-2 bg-white border-2 border-black">
+											<item.icon className="h-6 w-6 text-black" />
 										</div>
+										<ArrowRightIcon className={cn("h-6 w-6 text-black group-hover:translate-x-1 transition-transform", item.textwhite ? "text-white" : "")} />
 									</div>
-									
-									{/* Product Details with Better Spacing */}
-									<div className="space-y-2">
-										{/* Category */}
-										<div className="flex items-center gap-2">
-											<span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-												{product.category}
-											</span>
-										</div>
-										
-										{/* Product Name */}
-										<h4 className="font-bold text-base text-gray-900 dark:text-gray-100 line-clamp-1">
-											{product.name}
-										</h4>
-										
-										{/* Price Section */}
-										<div className="flex items-baseline gap-2">
-											<p className="text-xl font-bold text-blue-600 dark:text-blue-400">
-												{product.price}
-											</p>
-											<p className="text-sm text-gray-400 dark:text-gray-500 line-through">
-												{product.oldPrice}
-											</p>
-										</div>
+									<div className="space-y-1">
+										<h3 className={cn("font-black text-xl uppercase tracking-tight", item.textwhite ? "text-white" : "text-black")}>{item.title}</h3>
+										<p className={cn("text-xs font-bold uppercase tracking-wider opacity-70", item.textwhite ? "text-white" : "text-black")}>{item.subtitle}</p>
 									</div>
-									
-									{/* Add to Cart Button - Professional */}
-									<Button className="w-full mt-4 bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium text-sm py-2.5 shadow-sm hover:shadow-md transition-all duration-200">
-										<ShoppingCartIcon className="h-4 w-4 mr-2 inline" />
-										Add to Cart
-									</Button>
 								</div>
-							</Card>
+							</Link>
 						))}
 					</div>
 				</div>
 
-				{/* Nigerian Market Features - Enhanced Design */}
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
-					{/* Features Card */}
-					<Card className="relative overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-						<div className="absolute top-0 right-0 h-32 w-32 bg-green-200/30 rounded-full blur-3xl" />
-						<div className="relative p-6">
-							<h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-								<ShieldCheckIcon className="h-5 w-5 mr-2 text-green-600" />
-								Why Choose BenPharm?
-							</h3>
-							<div className="space-y-3">
-								{[
-									{ icon: BadgeIcon, text: "100% NAFDAC Verified Products", color: "text-green-600" },
-									{ icon: TruckIcon, text: "Same-Day Delivery in Major Cities", color: "text-blue-600" },
-									{ icon: HeartIcon, text: "Trusted by 5,000+ Nigerian Pharmacies", color: "text-red-500" },
-									{ icon: PercentIcon, text: "Bulk Discounts for Wholesale Orders", color: "text-purple-600" }
-								].map((feature, index) => (
-									<div key={index} className="flex items-center gap-3">
-										<feature.icon className={cn("h-5 w-5", feature.color)} />
-										<span className="text-sm text-gray-700">{feature.text}</span>
-									</div>
-								))}
-							</div>
-						</div>
-					</Card>
+				{/* 3. PRIORITY FEATURES: Quick Reorder (Tier 1) */}
+				<QuickReorderPanel />
 
-					{/* Promotions Card */}
-					<Card className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-						<div className="absolute top-0 right-0 h-32 w-32 bg-purple-200/30 rounded-full blur-3xl" />
-						<div className="relative p-6">
-							<h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-								<SparklesIcon className="h-5 w-5 mr-2 text-purple-600" />
-								Current Promotions
-							</h3>
-							<div className="space-y-3">
-								<div className="p-3 bg-white/80 rounded-lg border border-purple-200">
-									<div className="flex items-start justify-between">
-										<div>
-											<p className="font-semibold text-sm text-gray-900">First Order Discount</p>
-											<p className="text-xs text-gray-600 mt-1">Get 20% off your first purchase</p>
-										</div>
-										<Badge className="bg-purple-100 text-purple-700">NEW</Badge>
+				{/* 4. INVENTORY: Trading Cards */}
+				<div>
+					<div className="flex items-end justify-between mb-8 pb-4 border-b-4 border-black dark:border-white">
+						<h2 className="text-3xl font-display font-black uppercase tracking-tighter text-black dark:text-white flex items-center gap-3">
+							<PackageIcon className="h-8 w-8 text-[#8B83F6]" />
+							Fresh Stock
+						</h2>
+						<Link 
+							href="/app/products" 
+							className="text-sm font-bold uppercase border-b-2 border-black hover:bg-black hover:text-white transition-all px-1"
+						>
+							VIEW_ALL_SKUS &rarr;
+						</Link>
+					</div>
+					
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+						{[
+							{ name: "Paracetamol 500mg", price: "₦250", category: "Pain Relief", stock: "IN STOCK", bg: "bg-[#FFFCF7]" },
+							{ name: "Vitamin C 1000mg", price: "₦1,200", category: "Vitamins", stock: "LIMITED", bg: "bg-[#E6E6FA]" },
+							{ name: "Amoxicillin 500mg", price: "₦800", category: "Antibiotics", stock: "IN STOCK", bg: "bg-[#FFEFD5]" },
+							{ name: "Insulin Pen", price: "₦5,500", category: "Diabetes", stock: "AVAILABLE", bg: "bg-[#E0F7FA]" }
+						].map((product, index) => (
+							<div 
+								key={index} 
+								className="group relative bg-white border-2 border-black hover:shadow-hard transition-all duration-300"
+							>
+								{/* Product Image Area */}
+								<div className={cn("h-40 w-full flex items-center justify-center border-b-2 border-black relative overflow-hidden", product.bg)}>
+									<div className="absolute inset-0 opacity-10" 
+										style={{backgroundImage: "radial-gradient(circle, #000 1px, transparent 1px)", backgroundSize: "10px 10px"}} 
+									/>
+									<div className="bg-white border-2 border-black p-4 rotate-3 group-hover:rotate-0 transition-all duration-500 shadow-sm z-10">
+										<PillIcon className="h-10 w-10 text-black" />
+									</div>
+									<div className="absolute top-2 right-2 bg-black text-white text-[10px] font-bold px-2 py-1 uppercase transform rotate-2">
+										{product.category}
 									</div>
 								</div>
-								<div className="p-3 bg-white/80 rounded-lg border border-pink-200">
-									<div className="flex items-start justify-between">
-										<div>
-											<p className="font-semibold text-sm text-gray-900">Free Delivery Weekend</p>
-											<p className="text-xs text-gray-600 mt-1">Orders above ₦10,000 ship free</p>
-										</div>
-										<Badge className="bg-red-100 text-red-700">HOT</Badge>
+								
+								{/* Product Details */}
+								<div className="p-5 space-y-4">
+									<div>
+										<h4 className="font-black text-lg text-black uppercase leading-tight line-clamp-1 group-hover:underline decoration-2 underline-offset-2">{product.name}</h4>
+										<p className="font-mono text-xl font-bold text-[#FF4500] mt-1">{product.price}</p>
+									</div>
+
+									<div className="flex items-center justify-between pt-2 border-t-2 border-dashed border-zinc-300">
+										<span className={cn(
+											"text-[10px] font-black uppercase px-2 py-1 border border-black",
+											product.stock === "LIMITED" ? "bg-amber-100" : "bg-green-100"
+										)}>
+											{product.stock}
+										</span>
+										<Button className="h-8 text-xs font-bold uppercase bg-black hover:bg-[#8B83F6] text-white border-none rounded-none transition-colors">
+											Add +
+										</Button>
 									</div>
 								</div>
 							</div>
-						</div>
-					</Card>
+						))}
+					</div>
 				</div>
 
-				{/* Quick Stats Footer */}
-				<div className="mt-12 mb-8 grid grid-cols-2 md:grid-cols-4 gap-6">
-					{[
-						{ label: "Products Available", value: "10,000+", icon: PackageIcon, bg: "from-blue-600/15 to-indigo-600/15", badgeBg: "bg-blue-500/15 dark:bg-blue-400/10", iconColor: "text-blue-400", textColor: "text-blue-600 dark:text-blue-300" },
-						{ label: "Happy Customers", value: "5,000+", icon: HeartIcon, bg: "from-rose-600/15 to-pink-600/15", badgeBg: "bg-rose-500/15 dark:bg-rose-400/10", iconColor: "text-rose-400", textColor: "text-rose-600 dark:text-rose-300" },
-						{ label: "Cities Covered", value: "36", icon: TruckIcon, bg: "from-emerald-600/15 to-teal-600/15", badgeBg: "bg-emerald-500/15 dark:bg-emerald-400/10", iconColor: "text-emerald-400", textColor: "text-emerald-600 dark:text-emerald-300" },
-						{ label: "Avg Delivery Time", value: "2 hrs", icon: Clock3Icon, bg: "from-purple-600/15 to-indigo-600/15", badgeBg: "bg-purple-500/15 dark:bg-purple-400/10", iconColor: "text-purple-400", textColor: "text-purple-600 dark:text-purple-300" }
-					].map((stat, index) => (
-						<Card
-							key={index}
-							className={cn(
-								"relative overflow-hidden rounded-2xl border border-white/20 dark:border-white/10 bg-white/60 dark:bg-gray-800/40 backdrop-blur-md shadow-lg transition-all",
-								"hover:shadow-xl hover:-translate-y-0.5"
-							)}
-						>
-							{/* subtle gradient tint */}
-							<div className={cn("absolute inset-0 bg-gradient-to-br", stat.bg)} />
-							{/* inner content */}
-							<div className="relative p-5 text-center space-y-2">
-								<div className={cn("mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full", stat.badgeBg)}>
-									<stat.icon className={cn("h-5 w-5", stat.iconColor)} />
+				{/* 4. METRICS: Marquee Style */}
+				<div className="border-t-4 border-black pt-8">
+					<div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+						{[
+							{ label: "Total SKUs", value: "10K+", icon: PackageIcon, bg: "bg-[#8B83F6]" },
+							{ label: "Active Pharmacies", value: "5K+", icon: HeartIcon, bg: "bg-[#FF4500]" },
+							{ label: "Cities Covered", value: "36", icon: TruckIcon, bg: "bg-[#FFD700]" },
+							{ label: "Avg. Dispatch", value: "2HR", icon: Clock3Icon, bg: "bg-black text-white", textwhite: true }
+						].map((stat, index) => (
+							<div key={index} className={cn("p-6 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all", stat.bg)}>
+								<div className="flex items-center gap-2 mb-2">
+									<stat.icon className={cn("h-5 w-5", stat.textwhite ? "text-white" : "text-black")} />
+									<p className={cn("text-xs font-black uppercase tracking-widest", stat.textwhite ? "text-white/80" : "text-black/60")}>{stat.label}</p>
 								</div>
-								<p className={cn("text-2xl font-extrabold tracking-tight", stat.textColor)}>{stat.value}</p>
-								<p className="text-xs text-gray-600 dark:text-gray-400">{stat.label}</p>
+								<p className={cn("text-4xl font-black tracking-tighter", stat.textwhite ? "text-white" : "text-black")}>{stat.value}</p>
 							</div>
-						</Card>
-					))}
+						))}
+					</div>
 				</div>
 			</div>
-		</div>
-	);
+		</div>	);
 }

@@ -117,7 +117,14 @@ app.get('/', async (c) => {
     }
     
     if (status) {
-      whereClause.status = status.toUpperCase()
+      // Support comma-separated statuses
+      if (status.includes(',')) {
+        whereClause.status = {
+          in: status.split(',').map(s => s.trim().toUpperCase())
+        }
+      } else {
+        whereClause.status = status.toUpperCase()
+      }
     }
     
     // Get orders with pagination

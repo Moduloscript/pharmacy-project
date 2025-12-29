@@ -35,10 +35,10 @@ interface OrdersListProps {
 }
 
 const statusOptions: Array<{ value: OrderStatus; label: string }> = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'confirmed', label: 'Confirmed' },
+  { value: 'received', label: 'Received' },
   { value: 'processing', label: 'Processing' },
-  { value: 'shipped', label: 'Shipped' },
+  { value: 'ready', label: 'Ready' },
+  { value: 'dispatched', label: 'Dispatched' },
   { value: 'delivered', label: 'Delivered' },
   { value: 'cancelled', label: 'Cancelled' },
   { value: 'refunded', label: 'Refunded' },

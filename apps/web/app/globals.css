@@ -246,3 +246,51 @@ html, body {
     transform: scaleY(1.1);
     letter-spacing: -0.02em;
 }
+
+/* Ujjo Scoped Theme */
+.theme-ujjo {
+    --background: #FFFCF7;
+    --foreground: #000000;
+    --card: #FFFFFF;
+    --card-foreground: #000000;
+    --primary: #8B83F6;
+    --primary-foreground: #FFFFFF;
+    --muted: #F0F0F0;
+    --muted-foreground: #666666;
+    --accent: #FF4500;
+    --accent-foreground: #FFFFFF;
+    --destructive: #FF0000;
+    --destructive-foreground: #FFFFFF;
+    --border: #000000;
+    --input: #000000;
+    --ring: #8B83F6;
+    --radius: 0px;
+    
+    /* Specific Ujjo Tokens */
+    --ujjo-purple: #8B83F6;
+    --ujjo-cream: #FFFCF7;
+    --ujjo-heat: #FF4500;
+}
+
+.theme-ujjo .font-display {
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    text-transform: uppercase;
+}
+
+.theme-ujjo .shadow-hard {
+    box-shadow: 4px 4px 0px 0px #000000;
+}
+
+.theme-ujjo .border-hard {
+    border: 2px solid #000000;
+}
+
+/* Typography Overrides for Ujjo Theme */
+.theme-ujjo h1, 
+.theme-ujjo h2,
+.theme-ujjo .font-heading {
+    text-transform: uppercase;
+    font-weight: 800; /* Black/Bold */
+    letter-spacing: -0.04em;
+}

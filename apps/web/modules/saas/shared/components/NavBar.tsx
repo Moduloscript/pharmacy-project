@@ -119,7 +119,7 @@ export function NavBar() {
 
 	return (
 		<nav
-			className={cn("w-full border-b", {
+			className={cn("sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md transition-shadow duration-200 border-b border-black/5 dark:border-white/5", {
 				"w-full md:fixed md:top-0 md:left-0 md:h-full md:w-[280px] md:border-r md:border-b-0":
 					useSidebarLayout,
 			})}

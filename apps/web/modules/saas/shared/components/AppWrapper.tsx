@@ -1,7 +1,7 @@
 "use client";
 
 import { config } from "@repo/config";
-import { NavBar } from "@saas/shared/components/NavBar";
+import { AppNavBar } from "@saas/shared/components/AppNavBar";
 import { VerificationBanners } from "@saas/shared/components/VerificationBanners";
 import { cn } from "@ui/lib";
 import { useEffect, type PropsWithChildren } from "react";
@@ -45,13 +45,21 @@ export function AppWrapper({ children }: PropsWithChildren) {
 	return (
 		<div
 			className={cn(
-				"bg-[radial-gradient(farthest-corner_at_0%_0%,color-mix(in_oklch,var(--color-primary),transparent_95%)_0%,var(--color-background)_50%)] dark:bg-[radial-gradient(farthest-corner_at_0%_0%,color-mix(in_oklch,var(--color-primary),transparent_90%)_0%,var(--color-background)_50%)]",
+				"bg-background text-foreground transition-colors duration-300",
 				[config.ui.saas.useSidebarLayout ? "" : ""],
 			)}
 		>
-			<NavBar />
+			<div className="absolute inset-0 z-0 opacity-20 pointer-events-none fixed"
+				style={{
+					backgroundImage: `linear-gradient(to right, #808080 1px, transparent 1px),
+					linear-gradient(to bottom, #808080 1px, transparent 1px)`,
+					backgroundSize: "40px 40px",
+				}}
+			/>
+			<div className="relative z-10">
+			<AppNavBar />
 			<div
-				className={cn("min-h-screen", [
+				className={cn("min-h-screen pt-20", [
 					config.ui.saas.useSidebarLayout
 						? "md:ml-[280px]"
 						: "",
@@ -60,12 +68,13 @@ export function AppWrapper({ children }: PropsWithChildren) {
 				{/* Global verification banners (email + pending approval) */}
 				<VerificationBanners />
 				<main
-					className={cn("w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-[1920px]", [
+					className={cn("w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-6xl", [
 						config.ui.saas.useSidebarLayout ? "" : "",
 					])}
 				>
 					{children}
 				</main>
+			</div>
 			</div>
 		</div>
 	);

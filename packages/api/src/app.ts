@@ -29,6 +29,7 @@ import { notificationsEnhancedRouter } from "./routes/notifications-enhanced";
 import { notificationsRouter } from "./routes/notifications";
 import { notificationPreferencesRouter } from "./routes/notification-preferences";
 import prescriptionsRouter from "./routes/prescriptions";
+import { promotionsRouter } from "./routes/promotions";
 
 import type { AppBindings } from "./types/context";
 
@@ -64,7 +65,8 @@ const appRouter = app
 	.route("/prescriptions", prescriptionsRouter)
 	.route("/notifications", notificationsEnhancedRouter)
 	.route("/notifications", notificationPreferencesRouter)
-	.route("/notifications", notificationsRouter);
+	.route("/notifications", notificationsRouter)
+	.route("/promotions", promotionsRouter);
 
 app.get(
 	"/app-openapi",
