@@ -80,8 +80,9 @@ productsRouter.get('/', zValidator('query', productsQuerySchema), async (c) => {
     }
     
     if (category) {
-      // Prisma cannot apply case-insensitive mode to enum fields; use exact match
-      where.category = { equals: category };
+      // Convert category to uppercase enum format (e.g., "antibiotics" -> "ANTIBIOTICS", "baby-care" -> "BABY_CARE")
+      const enumCategory = category.toUpperCase().replace(/-/g, '_');
+      where.category = { equals: enumCategory };
     }
     
     if (min_price !== undefined) {
@@ -224,6 +225,29 @@ productsRouter.get('/', zValidator('query', productsQuerySchema), async (c) => {
   } catch (error) {
     console.error('Error fetching products:', error);
     return c.json({ error: 'Failed to fetch products' }, 500);
+  }
+});
+
+// Get product statistics by category
+productsRouter.get('/stats/categories', async (c) => {
+  try {
+    const categoryCounts = await db.product.groupBy({
+      by: ['category'],
+      _count: {
+        category: true
+      }
+    });
+
+    // Format as simple map: { CATEGORY_NAME: count }
+    const stats = categoryCounts.reduce((acc, curr) => {
+      acc[curr.category] = curr._count.category;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return c.json({ stats });
+  } catch (error) {
+    console.error('Error fetching category stats:', error);
+    return c.json({ error: 'Failed to fetch category statistics' }, 500);
   }
 });
 

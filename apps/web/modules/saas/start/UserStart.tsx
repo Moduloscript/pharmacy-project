@@ -8,9 +8,13 @@ import { QuickReorderPanel } from "@saas/dashboard/components/QuickReorderPanel"
 import { ActiveOrderTracker } from "@saas/dashboard/components/ActiveOrderTracker";
 import { CreditBalanceWidget } from "@saas/dashboard/components/CreditBalanceWidget";
 import { PromotionsBanner } from "@saas/dashboard/components/PromotionsBanner";
+import { CategoryQuickLinks } from "@saas/dashboard/components/CategoryQuickLinks";
+import { LowStockAlerts } from "@saas/dashboard/components/LowStockAlerts";
+import { FreshStock } from "@saas/dashboard/components/FreshStock";
 import { Badge } from "@ui/components/badge";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { cn } from "@ui/lib";
 import {
@@ -111,12 +115,20 @@ export default function UserStart() {
 							
 							{/* Stats Indicators */}
 							<div className="flex flex-wrap justify-center lg:justify-start gap-4 pt-4">
-								<div className="flex items-center gap-2 px-3 py-1 bg-white border border-black rounded-full text-sm font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+								{/* Dispatch Badge - High Contrast text-black forced */}
+								<div className="flex items-center gap-2 px-3 py-1 bg-white border border-black rounded-full text-sm font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-black">
 									<TruckIcon className="h-4 w-4 text-black" />
 									<span className="uppercase">Same-day Dispatch</span>
 								</div>
-								<div className="flex items-center gap-2 px-3 py-1 bg-white border border-black rounded-full text-sm font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-									<ShieldCheckIcon className="h-4 w-4 text-black" />
+								{/* NAFDAC Badge - Real Logo + High Contrast */}
+								<div className="flex items-center gap-2 px-3 py-1 bg-white border border-black rounded-full text-sm font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-black">
+									<Image 
+										src="/nafdac-logo.png" 
+										alt="NAFDAC" 
+										width={24}
+										height={24}
+										className="object-contain"
+									/>
 									<span className="uppercase">NAFDAC Certified</span>
 								</div>
 							</div>
@@ -167,9 +179,12 @@ export default function UserStart() {
 				<PromotionsBanner />
 
 				{/* 2. STATUS & TRACKING (Tier 1) */}
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+				<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 					<div className="h-full">
 						<CreditBalanceWidget />
+					</div>
+					<div className="h-full">
+						<LowStockAlerts />
 					</div>
 					<div className="h-full">
 						<ActiveOrderTracker />
@@ -225,68 +240,11 @@ export default function UserStart() {
 				{/* 3. PRIORITY FEATURES: Quick Reorder (Tier 1) */}
 				<QuickReorderPanel />
 
-				{/* 4. INVENTORY: Trading Cards */}
-				<div>
-					<div className="flex items-end justify-between mb-8 pb-4 border-b-4 border-black dark:border-white">
-						<h2 className="text-3xl font-display font-black uppercase tracking-tighter text-black dark:text-white flex items-center gap-3">
-							<PackageIcon className="h-8 w-8 text-[#8B83F6]" />
-							Fresh Stock
-						</h2>
-						<Link 
-							href="/app/products" 
-							className="text-sm font-bold uppercase border-b-2 border-black hover:bg-black hover:text-white transition-all px-1"
-						>
-							VIEW_ALL_SKUS &rarr;
-						</Link>
-					</div>
-					
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-						{[
-							{ name: "Paracetamol 500mg", price: "₦250", category: "Pain Relief", stock: "IN STOCK", bg: "bg-[#FFFCF7]" },
-							{ name: "Vitamin C 1000mg", price: "₦1,200", category: "Vitamins", stock: "LIMITED", bg: "bg-[#E6E6FA]" },
-							{ name: "Amoxicillin 500mg", price: "₦800", category: "Antibiotics", stock: "IN STOCK", bg: "bg-[#FFEFD5]" },
-							{ name: "Insulin Pen", price: "₦5,500", category: "Diabetes", stock: "AVAILABLE", bg: "bg-[#E0F7FA]" }
-						].map((product, index) => (
-							<div 
-								key={index} 
-								className="group relative bg-white border-2 border-black hover:shadow-hard transition-all duration-300"
-							>
-								{/* Product Image Area */}
-								<div className={cn("h-40 w-full flex items-center justify-center border-b-2 border-black relative overflow-hidden", product.bg)}>
-									<div className="absolute inset-0 opacity-10" 
-										style={{backgroundImage: "radial-gradient(circle, #000 1px, transparent 1px)", backgroundSize: "10px 10px"}} 
-									/>
-									<div className="bg-white border-2 border-black p-4 rotate-3 group-hover:rotate-0 transition-all duration-500 shadow-sm z-10">
-										<PillIcon className="h-10 w-10 text-black" />
-									</div>
-									<div className="absolute top-2 right-2 bg-black text-white text-[10px] font-bold px-2 py-1 uppercase transform rotate-2">
-										{product.category}
-									</div>
-								</div>
-								
-								{/* Product Details */}
-								<div className="p-5 space-y-4">
-									<div>
-										<h4 className="font-black text-lg text-black uppercase leading-tight line-clamp-1 group-hover:underline decoration-2 underline-offset-2">{product.name}</h4>
-										<p className="font-mono text-xl font-bold text-[#FF4500] mt-1">{product.price}</p>
-									</div>
+				{/* 3.5 CATEGORY QUICK LINKS (Tier 2) */}
+				<CategoryQuickLinks />
 
-									<div className="flex items-center justify-between pt-2 border-t-2 border-dashed border-zinc-300">
-										<span className={cn(
-											"text-[10px] font-black uppercase px-2 py-1 border border-black",
-											product.stock === "LIMITED" ? "bg-amber-100" : "bg-green-100"
-										)}>
-											{product.stock}
-										</span>
-										<Button className="h-8 text-xs font-bold uppercase bg-black hover:bg-[#8B83F6] text-white border-none rounded-none transition-colors">
-											Add +
-										</Button>
-									</div>
-								</div>
-							</div>
-						))}
-					</div>
-				</div>
+				{/* 4. INVENTORY: Fresh Stock (Tier 2) */}
+				<FreshStock />
 
 				{/* 4. METRICS: Marquee Style */}
 				<div className="border-t-4 border-black pt-8">
