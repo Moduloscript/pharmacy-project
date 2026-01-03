@@ -12,11 +12,17 @@ export interface Product {
   image_url?: string;
   imageUrl?: string;
   wholesalePrice?: number;
+  wholesale_price?: number;
   retailPrice: number;
+  retail_price?: number;
   stockQuantity?: number;
+  stock_quantity?: number;
   minOrderQuantity?: number;
+  min_order_qty?: number;
   isPrescriptionRequired?: boolean;
+  is_prescription_required?: boolean;
   nafdacNumber?: string;
+  nafdac_reg_number?: string;
   createdAt?: string;
   updatedAt?: string;
   organization?: { id: string; name: string };
@@ -37,6 +43,8 @@ export interface Product {
   hasBulkRules?: boolean;
   is_controlled?: boolean;
   isControlled?: boolean;
+  isRefrigerated?: boolean;
+  slug?: string;
 }
 
 export interface ProductsResponse {

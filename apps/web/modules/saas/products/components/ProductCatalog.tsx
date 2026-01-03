@@ -6,7 +6,7 @@ import { Button } from '@ui/components/button';
 import { Card } from '@ui/components/card';
 import { Badge } from '@ui/components/badge';
 import { cn } from '@ui/lib';
-import { Product, ProductFilters, productsAPI } from '../lib/api';
+import { Product, ProductFilters, productsAPI, ProductSortOption } from '../lib/api';
 import { useProducts, useCategories } from '../lib/queries';
 import { 
   productFiltersAtom,
@@ -81,7 +81,7 @@ export function ProductCatalog({
   const handleSortChange = (sortValue: string) => {
     // Persist a sort param the backend can use
     // Example values: 'updated_desc', 'name_asc', 'price_asc', 'price_desc', 'stock_desc'
-    updateFilters({ sort: sortValue });
+    updateFilters({ sort: sortValue as ProductSortOption });
   };
 
   const getSortLabel = (value?: string) => {

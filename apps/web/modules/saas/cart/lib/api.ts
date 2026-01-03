@@ -183,12 +183,15 @@ export const CartUtils = {
     const errors: string[] = [];
     
     items.forEach(item => {
-      if (item.quantity > item.product.stock_quantity) {
-        errors.push(`${item.product.name}: Only ${item.product.stock_quantity} units available (requested ${item.quantity})`);
+      const stockQty = item.product.stockQuantity ?? item.product.stock_quantity ?? 0;
+      const minQty = item.product.minOrderQuantity ?? item.product.min_order_qty ?? 1;
+      
+      if (item.quantity > stockQty) {
+        errors.push(`${item.product.name}: Only ${stockQty} units available (requested ${item.quantity})`);
       }
       
-      if (item.quantity < (item.product?.min_order_qty || 1)) {
-        errors.push(`${item.product.name}: Minimum order quantity is ${item.product.min_order_qty} (current ${item.quantity})`);
+      if (item.quantity < minQty) {
+        errors.push(`${item.product.name}: Minimum order quantity is ${minQty} (current ${item.quantity})`);
       }
     });
     

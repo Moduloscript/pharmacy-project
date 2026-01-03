@@ -79,8 +79,8 @@ export function CartItem({
   const [, removeItem] = useAtom(removeFromCartAtom);
 
   const handleQuantityChange = async (newQuantity: number) => {
-    const minQty = item.product?.minOrderQuantity || item.product?.min_order_qty || 1;
-    const stockQty = item.product?.stockQuantity || item.product?.stock_quantity || 0;
+    const minQty = item.product?.minOrderQuantity || 1;
+    const stockQty = item.product?.stockQuantity || 0;
     
     if (newQuantity < minQty || newQuantity > stockQty) {
       return; // Don't update if invalid
@@ -99,8 +99,8 @@ export function CartItem({
   };
 
   // Helper to get stock quantity with fallback
-  const stockQuantity = item.product?.stockQuantity || item.product?.stock_quantity || 0;
-  const minOrderQty = item.product?.minOrderQuantity || item.product?.min_order_qty || 1;
+  const stockQuantity = item.product?.stockQuantity || 0;
+  const minOrderQty = item.product?.minOrderQuantity || 1;
 
   const isOutOfStock = stockQuantity === 0;
   const isLowStock = stockQuantity > 0 && stockQuantity < 10;
@@ -186,15 +186,15 @@ export function CartItem({
               {item.product.name}
             </h3>
             
-            {item.product.genericName || item.product.generic_name && (
+            {item.product.genericName && (
               <p className="text-sm text-muted-foreground mt-1">
-                Generic: {item.product.genericName || item.product.generic_name}
+                Generic: {item.product.genericName}
               </p>
             )}
 
             {/* Badges */}
             <div className="flex flex-wrap gap-2 mt-2">
-              {(item.product.isPrescriptionRequired || item.product.requires_prescription || item.product.is_prescription_required) && (
+              {item.product.isPrescriptionRequired && (
                 <Badge status="warning" className="text-xs">
                   <ShieldCheckIcon className="size-3 mr-1" />
                   Prescription required
@@ -213,9 +213,9 @@ export function CartItem({
                 </Badge>
               )}
 
-              {(item.product.nafdacNumber || item.product.nafdac_reg_number) && (
+              {item.product.nafdacNumber && (
                 <Badge variant="outline" className="text-xs">
-                  NAFDAC: {item.product.nafdacNumber || item.product.nafdac_reg_number}
+                  NAFDAC: {item.product.nafdacNumber}
                 </Badge>
               )}
             </div>
@@ -370,7 +370,7 @@ export function CartItem({
           )}
 
           {/* Additional Info */}
-          {item.product.requires_prescription && (
+          {item.product.isPrescriptionRequired && (
             <Alert variant="warning">
               <AlertTitle>Prescription required</AlertTitle>
               <AlertDescription>

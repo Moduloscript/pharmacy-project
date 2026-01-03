@@ -113,7 +113,7 @@ const FloatingIcon = ({
 
 export function Hero() {
 	return (
-		<div className="relative min-h-[90vh] w-full overflow-hidden bg-background text-foreground">
+						<div className="relative min-h-[90vh] w-full overflow-hidden bg-background text-foreground">
 			{/* Grid Background */}
 			<div className="absolute inset-0 z-0 opacity-20"
 				style={{

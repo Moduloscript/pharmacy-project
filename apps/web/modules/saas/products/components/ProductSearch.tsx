@@ -239,7 +239,7 @@ export function ProductSearch({
                       {/* Price and Stock */}
                       <div className="text-right">
                         <p className="font-semibold text-gray-900">
-                          ₦{product.retail_price.toLocaleString('en-NG')}
+                          ₦{(product.retailPrice ?? product.retail_price ?? 0).toLocaleString('en-NG')}
                         </p>
                         <p className={cn(
                           'text-xs',

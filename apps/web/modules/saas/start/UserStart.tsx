@@ -93,108 +93,108 @@ export default function UserStart() {
 			<div className="relative z-10 max-w-7xl mx-auto px-6 py-8 lg:px-8 lg:py-12 space-y-16 animate-in fade-in duration-500">
 				
 				{/* 1. HERO SECTION: Ujjo-Style Poster */}
-				<div className="w-full bg-primary border-2 border-foreground p-8 md:p-12 shadow-hard relative overflow-hidden">
+				{/* 1. HERO SECTION: Ujjo-Style Poster - Exact Match to Design */}
+				<div className="w-full bg-[#8B83F6] border-2 border-black p-8 md:p-12 shadow-hard relative overflow-hidden">
 					{/* Decorative Elements */}
 					<div className="absolute top-4 right-4 animate-spin-slow opacity-20">
-						<SparklesIcon className="w-24 h-24 text-primary-foreground" />
+						<SparklesIcon className="w-24 h-24 text-black" />
 					</div>
 
-					<div className="flex flex-col lg:flex-row items-center justify-between gap-12 relative z-10">
-						<div className="flex-1 space-y-6 text-center lg:text-left">
-							{/* Greeting Badge - Brutalist Pill */}
-							<div className="inline-flex items-center gap-2 bg-card border-2 border-foreground px-4 py-1.5 text-sm font-bold uppercase tracking-wider text-foreground shadow-sm transform -rotate-1 hover:rotate-0 transition-transform">
-								<span className="w-3 h-3 rounded-full bg-accent animate-pulse border border-foreground"></span>
-								<span>{greeting}, {user?.name?.split(' ')[0] || 'User'}</span>
+					<div className="flex flex-col lg:flex-row items-center justify-between gap-8 relative z-10">
+						<div className="flex-1 space-y-8 text-center lg:text-left">
+							{/* Greeting Badge - White Pill with Orange Dot */}
+							<div className="inline-flex items-center gap-2 bg-white border-2 border-black px-4 py-2 text-sm font-bold uppercase tracking-wider text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] transform -rotate-1 hover:rotate-0 transition-transform">
+								<span className="w-3 h-3 rounded-full bg-[#FF4500] border border-black"></span>
+								<span>GOOD AFTERNOON, {user?.name?.split(' ')[0] || 'TUNDE'}</span>
 							</div>
 							
-							<h1 className="text-5xl md:text-7xl font-display font-black tracking-tighter text-primary-foreground leading-[0.9] uppercase drop-shadow-sm">
-								PRECISION <br />
-								<span className="text-card">IN EVERY PILL</span>
+							<h1 className="text-4xl sm:text-5xl md:text-7xl font-display font-black tracking-tighter leading-[0.9] uppercase drop-shadow-sm">
+								<span className="block text-black">PRECISION</span>
+								<span className="block text-white">IN EVERY PILL</span>
 							</h1>
 							
-							<p className="max-w-xl text-xl font-medium text-primary-foreground/80 leading-relaxed mx-auto lg:mx-0">
-								The "Oh Sh*t" moment for your pharmacy logistics. <br/>
-								<span className="bg-foreground text-background px-1">Verified.</span> <span className="bg-foreground text-background px-1">Secure.</span> <span className="bg-foreground text-background px-1">Fast.</span>
-							</p>
+							<div className="max-w-xl mx-auto lg:mx-0">
+								<p className="text-lg font-medium text-black/90 leading-relaxed mb-3">
+									The "Oh Sh*t" moment for your pharmacy logistics.
+								</p>
+								<div className="flex flex-wrap justify-center lg:justify-start gap-2">
+									<span className="bg-black text-white px-2 py-0.5 font-bold">Verified.</span>
+									<span className="bg-black text-white px-2 py-0.5 font-bold">Secure.</span>
+									<span className="bg-black text-white px-2 py-0.5 font-bold">Fast.</span>
+								</div>
+							</div>
 							
-							{/* Stats Indicators */}
-							<div className="flex flex-wrap justify-center lg:justify-start gap-4 pt-4">
+							{/* Stats Indicators - White Pills */}
+							<div className="flex flex-wrap justify-center lg:justify-start gap-4 pt-2">
 								{/* Dispatch Badge */}
-								<div className="flex items-center gap-2 px-3 py-1 bg-card border border-foreground rounded-full text-sm font-bold shadow-hard text-foreground">
-									<TruckIcon className="h-4 w-4" />
-									<span className="uppercase">Same-day Dispatch</span>
+								<div className="flex items-center gap-3 px-4 py-2 bg-white border-2 border-black rounded-full text-sm font-black uppercase text-black shadow-sm hover:translate-y-0.5 transition-transform">
+									<TruckIcon className="h-5 w-5" />
+									<span>Same-day Dispatch</span>
 								</div>
 								{/* NAFDAC Badge */}
-								<div className="flex items-center gap-2 px-4 py-1.5 bg-card border-2 border-foreground rounded-full shadow-hard hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-default">
-									<img 
-										src="/nafdac-logo.png" 
-										alt="NAFDAC" 
-										width={36}
-										height={36}
-										className="object-contain"
-									/>
-									<div className="flex flex-col leading-none">
-										<span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Verified</span>
-										<span className="text-base font-black uppercase text-foreground tracking-tight">NAFDAC Certified</span>
+								<div className="flex items-center gap-3 px-5 py-2.5 bg-white border-2 border-black rounded-full text-base font-black uppercase text-black shadow-sm hover:translate-y-0.5 transition-transform">
+									<div className="relative w-8 h-8">
+										<Image 
+											src="/nafdac-logo.png" 
+											alt="NAFDAC" 
+											fill
+											className="object-contain"
+										/>
 									</div>
+									<span>NAFDAC Certified</span>
 								</div>
 							</div>
 						</div>
 						
-						{/* Account Status Box - Sticker Style */}
-						<div className="w-full lg:w-auto min-w-[320px] bg-card border-2 border-foreground p-6 shadow-hard transform rotate-1 hover:rotate-0 transition-all duration-300">
-							<div className="flex items-start justify-between mb-6 border-b-2 border-foreground pb-4">
-								<div className="p-1 bg-accent border-2 border-foreground">
-									<UserAvatar 
-										className="h-12 w-12"
-										name={user?.name || "User"}
-										avatarUrl={user?.image}
-									/>
+						{/* Account Status Card - Sticker Style */}
+						<div className="w-full max-w-sm lg:w-auto min-w-[280px] lg:min-w-[320px] bg-white border-2 border-black p-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,0.2)] transform rotate-2 hover:rotate-0 transition-all duration-300">
+							<div className="flex items-start justify-between mb-8 border-b-2 border-black pb-6">
+								{/* Orange Square Avatar */}
+								<div className="w-16 h-16 bg-[#FF4500] border-2 border-black flex items-center justify-center text-white">
+									<UserIcon className="h-8 w-8" />
 								</div>
+								
 								<div className="text-right">
-									<div className="text-[10px] font-black uppercase text-foreground">Status</div>
-										{/* Status - Real Data */}
-										{(() => {
-											const status = customerProfile?.verificationStatus || (user as any)?.customer?.verificationStatus || 'PENDING';
-											const isVerified = status === 'VERIFIED';
-											return (
-												<div className="flex items-center justify-end gap-2 mt-1">
-													<div className={cn(
-														"h-2 w-2 rounded-full border border-foreground animate-pulse",
-														isVerified ? "bg-green-500" : "bg-yellow-400"
-													)} />
-													<span className="text-sm font-black uppercase tracking-widest text-foreground">
-														{status}
-													</span>
-												</div>
-											);
-										})()}
+									<div className="text-[10px] font-black uppercase text-gray-500 mb-1">Status</div>
+									{/* Status - Real Data */}
+									{(() => {
+										const status = customerProfile?.verificationStatus || (user as any)?.customer?.verificationStatus || 'PENDING';
+										const isVerified = status === 'VERIFIED';
+										return (
+											<div className="flex items-center justify-end gap-2">
+												<div className={cn(
+													"h-2 w-2 rounded-full border border-black",
+													isVerified ? "bg-green-600" : "bg-yellow-400"
+												)} />
+												<span className="text-xl font-black uppercase tracking-tight text-black">
+													{isVerified ? 'ACTIVE' : status}
+												</span>
+											</div>
+										);
+									})()}
 								</div>
 							</div>
 							
-							<div className="space-y-4">
+							<div className="space-y-6">
 								<div>
-									<div className="text-[10px] font-black uppercase text-muted-foreground mb-1">Account Type</div>
-									<div className="font-bold text-lg text-foreground uppercase">
-										{(customerProfile?.customerType || (user as any)?.customer?.customerType) === 'WHOLESALE' ? (
-											<span className="bg-background text-foreground border border-foreground px-2 py-0.5">Wholesale Partner</span>
-										) : (
-											<span className="bg-primary/20 text-foreground border border-foreground px-2 py-0.5">Retail Customer</span>
-										)}
+									<div className="text-[10px] font-black uppercase text-gray-500 mb-1">Account Type</div>
+									<div className="inline-block bg-[#E0F2FE] border-2 border-black px-3 py-1 font-black text-lg text-black uppercase">
+										{(customerProfile?.customerType || (user as any)?.customer?.customerType) === 'WHOLESALE' ? 'Wholesale Partner' : 'Retail Customer'}
 									</div>
 								</div>
-								<div className="grid grid-cols-2 gap-4 pt-4 border-t-2 border-foreground">
+								
+								<div className="grid grid-cols-2 gap-8 pt-2">
 									<div>
-										<div className="text-[10px] font-black uppercase text-muted-foreground">Member ID</div>
-										<div className="font-mono text-sm font-bold text-foreground border-b border-foreground inline-block">
+										<div className="text-[10px] font-black uppercase text-gray-500 mb-1">Member ID</div>
+										<div className="font-bold text-black border-b-2 border-black inline-block pb-0.5">
 											{user?.createdAt 
 												? `BP-${new Date(user.createdAt).getFullYear()}-${(customerProfile?.id || (user as any)?.customer?.id)?.substring(0, 4).toUpperCase() || '0000'}`
 												: `BP-${new Date().getFullYear()}-XXXX`}
 										</div>
 									</div>
 									<div>
-										<div className="text-[10px] font-black uppercase text-muted-foreground">Region</div>
-										<div className="font-mono text-sm font-bold text-foreground border-b border-foreground inline-block">
+										<div className="text-[10px] font-black uppercase text-gray-500 mb-1">Region</div>
+										<div className="font-bold text-black border-b-2 border-black inline-block pb-0.5">
 											{(customerProfile?.city || (user as any)?.customer?.city) && (customerProfile?.state || (user as any)?.customer?.state)
 												? `${customerProfile?.city || (user as any)?.customer?.city}, ${customerProfile?.state || (user as any)?.customer?.state}`
 												: (customerProfile?.state || (user as any)?.customer?.state || "Nigeria")}
@@ -237,30 +237,63 @@ export default function UserStart() {
 					</div>
 
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-						{/* Reusable Card Style */}
+						{/* Reusable Card Style - Matched to User Image */}
 						{[
-							{ title: "Catalog", subtitle: "Browse inventory", icon: PackageIcon, color: "bg-primary", href: "/app/products" },
-							{ title: "Cart", subtitle: cartItemCount > 0 ? "Ready for checkout" : "No items", icon: ShoppingCartIcon, color: "bg-accent", href: "/app/cart", textwhite: true },
-							{ title: "Orders", subtitle: "Track shipments", icon: ClipboardListIcon, color: "bg-primary/30", href: "/app/orders" },
-							{ title: "Search", subtitle: "Global lookup", icon: SearchIcon, color: "bg-muted", href: "/app/search" }
+							{ 
+								title: "Catalog", 
+								subtitle: "Browse inventory", 
+								icon: PackageIcon, 
+								bgClass: "bg-[#8B83F6]", // Purple
+								textClass: "text-black",
+								iconBgClass: "bg-white",
+								href: "/app/products" 
+							},
+							{ 
+								title: "Cart", 
+								subtitle: "Ready for checkout", 
+								icon: ShoppingCartIcon, 
+								bgClass: "bg-[#FF4500]", // Orange
+								textClass: "text-white",
+								iconBgClass: "bg-white text-black",
+								href: "/app/cart" 
+							},
+							{ 
+								title: "Orders", 
+								subtitle: "Track shipments", 
+								icon: ClipboardListIcon, 
+								bgClass: "bg-[#E6E6FA]", // Light Purple
+								textClass: "text-black",
+								iconBgClass: "bg-white",
+								href: "/app/orders" 
+							},
+							{ 
+								title: "Search", 
+								subtitle: "Global lookup", 
+								icon: SearchIcon, 
+								bgClass: "bg-[#F5F5F5]", // White/Grey
+								textClass: "text-black",
+								iconBgClass: "bg-white",
+								href: "/app/search" 
+							}
 						].map((item, i) => (
-							<Link key={i} href={item.href} className="group relative block h-full">
+							<Link key={i} href={item.href} className="group relative block h-48">
+								{/* Shadow Block */}
+								<div className="absolute inset-0 bg-black translate-x-2 translate-y-2 transition-transform group-hover:translate-x-3 group-hover:translate-y-3" />
+								
+								{/* Main Card */}
 								<div className={cn(
-									"absolute inset-0 border-2 border-foreground translate-x-1 translate-y-1 transition-transform group-hover:translate-x-2 group-hover:translate-y-2 bg-foreground"
-								)} />
-								<div className={cn(
-									"relative h-full bg-card border-2 border-foreground p-6 flex flex-col justify-between transition-transform transform group-hover:-translate-y-1 group-hover:-translate-x-1",
-									item.color
+									"relative h-full border-2 border-black p-6 flex flex-col justify-between transition-transform transform group-hover:-translate-y-1 group-hover:-translate-x-1",
+									item.bgClass
 								)}>
-									<div className="flex justify-between items-start mb-6">
-										<div className="p-2 bg-card border-2 border-foreground">
-											<item.icon className="h-6 w-6 text-foreground" />
+									<div className="flex justify-between items-start">
+										<div className={cn("p-2 border-2 border-black w-12 h-12 flex items-center justify-center text-black", item.iconBgClass)}>
+											<item.icon className="h-6 w-6" />
 										</div>
-										<ArrowRightIcon className={cn("h-6 w-6 group-hover:translate-x-1 transition-transform", item.textwhite ? "text-accent-foreground" : "text-foreground")} />
+										<ArrowRightIcon className={cn("h-6 w-6 transition-transform group-hover:translate-x-1", item.textClass)} />
 									</div>
 									<div className="space-y-1">
-										<h3 className={cn("font-black text-xl uppercase tracking-tight", item.textwhite ? "text-accent-foreground" : "text-foreground")}>{item.title}</h3>
-										<p className={cn("text-xs font-bold uppercase tracking-wider opacity-70", item.textwhite ? "text-accent-foreground" : "text-muted-foreground")}>{item.subtitle}</p>
+										<h3 className={cn("font-black text-2xl uppercase tracking-tighter", item.textClass)}>{item.title}</h3>
+										<p className={cn("text-xs font-bold uppercase tracking-wider opacity-80", item.textClass)}>{item.subtitle}</p>
 									</div>
 								</div>
 							</Link>
@@ -281,17 +314,17 @@ export default function UserStart() {
 				<div className="border-t-4 border-foreground pt-8">
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-6">
 						{[
-							{ label: "Total SKUs", value: "10K+", icon: PackageIcon, bg: "bg-primary" },
-							{ label: "Active Pharmacies", value: "5K+", icon: HeartIcon, bg: "bg-accent" },
-							{ label: "Cities Covered", value: "36", icon: TruckIcon, bg: "bg-[#FFD700]" },
-							{ label: "Avg. Dispatch", value: "2HR", icon: Clock3Icon, bg: "bg-foreground text-background", textwhite: true }
+							{ label: "Total SKUs", value: "10K+", icon: PackageIcon, bgClass: "bg-[#8B83F6]", textClass: "text-black" },
+							{ label: "Active Pharmacies", value: "5K+", icon: HeartIcon, bgClass: "bg-[#FF4500]", textClass: "text-black" },
+							{ label: "Cities Covered", value: "36", icon: TruckIcon, bgClass: "bg-[#FFD700]", textClass: "text-black" },
+							{ label: "Avg. Dispatch", value: "2HR", icon: Clock3Icon, bgClass: "bg-black", textClass: "text-white" }
 						].map((stat, index) => (
-							<div key={index} className={cn("p-6 border-2 border-foreground shadow-hard hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all", stat.bg)}>
+							<div key={index} className={cn("p-6 border-2 border-foreground shadow-hard hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all", stat.bgClass)}>
 								<div className="flex items-center gap-2 mb-2">
-									<stat.icon className={cn("h-5 w-5", stat.textwhite ? "text-background" : "text-primary-foreground")} />
-									<p className={cn("text-xs font-black uppercase tracking-widest", stat.textwhite ? "text-background/80" : "text-primary-foreground/60")}>{stat.label}</p>
+									<stat.icon className={cn("h-5 w-5", stat.textClass)} />
+									<p className={cn("text-xs font-black uppercase tracking-widest opacity-80", stat.textClass)}>{stat.label}</p>
 								</div>
-								<p className={cn("text-4xl font-black tracking-tighter", stat.textwhite ? "text-background" : "text-primary-foreground")}>{stat.value}</p>
+								<p className={cn("text-4xl font-black tracking-tighter", stat.textClass)}>{stat.value}</p>
 							</div>
 						))}
 					</div>

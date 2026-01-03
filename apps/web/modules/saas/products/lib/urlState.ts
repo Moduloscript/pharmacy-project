@@ -50,7 +50,9 @@ export function useProductsURLStateSync() {
       max_price: max_price ? Number(max_price) : undefined,
       prescription_only: toBool(prescription_only),
       in_stock_only: toBool(in_stock_only),
-      sort: sort || undefined,
+      sort: (sort && ['created_at_desc', 'updated_desc', 'name_asc', 'price_asc', 'price_desc', 'stock_desc'].includes(sort)) 
+        ? (sort as import("./api").ProductSortOption) 
+        : undefined,
     };
 
     updateFilters(nextFilters);
