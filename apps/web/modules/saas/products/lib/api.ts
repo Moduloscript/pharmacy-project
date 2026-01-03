@@ -11,21 +11,13 @@ export interface Product {
   description?: string;
   image_url?: string;
   imageUrl?: string;
-  wholesale_price?: number;
   wholesalePrice?: number;
-  retail_price: number;
-  retailPrice?: number;
-  stock_quantity: number;
+  retailPrice: number;
   stockQuantity?: number;
-  min_order_qty?: number;
   minOrderQuantity?: number;
-  is_prescription_required?: boolean;
   isPrescriptionRequired?: boolean;
-  nafdac_reg_number?: string;
   nafdacNumber?: string;
-  created_at?: string;
   createdAt?: string;
-  updated_at?: string;
   updatedAt?: string;
   organization?: { id: string; name: string };
   // Additional optional fields used in UI
@@ -67,6 +59,14 @@ export interface CategoriesResponse {
   total: number;
 }
 
+export type ProductSortOption = 
+  | 'created_at_desc'
+  | 'updated_desc'
+  | 'name_asc'
+  | 'price_asc'
+  | 'price_desc'
+  | 'stock_desc';
+
 export interface ProductFilters {
   page?: number;
   limit?: number;
@@ -76,8 +76,7 @@ export interface ProductFilters {
   max_price?: number;
   prescription_only?: boolean;
   in_stock_only?: boolean;
-  // Sort parameter (e.g., "updated_desc", "name_asc", "price_asc", "price_desc", "stock_desc")
-  sort?: string;
+  sort?: ProductSortOption;
 }
 
 export interface CreateProductData {
@@ -251,7 +250,7 @@ export const productsAPI = new ProductsAPI();
 // Utility functions
 export function formatPrice(price: number | null | undefined, currency = '₦'): string {
   // Handle undefined, null, or invalid price values
-  if (price === undefined || price === null || isNaN(price)) {
+  if (price === undefined || price === null || Number.isNaN(price)) {
     return `${currency}0`;
   }
   return `${currency}${price.toLocaleString('en-NG')}`;

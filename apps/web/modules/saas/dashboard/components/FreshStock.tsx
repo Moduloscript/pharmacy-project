@@ -9,7 +9,7 @@ import { Product } from "@saas/products/lib/api";
 
 export function FreshStock() {
   const { data, isLoading } = useProducts({ 
-    sort: 'created_at_desc' as any, // assuming API supports this sort key
+    sort: 'created_at_desc',
     limit: 4 
   });
 
@@ -58,13 +58,21 @@ export function FreshStock() {
                 const bg = bgColors[index % bgColors.length];
                 
                 // Stock status logic
-                const stockStatus = product.stock_quantity === 0 ? "OUT_OF_STOCK" 
-                    : product.stock_quantity < 10 ? "LIMITED" 
-                    : "IN STOCK";
+                const qty = product.stockQuantity;
+                let stockStatus = "IN STOCK";
+                
+                if (qty === undefined || qty === null) {
+                    stockStatus = "UNKNOWN";
+                } else if (qty === 0) {
+                    stockStatus = "OUT_OF_STOCK";
+                } else if (qty < 10) {
+                    stockStatus = "LIMITED";
+                }
                 
                 // Brutalist colors (more saturated/defined)
                 const stockColor = stockStatus === "LIMITED" ? "bg-[#FFD700] text-black" // Gold
                     : stockStatus === "OUT_OF_STOCK" ? "bg-red-500 text-white"
+                    : stockStatus === "UNKNOWN" ? "bg-gray-500 text-white" // Grey
                     : "bg-[#00E676] text-black"; // Vivid Green
 
                 return (
@@ -88,7 +96,7 @@ export function FreshStock() {
                             )}
 
                             <div className="absolute top-2 right-2 bg-black text-white dark:bg-white dark:text-black text-[10px] font-black px-2 py-1 uppercase transform rotate-2 z-20 shadow-sm border border-transparent dark:border-black">
-                                {product.category}
+                                {product.category || "Uncategorized"}
                             </div>
                         </div>
                         
@@ -99,7 +107,7 @@ export function FreshStock() {
                                     {product.name}
                                 </h4>
                                 <p className="font-mono text-xl font-bold text-[#FF4500] mt-1 relative inline-block">
-                                    ₦{product.retailPrice?.toLocaleString() || product.retail_price?.toLocaleString() || "0"}
+                                    ₦{product.retailPrice?.toLocaleString() || "0"}
                                     {/* Decorative underline */}
                                     <span className="absolute bottom-0 left-0 w-full h-[2px] bg-black/10 dark:bg-white/10" />
                                 </p>

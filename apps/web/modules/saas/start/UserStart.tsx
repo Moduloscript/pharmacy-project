@@ -123,7 +123,7 @@ export default function UserStart() {
 								{/* NAFDAC Badge - Real Logo + High Contrast */}
 								<div className="flex items-center gap-2 px-3 py-1 bg-white border border-black rounded-full text-sm font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-black">
 									<Image 
-										src="/nafdac-logo.png" 
+										src="public/nafdac-logo.png" 
 										alt="NAFDAC" 
 										width={24}
 										height={24}

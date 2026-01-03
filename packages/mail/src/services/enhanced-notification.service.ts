@@ -3,9 +3,19 @@ import type { NotificationChannel as PrismaNotificationChannel, NotificationPrio
 import { sendNotificationImmediate } from '../send-immediate';
 import type { NotificationChannel, NotificationType, NotificationJobData } from '../../types';
 
+const PRISMA_TO_INTERNAL_CHANNEL: Record<string, NotificationChannel> = {
+  EMAIL: 'email',
+  SMS: 'sms',
+  WHATSAPP: 'whatsapp',
+};
+
 // Helper to convert Prisma enum to custom type
-function toPrismaChannel(channel: PrismaNotificationChannel): NotificationChannel {
-  return channel.toLowerCase() as NotificationChannel;
+export function toInternalChannel(channel: PrismaNotificationChannel): NotificationChannel {
+  const mapped = PRISMA_TO_INTERNAL_CHANNEL[channel];
+  if (!mapped) {
+    throw new Error(`Unsupported notification channel: ${channel}`);
+  }
+  return mapped;
 }
 
 function toPrismaPriority(priority: 'low' | 'normal' | 'high'): PrismaPriority {
@@ -13,10 +23,85 @@ function toPrismaPriority(priority: 'low' | 'normal' | 'high'): PrismaPriority {
 }
 
 /**
+ * Privacy-aware logging utilities
+ */
+const ENABLE_PII_LOGGING = process.env.ENABLE_PII_LOGGING === 'true';
+
+function redactCustomerId(customerId: string): string {
+  if (ENABLE_PII_LOGGING) {
+    return customerId;
+  }
+  
+  // Create a simple hash for opaque identifier
+  // Take first 8 chars of customer ID and hash them
+  const hash = customerId.split('').reduce((acc, char) => {
+    return ((acc << 5) - acc) + char.charCodeAt(0);
+  }, 0);
+  
+  return `customer_${Math.abs(hash).toString(16).substring(0, 8)}`;
+}
+
+/**
  * Enhanced Notification Service
  * Provides high-level notification methods for common use cases
  */
 export class EnhancedNotificationService {
+  /**
+   * Helper to resolve customer and enabled notification channels
+   */
+  private async getNotificationRecipient(customerId: string): Promise<{
+    customer: { id: string; phone: string | null; user: { name: string | null; email: string } };
+    channels: PrismaNotificationChannel[];
+  }> {
+    // Get customer details
+    const customer = await db.customer.findUnique({
+      where: { id: customerId },
+      select: {
+        id: true,
+        phone: true,
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!customer) {
+      throw new Error(`Customer not found: ${redactCustomerId(customerId)}`);
+    }
+
+    // Check notification preferences
+    const preferences = await db.notificationPreferences.findUnique({
+      where: { customerId },
+    });
+
+    // Determine enabled channels
+    const channels: PrismaNotificationChannel[] = [];
+    
+    // Add email if enabled (or default)
+    if (preferences?.emailEnabled !== false && customer.user.email) {
+      channels.push('EMAIL');
+    }
+    
+    // Add SMS if enabled (or default) and phone exists
+    if (preferences?.smsEnabled !== false && customer.phone) {
+      channels.push('SMS');
+    }
+
+    // Default to email if no channels selected but email exists
+    if (channels.length === 0 && customer.user.email) {
+      channels.push('EMAIL');
+    }
+
+    if (channels.length === 0) {
+      throw new Error(`No enabled channels found for customer ${redactCustomerId(customerId)}`);
+    }
+
+    return { customer, channels };
+  }
+
   /**
    * Send order confirmation notification
    */
@@ -28,23 +113,7 @@ export class EnhancedNotificationService {
     deliveryAddress: string;
   }): Promise<void> {
     try {
-      // Get customer details
-      const customer = await db.customer.findUnique({
-        where: { id: data.customerId },
-        include: {
-          user: {
-            select: {
-              name: true,
-              email: true,
-            },
-          },
-        },
-      });
-
-      if (!customer) {
-        console.error(`Customer not found: ${data.customerId}`);
-        return;
-      }
+      const { customer, channels } = await this.getNotificationRecipient(data.customerId);
 
       // Fetch order items to display in email
       const order = await db.order.findUnique({
@@ -59,34 +128,6 @@ export class EnhancedNotificationService {
         quantity: item.quantity,
         price: Number(item.unitPrice)
       })) || [];
-
-      // Check notification preferences
-      const preferences = await db.notificationPreferences.findUnique({
-        where: { customerId: data.customerId },
-      });
-
-      // Determine enabled channels
-      const channels: PrismaNotificationChannel[] = [];
-      
-      // Add email if enabled (or default)
-      if (preferences?.emailEnabled !== false && customer.user.email) {
-        channels.push('EMAIL');
-      }
-      
-      // Add SMS if enabled (or default) and phone exists
-      if (preferences?.smsEnabled !== false && customer.phone) {
-        channels.push('SMS');
-      }
-
-      // Default to email if no channels selected but email exists
-      if (channels.length === 0 && customer.user.email) {
-        channels.push('EMAIL');
-      }
-
-      if (channels.length === 0) {
-        console.error(`No enabled channels found for customer ${data.customerId}`);
-        return;
-      }
 
       // Send to all enabled channels
       await Promise.all(channels.map(async (channel) => {
@@ -114,10 +155,10 @@ export class EnhancedNotificationService {
         });
 
         // Send immediately
-        await sendNotificationImmediate({
+        const result = await sendNotificationImmediate({
           notificationId: notification.id,
           type: 'order_confirmation',
-          channel: toPrismaChannel(channel),
+          channel: toInternalChannel(channel),
           recipient,
           template: channel === 'EMAIL' ? 'order_confirmation' : undefined,
           message: channel === 'SMS' ? notification.message : undefined, // Ensure SMS uses the professional message
@@ -128,10 +169,14 @@ export class EnhancedNotificationService {
             order_items: orderItems,
             customer_name: customer.user.name || 'Customer',
           },
-          priority: 'high',
+          priority: toPrismaPriority('high'),
         });
         
-        console.log(`✅ Order confirmation sent via ${channel} for order ${data.orderNumber}`);
+        if (result.success) {
+          console.log(`✅ Order confirmation sent via ${channel} for order ${data.orderNumber}`);
+        } else {
+          console.error(`❌ Failed to send order confirmation via ${channel} for order ${data.orderNumber}: ${result.error}`);
+        }
       }));
 
     } catch (error) {
@@ -140,9 +185,6 @@ export class EnhancedNotificationService {
     }
   }
 
-  /**
-   * Convert order status to human-readable label
-   */
   /**
    * Convert order status to human-readable label
    */
@@ -179,23 +221,7 @@ export class EnhancedNotificationService {
         return;
       }
 
-      // Get customer details
-      const customer = await db.customer.findUnique({
-        where: { id: data.customerId },
-        include: {
-          user: {
-            select: {
-              name: true,
-              email: true,
-            },
-          },
-        },
-      });
-
-      if (!customer) {
-        console.error(`Customer not found: ${data.customerId}`);
-        return;
-      }
+      const { customer, channels } = await this.getNotificationRecipient(data.customerId);
 
       // Fetch order items to display in delivery update
       const order = await db.order.findUnique({
@@ -210,34 +236,6 @@ export class EnhancedNotificationService {
         quantity: item.quantity,
         price: Number(item.unitPrice)
       })) || [];
-
-      // Check notification preferences
-      const preferences = await db.notificationPreferences.findUnique({
-        where: { customerId: data.customerId },
-      });
-
-      // Determine enabled channels
-      const channels: PrismaNotificationChannel[] = [];
-      
-      // Add email if enabled (or default)
-      if (preferences?.emailEnabled !== false && customer.user.email) {
-        channels.push('EMAIL');
-      }
-      
-      // Add SMS if enabled (or default) and phone exists
-      if (preferences?.smsEnabled !== false && customer.phone) {
-        channels.push('SMS');
-      }
-
-      // Default to email if no channels selected but email exists
-      if (channels.length === 0 && customer.user.email) {
-        channels.push('EMAIL');
-      }
-
-      if (channels.length === 0) {
-        console.error(`No enabled channels found for customer ${data.customerId}`);
-        return;
-      }
 
       const statusLabel = this.getStatusLabel(data.status);
       const customerName = customer.user.name || 'Customer';
@@ -273,10 +271,10 @@ export class EnhancedNotificationService {
         });
 
         // Send immediately
-        await sendNotificationImmediate({
+        const result = await sendNotificationImmediate({
           notificationId: notification.id,
           type: 'delivery_update',
-          channel: toPrismaChannel(channel),
+          channel: toInternalChannel(channel),
           recipient,
           template: channel === 'EMAIL' ? 'delivery_update' : undefined,
           message: channel === 'SMS' ? notification.message : undefined, // Ensure SMS uses the professional message
@@ -289,10 +287,14 @@ export class EnhancedNotificationService {
             tracking_url: `https://pharmacy-project-web.vercel.app/app/orders/${data.id}`,
             order_items: orderItems,
           },
-          priority: 'normal',
+          priority: toPrismaPriority('normal'),
         });
 
-        console.log(`✅ Delivery update sent via ${channel} for order ${data.orderNumber}`);
+        if (result.success) {
+          console.log(`✅ Delivery update sent via ${channel} for order ${data.orderNumber}`);
+        } else {
+          console.error(`❌ Failed to send delivery update via ${channel} for order ${data.orderNumber}: ${result.error}`);
+        }
       }));
 
     } catch (error) {
@@ -312,51 +314,7 @@ export class EnhancedNotificationService {
     paymentMethod: string;
   }): Promise<void> {
     try {
-      // Get customer details
-      const customer = await db.customer.findUnique({
-        where: { id: data.customerId },
-        include: {
-          user: {
-            select: {
-              name: true,
-              email: true,
-            },
-          },
-        },
-      });
-
-      if (!customer) {
-        console.error(`Customer not found: ${data.customerId}`);
-        return;
-      }
-
-      // Check notification preferences
-      const preferences = await db.notificationPreferences.findUnique({
-        where: { customerId: data.customerId },
-      });
-
-      // Determine enabled channels
-      const channels: PrismaNotificationChannel[] = [];
-      
-      // Add email if enabled (or default)
-      if (preferences?.emailEnabled !== false && customer.user.email) {
-        channels.push('EMAIL');
-      }
-      
-      // Add SMS if enabled (or default) and phone exists
-      if (preferences?.smsEnabled !== false && customer.phone) {
-        channels.push('SMS');
-      }
-
-      // Default to email if no channels selected but email exists
-      if (channels.length === 0 && customer.user.email) {
-        channels.push('EMAIL');
-      }
-
-      if (channels.length === 0) {
-        console.error(`No enabled channels found for customer ${data.customerId}`);
-        return;
-      }
+      const { customer, channels } = await this.getNotificationRecipient(data.customerId);
 
       // Send to all enabled channels
       await Promise.all(channels.map(async (channel) => {
@@ -384,10 +342,10 @@ export class EnhancedNotificationService {
         });
 
         // Send immediately
-        await sendNotificationImmediate({
+        const result = await sendNotificationImmediate({
           notificationId: notification.id,
           type: 'payment_success',
-          channel: toPrismaChannel(channel),
+          channel: toInternalChannel(channel),
           recipient,
           template: channel === 'EMAIL' ? 'payment_success' : undefined,
           message: channel === 'SMS' ? notification.message : undefined, // Ensure SMS uses the professional message
@@ -396,10 +354,14 @@ export class EnhancedNotificationService {
             amount: data.amount,
             method: data.paymentMethod,
           },
-          priority: 'high',
+          priority: toPrismaPriority('high'),
         });
         
-        console.log(`✅ Payment confirmation sent via ${channel} for order ${data.orderNumber}`);
+        if (result.success) {
+          console.log(`✅ Payment confirmation sent via ${channel} for order ${data.orderNumber}`);
+        } else {
+          console.error(`❌ Failed to send payment confirmation via ${channel} for order ${data.orderNumber}: ${result.error}`);
+        }
       }));
 
     } catch (error) {

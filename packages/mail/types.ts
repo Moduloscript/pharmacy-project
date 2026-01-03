@@ -1,4 +1,5 @@
 import type { Locale } from "@repo/i18n";
+import type { NotificationPriority } from "@repo/database";
 
 export interface SendEmailParams {
 	to: string;
@@ -56,7 +57,7 @@ export interface NotificationJobData {
 	// Metadata
 	customerId?: string;
 	orderId?: string;
-	priority?: 'low' | 'normal' | 'high';
+	priority?: NotificationPriority | 'low' | 'normal' | 'high';
 	scheduledFor?: Date;
 }
 

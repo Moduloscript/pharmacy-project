@@ -20,20 +20,36 @@ export function CategoryQuickLinks() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+    const controller = new AbortController();
+
     async function fetchStats() {
       try {
-        const response = await fetch('/api/products/stats/categories');
-        if (response.ok) {
+        const response = await fetch('/api/products/stats/categories', {
+          signal: controller.signal
+        });
+        if (response.ok && mounted) {
           const data = await response.json();
-          setStats(data.stats || {});
+          if (mounted) {
+            setStats(data.stats || {});
+          }
         }
-      } catch (error) {
-        console.error('Failed to fetch category stats', error);
+      } catch (error: any) {
+        if (error.name !== 'AbortError' && mounted) {
+          console.error('Failed to fetch category stats', error);
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
     fetchStats();
+
+    return () => {
+      mounted = false;
+      controller.abort();
+    };
   }, []);
 
   const categories = [
