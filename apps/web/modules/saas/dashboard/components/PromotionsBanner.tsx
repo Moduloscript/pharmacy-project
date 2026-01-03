@@ -117,7 +117,7 @@ export function PromotionsBanner() {
 
                   {/* Image Section - ABSOLUTE positioned to reclaim size */}
                   <div className="absolute right-0 top-0 bottom-0 z-10 w-[60%] md:w-[50%] overflow-visible pointer-events-none">
-                    {promo.imageUrl ? (
+                    {promo.imageUrl && promo.imageUrl.trim() !== '' ? (
                       <div className="relative w-full h-full">
                            <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-white/20 mix-blend-overlay z-20" />
                            <Image 

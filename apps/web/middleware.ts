@@ -230,6 +230,6 @@ export default async function middleware(req: NextRequest) {
 
 export const config = {
 	matcher: [
-		"/((?!api|image-proxy|images|fonts|pdf\\.worker\\.min\\.mjs|pdf\\.worker\\.min\\.js|pdf\\.worker|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+		"/((?!api|image-proxy|images|fonts|pdf\\.worker\\.min\\.mjs|pdf\\.worker\\.min\\.js|pdf\\.worker|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.svg$|.*\\.webp$|.*\\.ico$).*)",
 	],
 };

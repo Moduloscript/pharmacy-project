@@ -112,25 +112,47 @@ customersRouter.get('/profile', authMiddleware, async (c) => {
 
     const needsProfile = await userNeedsCustomerProfile(user.id);
 
-    // Include customerType and verificationStatus if profile exists
-    let customerType: string | null = null;
-    let verificationStatus: string | null = null;
+    // Include full customer details if profile exists
+    let customerData = {
+      customerType: null as string | null,
+      verificationStatus: null as string | null,
+      id: null as string | null,
+      city: null as string | null,
+      state: null as string | null,
+      createdAt: null as Date | null,
+    };
+
     try {
       const { db } = await import('@repo/database');
       const customer = await db.customer.findUnique({
         where: { userId: user.id },
-        select: { customerType: true, verificationStatus: true },
+        select: { 
+          customerType: true, 
+          verificationStatus: true, 
+          id: true,
+          city: true,
+          state: true,
+          createdAt: true
+        },
       });
-      customerType = customer?.customerType ?? null;
-      verificationStatus = customer?.verificationStatus ?? null;
+      
+      if (customer) {
+        customerData = { 
+          customerType: customer.customerType,
+          verificationStatus: customer.verificationStatus,
+          id: customer.id,
+          city: customer.city,
+          state: customer.state,
+          createdAt: customer.createdAt
+        };
+      }
     } catch (e) {
       // If database import or query fails, fall back to minimal response; do not crash the request.
     }
     
     return c.json({ 
       needsProfile,
-      customerType,
-      verificationStatus,
+      ...customerData,
       message: needsProfile ? 'Customer profile required' : 'Customer profile exists'
     });
 

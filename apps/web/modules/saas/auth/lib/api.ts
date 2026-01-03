@@ -43,3 +43,19 @@ export const useUserAccountsQuery = () => {
 		},
 	});
 };
+
+export const customerProfileQueryKey = ["user", "customer-profile"] as const;
+
+export const useCustomerProfileQuery = () => {
+	return useQuery({
+		queryKey: customerProfileQueryKey,
+		queryFn: async () => {
+			const response = await fetch("/api/customers/profile");
+			if (!response.ok) {
+				throw new Error("Failed to fetch profile");
+			}
+			return response.json();
+		},
+		enabled: config.ui.saas.enabled,
+	});
+};

@@ -294,3 +294,31 @@ html, body {
     font-weight: 800; /* Black/Bold */
     letter-spacing: -0.04em;
 }
+
+/* Dark Mode Variants for Ujjo Theme */
+.dark .theme-ujjo,
+.theme-ujjo:where(.dark, .dark *) {
+    --background: #0f0f0f;
+    --foreground: #f5f5f5;
+    --card: #1a1a1a;
+    --card-foreground: #f5f5f5;
+    --primary: #a5a0ff;
+    --primary-foreground: #0f0f0f;
+    --muted: #2a2a2a;
+    --muted-foreground: #a0a0a0;
+    --accent: #ff6b3d;
+    --accent-foreground: #0f0f0f;
+    --border: #3a3a3a;
+    --input: #3a3a3a;
+    --ring: #a5a0ff;
+    
+    /* Dark Mode Ujjo Tokens */
+    --ujjo-purple: #a5a0ff;
+    --ujjo-cream: #1a1a1a;
+    --ujjo-heat: #ff6b3d;
+}
+
+.dark .theme-ujjo .shadow-hard,
+.theme-ujjo:where(.dark, .dark *) .shadow-hard {
+    box-shadow: 4px 4px 0px 0px rgba(255, 255, 255, 0.3);
+}
