@@ -325,6 +325,8 @@ model Order {
   paymentMethod       PaymentMethod?
   paymentReference    String?
   purchaseOrderNumber String?
+  invoiceNumber       String?         @unique
+  invoiceDate         DateTime?
   creditTerms         Boolean         @default(false)
   estimatedDelivery   DateTime?
   actualDelivery      DateTime?

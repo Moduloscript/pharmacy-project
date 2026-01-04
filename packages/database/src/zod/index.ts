@@ -104,7 +104,7 @@ export const ProductScalarFieldEnumSchema = z.enum(['id','name','description','c
 
 export const CartItemScalarFieldEnumSchema = z.enum(['id','customerId','productId','quantity','unitPrice','createdAt','updatedAt']);
 
-export const OrderScalarFieldEnumSchema = z.enum(['id','orderNumber','customerId','status','deliveryMethod','deliveryAddress','deliveryCity','deliveryState','deliveryLGA','deliveryPhone','deliveryNotes','subtotal','deliveryFee','discount','tax','total','paymentStatus','paymentMethod','paymentReference','purchaseOrderNumber','creditTerms','estimatedDelivery','actualDelivery','internalNotes','createdAt','updatedAt']);
+export const OrderScalarFieldEnumSchema = z.enum(['id','orderNumber','customerId','status','deliveryMethod','deliveryAddress','deliveryCity','deliveryState','deliveryLGA','deliveryPhone','deliveryNotes','subtotal','deliveryFee','discount','tax','total','paymentStatus','paymentMethod','paymentReference','purchaseOrderNumber','invoiceNumber','invoiceDate','creditTerms','estimatedDelivery','actualDelivery','internalNotes','createdAt','updatedAt']);
 
 export const OrderItemScalarFieldEnumSchema = z.enum(['id','orderId','productId','quantity','unitPrice','subtotal','productName','productSKU','productDescription','createdAt']);
 
@@ -518,6 +518,8 @@ export const OrderSchema = z.object({
   total: z.instanceof(Prisma.Decimal, { message: "Field 'total' must be a Decimal. Location: ['Models', 'Order']"}),
   paymentReference: z.string().nullable(),
   purchaseOrderNumber: z.string().nullable(),
+  invoiceNumber: z.string().nullable(),
+  invoiceDate: z.coerce.date().nullable(),
   creditTerms: z.boolean(),
   estimatedDelivery: z.coerce.date().nullable(),
   actualDelivery: z.coerce.date().nullable(),
