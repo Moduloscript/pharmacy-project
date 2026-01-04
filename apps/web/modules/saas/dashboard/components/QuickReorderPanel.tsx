@@ -12,7 +12,14 @@ import Link from "next/link";
 import { Order, OrderItem } from "@saas/orders/lib/types";
 
 export function QuickReorderPanel() {
-  const { data, isLoading } = useMyOrders({ status: ['delivered', 'dispatched', 'processing', 'ready'] as any }, 1);
+  const { data, isLoading } = useMyOrders({ status: ['delivered', 'dispatched', 'processing', 'ready', 'DELIVERED', 'DISPATCHED', 'PROCESSING', 'READY'] as any }, 1);
+  
+  console.log('[QuickReorderPanel] Debug:', {
+    isLoading,
+    ordersLength: data?.orders?.length,
+    orders: data?.orders
+  });
+
   const addToCart = useSetAtom(addToCartWithActivityAtom);
   const [addingId, setAddingId] = useState<string | null>(null);
 

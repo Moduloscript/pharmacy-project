@@ -7,9 +7,14 @@ import { cn } from "@ui/lib";
 import { WalletIcon, FileTextIcon, ArrowRightIcon } from "lucide-react";
 import Link from "next/link";
 
+import { useCustomerProfileQuery } from "@saas/auth/lib/api";
+
 export function CreditBalanceWidget() {
   const { user } = useSession();
-  const customerType = (user as any)?.customer?.customerType;
+  const { data: customerProfile } = useCustomerProfileQuery();
+  
+  // Robust check for customer type using profile query as source of truth
+  const customerType = customerProfile?.customerType || (user as any)?.customer?.customerType;
 
   // Mock data for B2B credit
   // In a real app, fetch this from a credit/ledger API
@@ -37,7 +42,7 @@ export function CreditBalanceWidget() {
           Upgrade to a <span className="font-bold">Wholesale Account</span> to access credit terms, bulk pricing, and exclusive deals.
         </p>
         <Button className="w-full bg-black hover:bg-[#8B83F6] text-white border-2 border-transparent font-bold uppercase text-xs" asChild>
-          <Link href="/app/account/upgrade">
+          <Link href="/app/settings/billing">
             Upgrade to Wholesale <ArrowRightIcon className="w-4 h-4 ml-2" />
           </Link>
         </Button>

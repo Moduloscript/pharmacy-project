@@ -45,7 +45,7 @@ import {
 export default function UserStart() {
 	const t = useTranslations();
 	const { user } = useSession();
-	const { data: customerProfile } = useCustomerProfileQuery();
+	const { data: customerProfile, isLoading } = useCustomerProfileQuery();
 
 	// Show organization management for multi-tenant SaaS if enabled
 	if (config.organizations.enable) {
@@ -148,60 +148,91 @@ export default function UserStart() {
 						
 						{/* Account Status Card - Sticker Style */}
 						<div className="w-full max-w-sm lg:w-auto min-w-[280px] lg:min-w-[320px] bg-white border-2 border-black p-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,0.2)] transform rotate-2 hover:rotate-0 transition-all duration-300">
-							<div className="flex items-start justify-between mb-8 border-b-2 border-black pb-6">
-								{/* Orange Square Avatar */}
-								<div className="w-16 h-16 bg-[#FF4500] border-2 border-black flex items-center justify-center text-white">
-									<UserIcon className="h-8 w-8" />
-								</div>
-								
-								<div className="text-right">
-									<div className="text-[10px] font-black uppercase text-gray-500 mb-1">Status</div>
-									{/* Status - Real Data */}
-									{(() => {
-										const status = customerProfile?.verificationStatus || (user as any)?.customer?.verificationStatus || 'PENDING';
-										const isVerified = status === 'VERIFIED';
-										return (
-											<div className="flex items-center justify-end gap-2">
-												<div className={cn(
-													"h-2 w-2 rounded-full border border-black",
-													isVerified ? "bg-green-600" : "bg-yellow-400"
-												)} />
-												<span className="text-xl font-black uppercase tracking-tight text-black">
-													{isVerified ? 'ACTIVE' : status}
-												</span>
+							{isLoading ? (
+								// Skeleton Loader matching the card layout
+								<div className="animate-pulse space-y-6">
+									<div className="flex items-start justify-between mb-8 border-b-2 border-black/10 pb-6">
+										<div className="w-16 h-16 bg-gray-200 border-2 border-gray-300" />
+										<div className="space-y-2">
+											<div className="h-3 w-12 bg-gray-200 ml-auto" />
+											<div className="h-6 w-24 bg-gray-200 ml-auto" />
+										</div>
+									</div>
+									<div className="space-y-4">
+										<div>
+											<div className="h-3 w-20 bg-gray-200 mb-2" />
+											<div className="h-8 w-32 bg-gray-200" />
+										</div>
+										<div className="grid grid-cols-2 gap-8">
+											<div className="space-y-2">
+												<div className="h-3 w-20 bg-gray-200" />
+												<div className="h-4 w-24 bg-gray-200" />
 											</div>
-										);
-									})()}
-								</div>
-							</div>
-							
-							<div className="space-y-6">
-								<div>
-									<div className="text-[10px] font-black uppercase text-gray-500 mb-1">Account Type</div>
-									<div className="inline-block bg-[#E0F2FE] border-2 border-black px-3 py-1 font-black text-lg text-black uppercase">
-										{(customerProfile?.customerType || (user as any)?.customer?.customerType) === 'WHOLESALE' ? 'Wholesale Partner' : 'Retail Customer'}
-									</div>
-								</div>
-								
-								<div className="grid grid-cols-2 gap-8 pt-2">
-									<div>
-										<div className="text-[10px] font-black uppercase text-gray-500 mb-1">Member ID</div>
-										<div className="font-bold text-black border-b-2 border-black inline-block pb-0.5">
-											{user?.createdAt 
-												? `BP-${new Date(user.createdAt).getFullYear()}-${(customerProfile?.id || (user as any)?.customer?.id)?.substring(0, 4).toUpperCase() || '0000'}`
-												: `BP-${new Date().getFullYear()}-XXXX`}
-										</div>
-									</div>
-									<div>
-										<div className="text-[10px] font-black uppercase text-gray-500 mb-1">Region</div>
-										<div className="font-bold text-black border-b-2 border-black inline-block pb-0.5">
-											{(customerProfile?.city || (user as any)?.customer?.city) && (customerProfile?.state || (user as any)?.customer?.state)
-												? `${customerProfile?.city || (user as any)?.customer?.city}, ${customerProfile?.state || (user as any)?.customer?.state}`
-												: (customerProfile?.state || (user as any)?.customer?.state || "Nigeria")}
+											<div className="space-y-2">
+												<div className="h-3 w-16 bg-gray-200" />
+												<div className="h-4 w-24 bg-gray-200" />
+											</div>
 										</div>
 									</div>
 								</div>
-							</div>
+							) : (
+								<>
+									<div className="flex items-start justify-between mb-8 border-b-2 border-black pb-6">
+										{/* Orange Square Avatar */}
+										<div className="w-16 h-16 bg-[#FF4500] border-2 border-black flex items-center justify-center text-white">
+											<UserIcon className="h-8 w-8" />
+										</div>
+										
+										<div className="text-right">
+											<div className="text-[10px] font-black uppercase text-gray-500 mb-1">Status</div>
+											{/* Status - Real Data */}
+											{(() => {
+												const status = customerProfile?.verificationStatus || (user as any)?.customer?.verificationStatus || 'PENDING';
+												const isVerified = status === 'VERIFIED';
+												return (
+													<div className="flex items-center justify-end gap-2">
+														<div className={cn(
+															"h-2 w-2 rounded-full border border-black",
+															isVerified ? "bg-green-600" : "bg-yellow-400"
+														)} />
+														<span className="text-xl font-black uppercase tracking-tight text-black">
+															{isVerified ? 'ACTIVE' : status}
+														</span>
+													</div>
+												);
+											})()}
+										</div>
+									</div>
+									
+									<div className="space-y-6">
+										<div>
+											<div className="text-[10px] font-black uppercase text-gray-500 mb-1">Account Type</div>
+											<div className="inline-block bg-[#E0F2FE] border-2 border-black px-3 py-1 font-black text-lg text-black uppercase">
+												{(customerProfile?.customerType || (user as any)?.customer?.customerType) === 'WHOLESALE' ? 'Wholesale Partner' : 'Retail Customer'}
+											</div>
+										</div>
+										
+										<div className="grid grid-cols-2 gap-8 pt-2">
+											<div>
+												<div className="text-[10px] font-black uppercase text-gray-500 mb-1">Member Since</div>
+												<div className="font-bold text-black border-b-2 border-black inline-block pb-0.5 uppercase">
+													{user?.createdAt 
+														? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+														: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+												</div>
+											</div>
+											<div>
+												<div className="text-[10px] font-black uppercase text-gray-500 mb-1">Region</div>
+												<div className="font-bold text-black border-b-2 border-black inline-block pb-0.5">
+													{(customerProfile?.city || (user as any)?.customer?.city) && (customerProfile?.state || (user as any)?.customer?.state)
+														? `${customerProfile?.city || (user as any)?.customer?.city}, ${customerProfile?.state || (user as any)?.customer?.state}`
+														: (customerProfile?.state || (user as any)?.customer?.state || "Nigeria")}
+												</div>
+											</div>
+										</div>
+									</div>
+								</>
+							)}
 						</div>
 					</div>
 				</div>

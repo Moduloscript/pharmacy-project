@@ -63,20 +63,29 @@ export class OrdersAPI {
       throw new Error(`Failed to fetch orders: ${response.statusText}`);
     }
     
-    const data = await response.json();
+    const responseData = await response.json();
+    
+    // Handle wrapped response format: { success: true, data: { orders: [...] } }
+    const actualData = responseData.success && responseData.data ? responseData.data : responseData;
+    
+    if (!actualData.orders) {
+      console.warn('[OrdersAPI] No orders found in response:', responseData);
+      return { orders: [], totalCount: 0 } as any;
+    }
+    
     return {
-      ...data,
-      orders: data.orders.map((order: any) => ({
+      ...actualData,
+      orders: actualData.orders.map((order: any) => ({
         ...order,
         itemsCount: order.itemsCount || order.items?.length || 0,
         createdAt: new Date(order.createdAt),
         updatedAt: new Date(order.updatedAt),
         estimatedDelivery: order.estimatedDelivery ? new Date(order.estimatedDelivery) : undefined,
         actualDelivery: order.actualDelivery ? new Date(order.actualDelivery) : undefined,
-        paymentInfo: {
+        paymentInfo: order.paymentInfo ? {
           ...order.paymentInfo,
           paidAt: order.paymentInfo.paidAt ? new Date(order.paymentInfo.paidAt) : undefined,
-        },
+        } : { status: 'pending' },
         tracking: order.tracking?.map((t: any) => ({
           ...t,
           updatedAt: new Date(t.updatedAt),

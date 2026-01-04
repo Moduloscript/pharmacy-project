@@ -18,9 +18,13 @@ import Autoplay from "embla-carousel-autoplay";
 import { useRef } from "react";
 import { usePromotions } from "../lib/queries";
 
+import { useCustomerProfileQuery } from "@saas/auth/lib/api";
+
 export function PromotionsBanner() {
   const { user } = useSession();
-  const customerType = (user as any)?.customer?.customerType;
+  const { data: customerProfile } = useCustomerProfileQuery();
+  // Safe access to customer type using fresh data if needed for conditional promos
+  const customerType = customerProfile?.customerType || (user as any)?.customer?.customerType;
   const plugin = useRef(
     Autoplay({ delay: 5000, stopOnInteraction: true })
   );
