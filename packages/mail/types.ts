@@ -6,6 +6,11 @@ export interface SendEmailParams {
 	subject: string;
 	text: string;
 	html?: string;
+	attachments?: Array<{
+		filename: string;
+		content: Buffer | string;
+		contentType?: string;
+	}>;
 }
 
 export type SendEmailHandler = (params: SendEmailParams) => Promise<void>;
@@ -59,6 +64,13 @@ export interface NotificationJobData {
 	orderId?: string;
 	priority?: NotificationPriority | 'low' | 'normal' | 'high';
 	scheduledFor?: Date;
+	
+	// Attachments (for Email)
+	attachments?: Array<{
+		filename: string;
+		content: Buffer | string; // Buffer or base64 string
+		contentType?: string;
+	}>;
 }
 
 export interface NotificationJobResult {

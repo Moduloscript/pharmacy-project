@@ -75,28 +75,37 @@ export class OrdersAPI {
     
     return {
       ...actualData,
-      orders: actualData.orders.map((order: any) => ({
-        ...order,
-        itemsCount: order.itemsCount || order.items?.length || 0,
-        createdAt: new Date(order.createdAt),
-        updatedAt: new Date(order.updatedAt),
-        estimatedDelivery: order.estimatedDelivery ? new Date(order.estimatedDelivery) : undefined,
-        actualDelivery: order.actualDelivery ? new Date(order.actualDelivery) : undefined,
-        paymentInfo: order.paymentInfo ? {
-          ...order.paymentInfo,
-          paidAt: order.paymentInfo.paidAt ? new Date(order.paymentInfo.paidAt) : undefined,
-        } : { status: 'pending' },
-        tracking: order.tracking?.map((t: any) => ({
-          ...t,
-          updatedAt: new Date(t.updatedAt),
-          estimatedDelivery: t.estimatedDelivery ? new Date(t.estimatedDelivery) : undefined,
-        })) || [],
-        prescriptionFiles: order.prescriptionFiles?.map((f: any) => ({
-          ...f,
-          uploadedAt: new Date(f.uploadedAt),
-          verifiedAt: f.verifiedAt ? new Date(f.verifiedAt) : undefined,
-        })) || [],
-      })),
+      orders: actualData.orders.map((order: any) => {
+        const normalizedStatus = (order.status || 'received').toLowerCase();
+        const rawPaymentStatus = (order.paymentStatus || 'pending').toLowerCase();
+        const normalizedPaymentStatus = rawPaymentStatus === 'completed' ? 'paid' : rawPaymentStatus;
+        
+        return {
+          ...order,
+          status: normalizedStatus,
+          paymentStatus: normalizedPaymentStatus, // Ensure root paymentStatus is correct
+          itemsCount: order.itemsCount || order.items?.length || 0,
+          createdAt: new Date(order.createdAt),
+          updatedAt: new Date(order.updatedAt),
+          estimatedDelivery: order.estimatedDelivery ? new Date(order.estimatedDelivery) : undefined,
+          actualDelivery: order.actualDelivery ? new Date(order.actualDelivery) : undefined,
+          paymentInfo: order.paymentInfo ? {
+            ...order.paymentInfo,
+            status: (order.paymentInfo.status || normalizedPaymentStatus).toLowerCase(),
+            paidAt: order.paymentInfo.paidAt ? new Date(order.paymentInfo.paidAt) : undefined,
+          } : { status: normalizedPaymentStatus },
+          tracking: order.tracking?.map((t: any) => ({
+            ...t,
+            updatedAt: new Date(t.updatedAt),
+            estimatedDelivery: t.estimatedDelivery ? new Date(t.estimatedDelivery) : undefined,
+          })) || [],
+          prescriptionFiles: order.prescriptionFiles?.map((f: any) => ({
+            ...f,
+            uploadedAt: new Date(f.uploadedAt),
+            verifiedAt: f.verifiedAt ? new Date(f.verifiedAt) : undefined,
+          })) || [],
+        };
+      }),
     };
   }
 
@@ -113,17 +122,24 @@ export class OrdersAPI {
     }
     
     const order = await response.json();
+    const normalizedStatus = (order.status || 'received').toLowerCase();
+    const rawPaymentStatus = (order.paymentStatus || 'pending').toLowerCase();
+    const normalizedPaymentStatus = rawPaymentStatus === 'completed' ? 'paid' : rawPaymentStatus;
+
     return {
       ...order,
+      status: normalizedStatus,
+      paymentStatus: normalizedPaymentStatus,
       itemsCount: order.itemsCount || order.items?.length || 0,
       createdAt: new Date(order.createdAt),
       updatedAt: new Date(order.updatedAt),
       estimatedDelivery: order.estimatedDelivery ? new Date(order.estimatedDelivery) : undefined,
       actualDelivery: order.actualDelivery ? new Date(order.actualDelivery) : undefined,
-      paymentInfo: {
+      paymentInfo: order.paymentInfo ? {
         ...order.paymentInfo,
+        status: (order.paymentInfo.status || normalizedPaymentStatus).toLowerCase(),
         paidAt: order.paymentInfo.paidAt ? new Date(order.paymentInfo.paidAt) : undefined,
-      },
+      } : { status: normalizedPaymentStatus },
       tracking: order.tracking?.map((t: any) => ({
         ...t,
         updatedAt: new Date(t.updatedAt),

@@ -1,6 +1,6 @@
-import { db as prisma } from '@repo/database';
-import { InvoicePdf as InvoiceTemplate } from '@repo/mail';
+import { db } from '@repo/database';
 import { renderToStream } from '@react-pdf/renderer';
+import { InvoicePdf } from '../templates/InvoicePdf';
 import { createElement } from 'react';
 import fs from 'fs';
 import path from 'path';
@@ -12,7 +12,7 @@ export class InvoiceService {
    * Format: INV-YYYY-SEQ (e.g., INV-2025-000001)
    */
   async getInvoiceNumber(orderId: string): Promise<{ invoiceNumber: string, invoiceDate: Date }> {
-    const order = await prisma.order.findUnique({
+    const order = await db.order.findUnique({
       where: { id: orderId },
       select: { invoiceNumber: true, invoiceDate: true }
     });
@@ -22,12 +22,9 @@ export class InvoiceService {
     }
 
     // Generate new invoice number
-    // Note: In a high-concurrency environment, this needs locking or a separate sequence table.
-    // implementing basic optimistic locking/retries or just relying on database unique constraint for now.
-    
     const date = new Date();
     const year = date.getFullYear();
-    const count = await prisma.order.count({
+    const count = await db.order.count({
       where: {
         invoiceNumber: {
           not: null
@@ -39,7 +36,7 @@ export class InvoiceService {
     const invoiceNumber = `INV-${year}-${sequence}`;
     
     // Update order
-    await prisma.order.update({
+    await db.order.update({
       where: { id: orderId },
       data: {
         invoiceNumber,
@@ -50,8 +47,18 @@ export class InvoiceService {
     return { invoiceNumber, invoiceDate: date };
   }
 
+  async generatePdf(orderId: string): Promise<Buffer> {
+    const stream = await this.generatePdfStream(orderId);
+    return new Promise((resolve, reject) => {
+      const chunks: Uint8Array[] = [];
+      stream.on('data', (chunk: Uint8Array) => chunks.push(chunk));
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
+      stream.on('error', (err: Error) => reject(err));
+    });
+  }
+
   async generatePdfStream(orderId: string) {
-    const order = await prisma.order.findUnique({
+    const order = await db.order.findUnique({
       where: { id: orderId },
       include: {
         customer: {
@@ -68,20 +75,18 @@ export class InvoiceService {
     const { invoiceNumber, invoiceDate } = await this.getInvoiceNumber(orderId);
 
     // Read logo file
-    // Ideally this should be cached or handled more efficiently in production
-    // Used try/catch to avoid crashing if file is missing
-    let logoData: Buffer | undefined;
+    let logoBuffer: Buffer | undefined;
     try {
-      // Trying common paths: project root or apps/web root
+      // Trying common paths
       const possiblePaths = [
-        path.join(process.cwd(), 'apps/web/public/images/logo.png'), // Specific requested path
-        path.join(process.cwd(), 'public/images/logo.png'),
-        path.join(__dirname, '../../../../../public/images/logo.png') 
+        path.join(process.cwd(), 'public/images/logo.png'), 
+        path.join(process.cwd(), 'apps/web/public/images/logo.png'), 
+        path.join(__dirname, '../../../../../../apps/web/public/images/logo.png')
       ];
       
       for (const p of possiblePaths) {
         if (fs.existsSync(p)) {
-          logoData = fs.readFileSync(p);
+          logoBuffer = fs.readFileSync(p);
           break;
         }
       }
@@ -89,14 +94,12 @@ export class InvoiceService {
       console.warn('Failed to load invoice logo', e);
     }
     
-    const logoSrc = logoData ? `data:image/png;base64,${logoData.toString('base64')}` : undefined;
-    
     // @ts-ignore
-    const stream = await renderToStream(createElement(InvoiceTemplate, {
+    const stream = await renderToStream(createElement(InvoicePdf, {
       order,
       invoiceNumber,
       invoiceDate,
-      logoSrc // Passing the loaded image
+      logoBuffer
     }));
 
     return stream;

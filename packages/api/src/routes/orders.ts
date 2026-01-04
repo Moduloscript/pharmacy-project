@@ -5,7 +5,7 @@ import { db } from '@repo/database'
 import { getSession } from '@repo/auth/lib/server'
 import { createMiddleware } from 'hono/factory'
 import { nanoid } from 'nanoid'
-import { enhancedNotificationService } from '@repo/mail'
+import { enhancedNotificationService, invoiceService } from '@repo/mail'
 
 import type { AppBindings } from '../types/context'
 const app = new Hono<AppBindings>()
@@ -793,12 +793,28 @@ app.post('/', zValidator('json', createOrderSchema), async (c) => {
     // Enqueue order confirmation notification (non-blocking)
     // Uses enhanced notification service with preference checking
     try {
+      // Generate Invoice PDF
+      let pdfAttachment;
+      try {
+        const pdfBuffer = await invoiceService.generatePdf(order.id);
+        if (pdfBuffer) {
+          pdfAttachment = [{
+            filename: `Invoice-${order.orderNumber}.pdf`,
+            content: pdfBuffer,
+            contentType: 'application/pdf'
+          }];
+        }
+      } catch (pdfErr) {
+        console.warn('Failed to generate invoice PDF for email:', pdfErr);
+      }
+
       await enhancedNotificationService.sendOrderConfirmation({
         id: order.id,
         orderNumber: order.orderNumber,
         customerId: customer.id,
         total: Number(total),
         deliveryAddress: data.deliveryAddress,
+        attachments: pdfAttachment
       });
     } catch (notifyErr) {
       console.warn('Order created but failed to queue notification:', notifyErr);

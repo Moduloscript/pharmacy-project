@@ -10,11 +10,13 @@ export { sendNotificationImmediate, sendNotificationWithRetry } from './send-imm
 
 // Export templates
 export { notificationTemplates, templateMessages, getTemplateMessage } from './templates/index';
+export { InvoicePdf } from './templates/InvoicePdf';
 
 // Monitoring exports
 export { NotificationMonitor, notificationMonitor } from './monitoring/notification-monitor';
 
 // Export notification services
 export { EnhancedNotificationService, enhancedNotificationService } from './services/enhanced-notification.service';
+export { InvoiceService, invoiceService } from './services/invoice-service';
 
 

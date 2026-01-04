@@ -50,7 +50,7 @@ export class ResendEmailProvider extends BaseNotificationProvider {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({ from, to, subject, html: String(html), text }),
+        body: JSON.stringify({ from, to, subject, html: String(html), text, attachments: data.attachments }),
       });
 
       let result: any = null;

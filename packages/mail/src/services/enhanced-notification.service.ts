@@ -111,6 +111,11 @@ export class EnhancedNotificationService {
     customerId: string;
     total: number;
     deliveryAddress: string;
+    attachments?: Array<{
+      filename: string;
+      content: Buffer | string;
+      contentType?: string;
+    }>;
   }): Promise<void> {
     try {
       const { customer, channels } = await this.getNotificationRecipient(data.customerId);
@@ -169,6 +174,7 @@ export class EnhancedNotificationService {
             order_items: orderItems,
             customer_name: customer.user.name || 'Customer',
           },
+          attachments: channel === 'EMAIL' ? data.attachments : undefined,
           priority: toPrismaPriority('high'),
         });
         
