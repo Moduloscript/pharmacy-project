@@ -83,7 +83,7 @@ export function NavBar() {
 			]
 		: [
 				{
-					label: t("app.menu.start"),
+					label: "Dashboard",
 					href: basePath,
 					icon: HomeIcon,
 					isActive: pathname === basePath,

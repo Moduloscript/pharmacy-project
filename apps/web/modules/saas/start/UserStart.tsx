@@ -90,7 +90,7 @@ export default function UserStart() {
 			/>
 
 			{/* Main Container */}
-			<div className="relative z-10 max-w-7xl mx-auto px-6 py-8 lg:px-8 lg:py-12 space-y-16 animate-in fade-in duration-500">
+			<div className="relative z-10 max-w-[1800px] mx-auto px-6 py-8 lg:px-8 lg:py-12 space-y-16 animate-in fade-in duration-500">
 				
 				{/* 1. HERO SECTION: Ujjo-Style Poster */}
 				{/* 1. HERO SECTION: Ujjo-Style Poster - Exact Match to Design */}
@@ -243,13 +243,13 @@ export default function UserStart() {
 				{/* 2. STATUS & TRACKING (Tier 1) */}
 				<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 					<div className="h-full">
-						<CreditBalanceWidget />
+						<ActiveOrderTracker />
 					</div>
 					<div className="h-full">
 						<LowStockAlerts />
 					</div>
 					<div className="h-full">
-						<ActiveOrderTracker />
+						<CreditBalanceWidget />
 					</div>
 				</div>
 

@@ -132,18 +132,43 @@ customersRouter.get('/profile', authMiddleware, async (c) => {
           id: true,
           city: true,
           state: true,
-          createdAt: true
+          createdAt: true,
+          creditLimit: true,
         },
       });
       
+      let usedCredit = 0;
+
       if (customer) {
+        // Calculate used credit (sum of unpaid orders)
+        const creditUsage = await db.order.aggregate({
+           where: {
+             customerId: customer.id,
+             paymentStatus: {
+               in: ['PENDING', 'PROCESSING']
+             },
+             status: {
+               not: 'CANCELLED'
+             }
+           },
+           _sum: {
+             total: true
+           }
+        });
+        
+        usedCredit = Number(creditUsage._sum.total || 0);
+
         customerData = { 
           customerType: customer.customerType,
           verificationStatus: customer.verificationStatus,
           id: customer.id,
           city: customer.city,
           state: customer.state,
-          createdAt: customer.createdAt
+          createdAt: customer.createdAt,
+          // @ts-ignore - Dynamic property
+          creditLimit: Number(customer.creditLimit || 0),
+          // @ts-ignore - Dynamic property
+          usedCredit: usedCredit
         };
       }
     } catch (e) {

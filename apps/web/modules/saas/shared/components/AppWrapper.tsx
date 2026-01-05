@@ -68,7 +68,7 @@ export function AppWrapper({ children }: PropsWithChildren) {
 				{/* Global verification banners (email + pending approval) */}
 				<VerificationBanners />
 				<main
-					className={cn("w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-6xl", [
+					className={cn("w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-full", [
 						config.ui.saas.useSidebarLayout ? "" : "",
 					])}
 				>
